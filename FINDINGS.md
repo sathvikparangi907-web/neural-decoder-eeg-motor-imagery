@@ -171,7 +171,45 @@ Worth noting that the window result cuts against an intuition the project relies
 2.5–4.0 s tail is *not* dead weight for a variance-based classifier, even though the ERD
 analysis shows mu rebounding from about 1.3 s.
 
-### The deep baselines do not reproduce — M3 not met
+### M3 result: two of five baselines reproduce, two miss badly
+
+Final E1, all nine subjects, corrected protocol (all of session T, fixed annealed schedule).
+Full log in `results/e1_within_subject.txt`.
+
+| | ours | published | gap | M3 (~3 points) |
+|---|---|---|---|---|
+| EEGConformer | **77.3%** | 78.66% | **−1.4** | passes |
+| FBCSP | 64.6% | ~67.8% | −3.2 | at the boundary |
+| EEGNet | 65.9% | 71.50% | −5.6 | misses |
+| CTNet | 64.2% | 82.52% | −18.3 | misses badly |
+| ATCNet | 62.8% | 81.10% | −18.3 | misses badly |
+
+**M3 is partially met.** Ordering rule 2 requires "at least two baselines reproduce their
+published within-subject accuracy" before the proposed model may be written. EEGConformer at
+−1.4 and FBCSP at −3.2 satisfy that, so HCT-Net is unblocked — but ATCNet and CTNet are 18
+points short and that has to be stated in the report rather than averaged away.
+
+Why the two failures are not fatal to the project: the contribution is a comparison under
+**one identical protocol**, and every model here is under it. A model that underperforms its
+published figure under a common protocol is a legitimate data point about that protocol — it
+is only a problem if it is presented as the authors' number. Both are quoted with their gap.
+
+The likely cause for ATCNet and CTNet, not yet tested: both reference implementations train
+far longer than §13 allows. ATCNet's uses 1,000 epochs; §13 caps at 500. CTNet also uses
+heavier dropout, which needs longer to converge. Testing that costs about 4 GPU-hours and is
+worth doing only if the schedule is a suspect for the cross-subject numbers too.
+
+### Progress against the broken protocol
+
+The protocol fix in finding 9 was worth a great deal, confirming the diagnosis:
+
+| | EEGNet | ATCNet | EEGConformer | CTNet |
+|---|---|---|---|---|
+| 80/20 holdout, best checkpoint | 55.5% | 60.1% | 74.4% | 52.9% |
+| all of session T, annealed | **65.9%** | **62.8%** | **77.3%** | **64.2%** |
+| gain | +10.4 | +2.7 | +2.9 | +11.3 |
+
+### Superseded: the deep baselines under the broken protocol
 
 E1, within-subject, train on session T and test on session E, all nine subjects, alignment
 on, §13 hyperparameters:

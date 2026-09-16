@@ -89,20 +89,46 @@ def predict_fbcsp(X, y, train_idx, val_idx, test_idx):
     return FBCSP().fit(X[train_idx], y[train_idx]).predict(X[test_idx])
 
 
+def done_already(out):
+    """(model, test subject, seed) triples already in the results file.
+
+    A fold takes minutes and a full model takes an hour, so a run that is
+    interrupted -- this machine kills background jobs when memory runs short --
+    must not start from the beginning. Re-running the same command resumes.
+    """
+    path = RESULTS / out
+    if not path.exists():
+        return set()
+    import csv
+    with open(path, encoding="utf-8") as fh:
+        return {(r["model"], int(r["test_subject"]), int(r["seed"]))
+                for r in csv.DictReader(fh)}
+
+
 def run(names=("FBCSP", *MODELS), seeds=SEEDS, align=True, out="e2_loso.csv"):
     folds = loso_folds()
     rows = []
+    finished = done_already(out)
     print(f"E2 leave-one-subject-out: {len(names)} model(s) x {len(folds)} folds x {seeds} seed(s)")
     print(f"Euclidean alignment {'on' if align else 'OFF'}. "
-          f"Artefact rejection applied to training subjects only.\n")
+          f"Artefact rejection applied to training subjects only.")
+    if finished:
+        pending = sum((n, f[2], s) not in finished
+                      for n in names for f in folds for s in range(seeds))
+        print(f"Resuming: {len(finished)} run(s) already recorded, {pending} to go.")
+    print()
 
     for name in names:
         accs = []
         for train_subjects, val_subject, test_subject in folds:
+            if all((name, test_subject, s) in finished for s in range(seeds)):
+                continue                             # already recorded, see done_already()
             X, y, session, tr, va, te = fold_data(
                 (train_subjects, val_subject, test_subject), align=align)
             for seed in range(seeds):
                 t0 = time.time()
+                if (name, test_subject, seed) in finished:
+                    continue
                 if name == "FBCSP":
                     if seed:
                         continue                     # deterministic, one seed is the answer
@@ -119,10 +145,14 @@ def run(names=("FBCSP", *MODELS), seeds=SEEDS, align=True, out="e2_loso.csv"):
                 print(f"  {name:14s} fold A{test_subject:02d}  seed {seed}  "
                       f"acc {m['accuracy']:6.1%}  kappa {m['kappa']:+.3f}  "
                       f"({time.time() - t0:.0f}s)")
-        print(f"  {name:14s} mean {np.mean(accs):6.1%} +/- {np.std(accs):.1%} over "
-              f"{len(accs)} run(s)\n")
+        if accs:
+            print(f"  {name:14s} mean {np.mean(accs):6.1%} +/- {np.std(accs):.1%} over "
+                  f"{len(accs)} new run(s)\n")
+        else:
+            print(f"  {name:14s} nothing to do, all folds already recorded\n")
 
-    write(rows, out)
+    if rows:
+        write(rows, out)
     return rows
 
 
@@ -141,8 +171,12 @@ def write(rows, name="e2_loso.csv"):
     if path.exists():
         import csv
         with open(path, encoding="utf-8") as fh:
-            replacing = {r["model"] for r in rows}
-            kept = [r for r in csv.DictReader(fh) if r["model"] not in replacing]
+            # Keyed on the individual run, not the model: a resumed run only
+            # carries the folds it actually redid, so replacing every row for
+            # that model would delete the folds completed before the interruption.
+            replacing = {(r["model"], r["test_subject"], r["seed"]) for r in rows}
+            kept = [r for r in csv.DictReader(fh)
+                    if (r["model"], int(r["test_subject"]), int(r["seed"])) not in replacing]
 
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(",".join(keys) + ",confusion\n")

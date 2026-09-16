@@ -328,6 +328,26 @@ Worth re-checking once the deep models have run: if they recover the left/right 
 where FBCSP does not, that is an argument for learned spatial filters over fixed CSP, and it
 belongs in the report.
 
+### EEGNet under LOSO: 51.2% ± 16.1%, beating FBCSP by 7.0 points (p = 0.039)
+
+| | A01 | A02 | A03 | A04 | A05 | A06 | A07 | A08 | A09 | mean | κ |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| FBCSP | 54.3 | 29.2 | 60.9 | 35.2 | 29.3 | 32.3 | 43.2 | 55.9 | 57.3 | 44.2% | 0.256 |
+| EEGNet | 70.8 | 28.3 | 73.8 | 35.9 | 37.8 | 44.6 | 40.8 | 65.5 | 63.0 | **51.2%** | 0.349 |
+
+Wilcoxon signed-rank paired across the nine subjects: **p = 0.0391, significant at 0.05.**
+The first significant result in the project, and it is the comparison §15 says the literature
+does not provide — a deep model against a classical one under one identical protocol.
+
+Note EEGNet's cross-subject scores exceed its own within-subject E1 scores on several
+subjects (A01 70.8% cross against 70.5% within). That looks wrong until you count trials: a
+LOSO fold trains on seven subjects, roughly 4,000 trials, against session T's 288. The extra
+data outweighs the handicap of never having seen the test subject. It is further evidence for
+finding 9 — E1's difficulty was always about data volume.
+
+EEGNet does not beat FBCSP everywhere: it loses on A02 (−0.9) and A07 (−2.4). The two methods
+disagree most on the subjects where both are near chance.
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

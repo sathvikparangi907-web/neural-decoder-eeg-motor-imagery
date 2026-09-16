@@ -1,0 +1,11 @@
+# generated scratch — regenerable with the pdftoppm commands in review2/HANDOFF.md
+review2/_qa-renders/
+
+# raw dataset and cached tensors — large, downloaded by phase3/data.py
+data/
+cache/
+
+node_modules/
+__pycache__/
+*.pyc
+desktop.ini

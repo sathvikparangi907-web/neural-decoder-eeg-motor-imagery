@@ -43,10 +43,17 @@ class FBCSP:
         # point the reference justifies.
         self.k = k
 
-    def _cov(self, X, lo, hi):
-        """Trace-normalised per-trial covariance inside one sub-band: (n, ch, ch)."""
+    def _cov(self, X, lo, hi, chunk=256):
+        """Trace-normalised per-trial covariance inside one sub-band: (n, ch, ch).
+
+        Filtered in chunks. A LOSO training split is around 4,000 trials, and
+        promoting all of them to float64 in one call costs ~600 MB before
+        covariances() takes its own copy; the covariances themselves are 15 MB.
+        """
         b, a = butter(4, [lo / (FS / 2), hi / (FS / 2)], btype="band")
-        C = covariances(filtfilt(b, a, np.asarray(X, dtype=np.float64), axis=-1))
+        C = np.concatenate([
+            covariances(filtfilt(b, a, np.asarray(X[i:i + chunk], dtype=np.float64), axis=-1))
+            for i in range(0, len(X), chunk)])
         return C / np.trace(C, axis1=1, axis2=2)[:, None, None]
 
     def _features(self, X):

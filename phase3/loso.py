@@ -120,15 +120,30 @@ def run(names=("FBCSP", *MODELS), seeds=SEEDS, align=True, out="e2_loso.csv"):
 
 
 def write(rows, name="e2_loso.csv"):
+    """Merge this run's rows into the results file, keeping other models' rows.
+
+    Runs happen one model at a time, over hours. Truncating the file would throw
+    away every model measured before this one, so rows for the models in this run
+    are replaced and everything else is carried through.
+    """
     RESULTS.mkdir(exist_ok=True)
     path = RESULTS / name
     keys = [k for k in rows[0] if k != "confusion"]
+
+    kept = []
+    if path.exists():
+        import csv
+        with open(path, encoding="utf-8") as fh:
+            replacing = {r["model"] for r in rows}
+            kept = [r for r in csv.DictReader(fh) if r["model"] not in replacing]
+
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(",".join(keys) + ",confusion\n")
-        for r in rows:
+        for r in kept + rows:
             fh.write(",".join(str(r[k]) for k in keys) +
                      ',"' + str(r["confusion"]) + '"\n')
-    print(f"wrote {len(rows)} rows to {path}")
+    print(f"wrote {len(rows)} rows to {path}"
+          + (f", keeping {len(kept)} from earlier runs" if kept else ""))
 
 
 if __name__ == "__main__":

@@ -52,12 +52,18 @@ def fetch(name):
     return path
 
 
-def load_session(subject, session):
+def load_session(subject, session, window=WINDOW):
     """One session of one subject.
 
-    Returns X (trials, 22, 875) in microvolts, y in 0..3, and a boolean mask
+    Returns X (trials, 22, samples) in microvolts, y in 0..3, and a boolean mask
     marking trials that fail the artefact check.
+
+    window is in seconds relative to the cue, and defaults to the analysis window
+    of section 8.3. The exploratory ERD analysis overrides it, because measuring
+    event-related desynchronisation needs a pre-cue baseline and the analysis
+    window deliberately starts after the cue. Only the default is cached.
     """
+    start, stop = (int((CUE + edge) * FS) for edge in window)
     mat = sio.loadmat(fetch(f"A{subject:02d}{session}"), struct_as_record=False, squeeze_me=True)
     b, a = butter(4, [BAND[0] / (FS / 2), BAND[1] / (FS / 2)], btype="band")
 
@@ -71,9 +77,9 @@ def load_session(subject, session):
         # trials they land in as artefacts rather than silently keeping them.
         signal = filtfilt(b, a, np.nan_to_num(raw), axis=0)
         for onset, label in zip(np.atleast_1d(run.trial).astype(int), np.atleast_1d(run.y).astype(int)):
-            trials.append(signal[onset + START:onset + STOP].T)
+            trials.append(signal[onset + start:onset + stop].T)
             labels.append(label - 1)
-            dirty.append(bad[onset + START:onset + STOP].any())
+            dirty.append(bad[onset + start:onset + stop].any())
 
     X = np.asarray(trials, dtype=np.float32)
     y = np.asarray(labels, dtype=np.int64)

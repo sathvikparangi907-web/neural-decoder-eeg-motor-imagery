@@ -439,6 +439,8 @@ A07 34.9% against EEGNet's 40.8% and ATCNet's 43.4%, A09 52.1% against 63.0%, A0
 against 44.6%. It is not uniformly weaker — it fails to generalise on the subjects where the
 baselines still manage something.
 
+**Established below (finding 12): it is neither — it is transfer.** Superseded text follows.
+
 **Not yet established: whether this is the architecture or the training.** The obvious next
 test is E1 for HCT-Net — if it also underperforms within subject, the architecture is simply
 weaker than its parts; if it performs well within subject and poorly across, the problem is
@@ -448,6 +450,76 @@ failure. That test is running.
 Related open question, and the reason §19.1 listed E5: the encoder depth of 2 was chosen on a
 budget argument (§11.6), not measured. It is possible that 2 layers underfits and that the
 budget reasoning, while sound about parameter count, picked the wrong side of the trade.
+
+---
+
+## Finding 12 — HCT-Net is the *best-transferring-worst* model: 2nd within subject, largest drop
+
+The discriminating test came back and it is not the architecture being weak. HCT-Net within
+subject scores **73.2%** — second of six, beating EEGNet by 7.3 points, CTNet by 9.0 and
+ATCNet by 10.4, behind only EEGConformer.
+
+| model | within subject | cross subject | drop | parameters |
+|---|---|---|---|---|
+| EEGConformer | 77.3% | *pending* | — | 697,412 |
+| **HCT-Net** | **73.2%** | **46.9%** | **−26.3** | 20,996 |
+| EEGNet | 65.9% | 51.2% | −14.8 | 3,188 |
+| FBCSP | 64.7% | 44.2% | −20.5 | — |
+| CTNet | 64.2% | *pending* | — | 152,364 |
+| ATCNet | 62.8% | 52.4% | −10.4 | 113,732 |
+
+**The model built to close the cross-subject gap has the largest cross-subject gap of
+anything tested — 26.3 points, exceeding even the 23.88 that CTNet reports and that this
+project was written to attack.**
+
+So the proposed architecture works. It is a good within-subject decoder. What it does *not*
+do is the one thing it was designed for, and it fails at it harder than the baselines it was
+meant to improve on.
+
+### The pattern across all four models is the project's own thesis, turned on itself
+
+Rank the models by within-subject accuracy and by their drop, and the two orderings are close
+to inverse: HCT-Net (73.2%, −26.3), FBCSP (64.7%, −20.5), EEGNet (65.9%, −14.8), ATCNet
+(62.8%, −10.4). **The better a model decodes a subject it has seen, the worse it transfers to
+one it has not.**
+
+§4 argues exactly this — that models learn structure specific to the training subjects, and
+that more capable models learn more of it. The project advanced that as the explanation for
+*other* people's results. It now holds for our own proposed model, measured under a single
+protocol, which is stronger evidence for §4's mechanism than anything quoted from the
+literature.
+
+Note it is not simply parameter count: ATCNet has 5.4× HCT-Net's parameters and the smallest
+drop. It tracks *within-subject skill*, not size. Whatever capacity ATCNet spends, it is not
+spending it on the individual.
+
+### What this does to the contribution
+
+The claim "a lightweight hybrid improves cross-subject accuracy" is dead — the experiment
+says the opposite and says it at p < 0.05. What survives is worth more than a small win would
+have been:
+
+1. **The first comparison of these architectures under one identical LOSO protocol** — the
+   stated contribution (i) in §1, unaffected by which model won.
+2. **A measured demonstration that within-subject skill and cross-subject transfer trade off
+   against each other**, on five models under one protocol. That is a result about the
+   problem, not about one architecture.
+3. **A negative result on a plausible design.** Euclidean alignment plus a small windowed
+   encoder is an obvious thing to try; it does not work, and the reason it does not work is
+   visible in the numbers.
+4. Euclidean alignment helps (+5.5 cross-subject, finding 11) but not enough to overcome what
+   the encoder learns about individuals.
+
+### What would be worth testing next, in order
+
+- **E5, attention depth**: the encoder depth of 2 was chosen on a budget argument, never
+  measured. If depth drives the within-subject gain that causes the transfer loss, 1 layer
+  may transfer better than 2. This is now the most informative single experiment left.
+- **E4, component study**: which part causes the drop — the encoder, the positional encoding,
+  or the windowing. V0–V5 as specified in §13.
+- The adversarial variant of §13.2, a subject classifier behind a gradient reversal layer,
+  moves from "optional extension" to the most promising remaining idea, because it attacks
+  precisely the failure these numbers identify.
 
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 

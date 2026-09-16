@@ -33,7 +33,7 @@ RESULTS = Path(__file__).resolve().parent.parent / "results"
 SEEDS = 3
 
 
-def fold_data(fold, cache={}):
+def fold_data(fold, align=True, cache={}):
     """Assemble one LOSO fold into arrays plus the index sets train() expects.
 
     Artefact-rejected trials are dropped from the TRAINING subjects only. The
@@ -53,7 +53,7 @@ def fold_data(fold, cache={}):
         Xs, ys, sess, rejected = cache[s]
         # Alignment is per subject and per session, and is unsupervised, so the
         # held-out subjects take part in their own alignment and nothing else.
-        X.append(align_subject(Xs, sess))
+        X.append(align_subject(Xs, sess) if align else Xs)
         y.append(ys)
         session.append(sess)
         keep.append(~rejected if s in train_subjects else np.ones(len(ys), bool))
@@ -82,16 +82,18 @@ def predict_fbcsp(X, y, train_idx, val_idx, test_idx):
     return FBCSP().fit(X[train_idx], y[train_idx]).predict(X[test_idx])
 
 
-def run(names=("FBCSP", *MODELS), seeds=SEEDS):
+def run(names=("FBCSP", *MODELS), seeds=SEEDS, align=True, out="e2_loso.csv"):
     folds = loso_folds()
     rows = []
     print(f"E2 leave-one-subject-out: {len(names)} model(s) x {len(folds)} folds x {seeds} seed(s)")
-    print("Alignment on. Artefact rejection applied to training subjects only.\n")
+    print(f"Euclidean alignment {'on' if align else 'OFF'}. "
+          f"Artefact rejection applied to training subjects only.\n")
 
     for name in names:
         accs = []
         for train_subjects, val_subject, test_subject in folds:
-            X, y, session, tr, va, te = fold_data((train_subjects, val_subject, test_subject))
+            X, y, session, tr, va, te = fold_data(
+                (train_subjects, val_subject, test_subject), align=align)
             for seed in range(seeds):
                 t0 = time.time()
                 if name == "FBCSP":
@@ -113,13 +115,13 @@ def run(names=("FBCSP", *MODELS), seeds=SEEDS):
         print(f"  {name:14s} mean {np.mean(accs):6.1%} +/- {np.std(accs):.1%} over "
               f"{len(accs)} run(s)\n")
 
-    write(rows)
+    write(rows, out)
     return rows
 
 
-def write(rows):
+def write(rows, name="e2_loso.csv"):
     RESULTS.mkdir(exist_ok=True)
-    path = RESULTS / "e2_loso.csv"
+    path = RESULTS / name
     keys = [k for k in rows[0] if k != "confusion"]
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(",".join(keys) + ",confusion\n")
@@ -135,4 +137,6 @@ if __name__ == "__main__":
     if "--seeds" in sys.argv:
         seeds = int(sys.argv[sys.argv.index("--seeds") + 1])
         args = [a for a in args if a != str(seeds)]
-    run(tuple(args) or ("FBCSP", *MODELS), seeds)
+    align = "--no-align" not in sys.argv
+    run(tuple(args) or ("FBCSP", *MODELS), seeds, align,
+        "e2_loso.csv" if align else "e2_loso_noalign.csv")

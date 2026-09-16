@@ -521,6 +521,54 @@ have been:
   moves from "optional extension" to the most promising remaining idea, because it attacks
   precisely the failure these numbers identify.
 
+---
+
+## Finding 13 — the trade-off held out of sample, and capacity buys almost nothing
+
+Finding 12 was written before EEGConformer had been run cross-subject, and it predicted that
+the best within-subject model should transfer worst. EEGConformer is the best within-subject
+model at 77.3%. It came back at **52.1% cross-subject — a 25.2-point drop, the second
+largest**, behind only HCT-Net.
+
+| model | within | cross | drop | parameters |
+|---|---|---|---|---|
+| EEGConformer | 77.3% | 52.1% | **−25.2** | 697,412 |
+| HCT-Net | 73.2% | 46.9% | **−26.3** | 20,996 |
+| EEGNet | 65.9% | 51.2% | −14.7 | 3,188 |
+| FBCSP | 64.7% | 44.2% | −20.5 | — |
+| ATCNet | 62.8% | 52.4% | −10.4 | 113,732 |
+
+Across the five models, within-subject accuracy against transfer drop gives **Pearson
+r = −0.848 (p = 0.070)**, Spearman −0.800. With five models that is not significant, and it
+should be reported as a strong effect on a small sample rather than as an established law —
+but it was a prediction that held on new data, not a pattern fitted after the fact.
+
+### Capacity buys almost nothing cross-subject
+
+The three best cross-subject models are within **1.2 points** of each other:
+
+| | cross-subject | parameters | |
+|---|---|---|---|
+| ATCNet | 52.4% | 113,732 | 36× EEGNet |
+| EEGConformer | 52.1% | 697,412 | **219× EEGNet** |
+| EEGNet | **51.2%** | **3,188** | — |
+
+**EEGConformer spends 219 times EEGNet's parameters to gain 0.9 points.** Correlation between
+log parameter count and cross-subject accuracy across the four deep models is +0.397 — weak,
+and driven entirely by EEGNet being unusually good for its size.
+
+This is contribution (iv) from §1 — accuracy measured against parameter count under a single
+protocol — and it lands more sharply than the proposed model winning would have. On this
+dataset, under this protocol, cross-subject accuracy is essentially flat in model size across
+two orders of magnitude, while within-subject accuracy is not. Whatever the extra capacity
+buys, it is subject-specific.
+
+It also reframes the §11.1 design constraint. Keeping the model under 50,000 parameters was
+justified on the grounds that a smaller model can memorise less about individuals. The size
+argument turns out to be right about transfer and irrelevant to cross-subject accuracy:
+EEGNet at 3,188 is within 1.2 points of models 36× and 219× its size, and HCT-Net at 20,996
+is worse than both. Size was never the binding constraint.
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

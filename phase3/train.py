@@ -154,7 +154,8 @@ def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True):
             accs.append(acc)
         results[name] = float(np.mean(accs))
         print(f"  {name:<12}" + "".join(cells)
-              + f"{results[name]:8.1%}{PUBLISHED[name]:10.1f}%")
+              + f"{results[name]:8.1%}"
+              + (f"{PUBLISHED[name]:10.1f}%" if name in PUBLISHED else f"{'--':>11}"))
 
     assert results, "no model was run"
     print(f"\n  accuracy and wall-clock seconds per run; chance is 25.0% over 4 classes")

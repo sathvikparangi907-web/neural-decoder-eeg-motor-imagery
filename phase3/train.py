@@ -30,6 +30,7 @@ WEIGHT_DECAY = 1e-4
 BATCH = 64
 MAX_EPOCHS = 500
 PATIENCE = 50               # epochs without a validation-accuracy improvement
+MIN_EPOCHS = 0              # floor before early stopping may fire; see FINDINGS.md finding 7
 SMOOTHING = 0.1
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -56,7 +57,8 @@ def predict(model, X, batch=BATCH, amp=False):
 
 
 def train(name, X, y, session, train_idx, val_idx, test_idx, align=True, seed=0,
-          epochs=MAX_EPOCHS, batch=BATCH, return_pred=False):
+          epochs=MAX_EPOCHS, batch=BATCH, return_pred=False, patience=PATIENCE,
+          min_epochs=MIN_EPOCHS):
     """Train one model on one split; return (test accuracy, best validation accuracy).
 
     With return_pred, also returns the per-trial test predictions, which section
@@ -86,7 +88,7 @@ def train(name, X, y, session, train_idx, val_idx, test_idx, align=True, seed=0,
     scaler = torch.amp.GradScaler(DEVICE, enabled=amp)
 
     best, best_state, stale = -1.0, None, 0
-    for _ in range(epochs):
+    for epoch in range(epochs):
         model.train()
         for b in torch.randperm(len(Xtr), device=DEVICE).split(batch):
             if len(b) < 2:
@@ -105,7 +107,7 @@ def train(name, X, y, session, train_idx, val_idx, test_idx, align=True, seed=0,
             best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
         else:
             stale += 1
-            if stale >= PATIENCE:
+            if stale >= patience and epoch >= min_epochs:
                 break
 
     model.load_state_dict(best_state)              # the best epoch, not the last one

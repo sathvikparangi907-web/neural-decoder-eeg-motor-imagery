@@ -17,7 +17,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from sklearn.model_selection import train_test_split
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from data import load_subject  # noqa: E402
@@ -103,6 +102,9 @@ def train(name, X, y, session, train_idx, val_idx, test_idx, align=True, seed=0,
             scaler.update()
         sched.step()
 
+        if not restore_best and patience > epochs:
+            continue                              # nothing consults validation; skip the pass
+
         acc = accuracy(model, Xval, yval, batch, amp)
         if acc > best:
             best, stale = acc, 0
@@ -140,11 +142,14 @@ def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True):
         for s in subjects:
             X, y, session, rejected = load_subject(s)
             X, y, session = X[~rejected], y[~rejected], session[~rejected]
-            t = np.flatnonzero(session == 0)
-            tr, val = train_test_split(t, test_size=0.2, stratify=y[t], random_state=0)
+            tr = np.flatnonzero(session == 0)
 
             t0 = time.perf_counter()
-            acc, _ = train(name, X, y, session, tr, val, np.flatnonzero(session == 1), align=align)
+            # val_idx is the training set itself: with restore_best off and patience
+            # beyond the epoch budget it is computed and never acted on, so no part
+            # of the fit depends on it and session E stays untouched.
+            acc, _ = train(name, X, y, session, tr, tr, np.flatnonzero(session == 1),
+                           align=align, patience=MAX_EPOCHS + 1, restore_best=False)
             cells.append(f"{acc:9.1%} {time.perf_counter() - t0:4.0f}s")
             accs.append(acc)
         results[name] = float(np.mean(accs))

@@ -23,17 +23,19 @@ from braindecode.models import ATCNet, CTNet, EEGConformer, EEGNet  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from data import N_EEG, N_SAMP  # noqa: E402
+from hctnet import HCTNet  # noqa: E402
 
 N_CLASSES = 4
 
 # braindecode 1.8.1 names all four the same way - n_chans / n_outputs / n_times -
 # so no per-model adapter is needed. EEGNetv4 is the pre-1.0 name for EEGNet and
 # is not what 1.8.1 exports.
-MODELS = {"EEGNet": EEGNet, "ATCNet": ATCNet, "EEGConformer": EEGConformer, "CTNet": CTNet}
+MODELS = {"EEGNet": EEGNet, "ATCNet": ATCNet, "EEGConformer": EEGConformer,
+          "CTNet": CTNet, "HCT-Net": HCTNet}
 
 # Table 15.1 quotes these for the *papers'* own input configurations, not for 875
 # samples, so they are a reference to print against and not something to assert.
-QUOTED = {"EEGNet": 2548, "ATCNet": 113732}
+QUOTED = {"EEGNet": 2548, "ATCNet": 113732, "HCT-Net": 20996}
 
 
 def build(name, n_chans=N_EEG, n_times=N_SAMP, n_outputs=N_CLASSES):

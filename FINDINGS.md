@@ -200,6 +200,36 @@ when session E is the test set. E2 and E3 validate against a **whole held-out su
 576 trials, roughly ten times the signal — so the headline cross-subject experiments do not
 inherit this weakness.
 
+## Finding 8 — the E1 failure tracks session shift, and alignment does not fix it
+
+E1 asks a model trained on session T to work on session E, recorded on a different day. How
+far apart those two days are varies a lot by subject, and it predicts the result:
+
+| | A01 | A02 | A03 | A04 | A05 | A06 | A07 | A08 | A09 |
+|---|---|---|---|---|---|---|---|---|---|
+| Session T↔E distance | 1.03 | 3.38 | 1.53 | 2.07 | **3.01** | 2.22 | 1.84 | 1.65 | 1.33 |
+| EEGNet E1 | 70.5% | 47.4% | 82.5% | 45.5% | **26.7%** | 35.6% | 57.3% | 64.5% | 69.5% |
+
+Log-Euclidean distance between the two sessions' mean covariances. **Correlation −0.77.**
+A01 has the closest pair of sessions and the best score; A05 and A02 the furthest and the
+worst.
+
+The part that matters: Euclidean alignment drives that distance from ~2 to about 3e-9 — the
+two sessions become second-order identical — **and the models still fail on exactly the
+subjects whose raw sessions were furthest apart.** So what separates two recording days for
+these subjects is not captured by the mean spatial covariance, which is the only thing EA
+normalises.
+
+This has a direct bearing on the project's thesis. Section 9.2 argues that EA removes the
+subject-specific mixing that blocks transfer. That is true of the second-order statistics by
+construction, and the cross-subject ablation shows it is worth +5 to +7 points — but this
+result says there is a residual, non-second-order component of recording-session identity
+that survives alignment intact. The same component is very likely present between subjects,
+not only between sessions, and it sets a ceiling on what alignment alone can deliver.
+
+Worth stating in the report as a limitation of the approach rather than discovering it in
+the cross-subject numbers and explaining it away afterwards.
+
 ## Finding 6 — silhouette is the wrong statistic for subject clustering
 
 Analysis 7 expects "clustering by subject before alignment". Silhouette score came out

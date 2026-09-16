@@ -169,5 +169,8 @@ def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True):
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if a != "--no-align"]
-    e1(subjects=tuple(int(a) for a in args) or E1_SUBJECTS,
+    subjects = tuple(int(a) for a in args if a.isdigit())
+    names = tuple(a for a in args if not a.isdigit())     # e.g. `py train.py HCT-Net 1 2 3`
+    e1(subjects=subjects or E1_SUBJECTS,
+       names=names or tuple(MODELS),
        align="--no-align" not in sys.argv)

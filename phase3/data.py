@@ -67,7 +67,7 @@ def load_session(subject, session, window=WINDOW):
     mat = sio.loadmat(fetch(f"A{subject:02d}{session}"), struct_as_record=False, squeeze_me=True)
     b, a = butter(4, [BAND[0] / (FS / 2), BAND[1] / (FS / 2)], btype="band")
 
-    trials, labels, dirty = [], [], []
+    trials, labels, dirty, skipped = [], [], [], 0
     for run in mat["data"]:
         if np.size(run.trial) == 0:
             continue                                  # first three runs are eye-movement recordings
@@ -77,9 +77,20 @@ def load_session(subject, session, window=WINDOW):
         # trials they land in as artefacts rather than silently keeping them.
         signal = filtfilt(b, a, np.nan_to_num(raw), axis=0)
         for onset, label in zip(np.atleast_1d(run.trial).astype(int), np.atleast_1d(run.y).astype(int)):
-            trials.append(signal[onset + start:onset + stop].T)
+            lo, hi = onset + start, onset + stop
+            if lo < 0 or hi > len(signal):
+                # Only reachable with a window wide enough to run off the recording;
+                # the default window always fits. Skipping keeps a negative index from
+                # silently wrapping to the end of the run.
+                skipped += 1
+                continue
+            trials.append(signal[lo:hi].T)
             labels.append(label - 1)
-            dirty.append(bad[onset + start:onset + stop].any())
+            dirty.append(bad[lo:hi].any())
+
+    if skipped:
+        print(f"  A{subject:02d}{session}: {skipped} trial(s) dropped, window {window} "
+              f"runs past the edge of the recording")
 
     X = np.asarray(trials, dtype=np.float32)
     y = np.asarray(labels, dtype=np.int64)

@@ -328,6 +328,46 @@ Worth re-checking once the deep models have run: if they recover the left/right 
 where FBCSP does not, that is an argument for learned spatial filters over fixed CSP, and it
 belongs in the report.
 
+## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
+
+The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO
+with and without Euclidean alignment, everything else identical:
+
+| fold | A01 | A02 | A03 | A04 | A05 | A06 | A07 | A08 | A09 | mean |
+|---|---|---|---|---|---|---|---|---|---|---|
+| aligned | 54.3% | 29.2% | 60.9% | 35.2% | 29.3% | 32.3% | 43.2% | 55.9% | 57.3% | **44.2%** |
+| no alignment | 45.7% | 27.8% | 60.6% | 37.8% | 28.0% | 33.0% | 27.6% | 35.8% | 52.4% | **38.7%** |
+| delta | +8.7 | +1.4 | +0.3 | **−2.6** | +1.4 | **−0.7** | +15.6 | +20.1 | +4.9 | **+5.5** |
+
+Alignment helps in seven of nine folds, and where it helps it can help a lot: +20.1 on A08,
++15.6 on A07. But it is **not uniform** — it costs 2.6 points on A04 and 0.7 on A06.
+
+**Wilcoxon signed-rank, paired across the nine subjects: W = 7.0, p = 0.0742. Not
+significant at 0.05.**
+
+This needs stating plainly rather than being buried. A 5.5-point mean improvement is a large
+effect for this problem, and the direction is consistent in 7 of 9 subjects — but with n = 9
+and two reversals, the test the project committed to in §12.8 does not clear its own
+threshold. §17's rule 3 requires reporting the uncorrected value, and this is it.
+
+Two things follow:
+
+1. **Nine subjects is a weak instrument, and that is a property of the dataset, not a
+   mistake.** With n = 9 the smallest p the Wilcoxon test can return is 0.0039, and that
+   requires all nine to move the same way. Any effect with two reversals is capped near 0.07
+   no matter how large it is. §8.6 anticipated that nine folds would support a mean and a
+   standard deviation but not strong per-fold claims; this is what that looks like in
+   practice. It is an argument for the future-scope multi-dataset evaluation, and against
+   over-claiming from IV-2a alone.
+2. **The claim has to be phrased as it was measured.** "Euclidean alignment improved
+   cross-subject accuracy by 5.5 points on average, in 7 of 9 subjects, p = 0.074" is
+   defensible. "Euclidean alignment significantly improves cross-subject accuracy" is not,
+   on this evidence.
+
+The same test will be run for each deep baseline and for the proposed model. If the deep
+models show the same direction, the combined picture is stronger than any single test — but
+each must still be reported with its own p-value.
+
 ---
 
 ## Environment note — the Kaggle assumption may not be needed

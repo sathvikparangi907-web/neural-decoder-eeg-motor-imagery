@@ -122,6 +122,22 @@ than single-channel power.
 
 ---
 
+## Finding 5 — silhouette is the wrong statistic for subject clustering
+
+Analysis 7 expects "clustering by subject before alignment". Silhouette score came out
+**negative before alignment** (−0.076 in 2-D, −0.040 in the full 22-D), which reads as "no
+subject structure" — the opposite of the premise the whole project rests on.
+
+Silhouette measures cluster *separation* and goes negative whenever clusters overlap, which
+nine real subjects do heavily. The measure that answers the actual question is
+nearest-subject-centroid recovery: **46.8% before alignment against 11.1% chance, falling to
+22.9% after**. Strong subject structure, substantially removed by Euclidean alignment.
+
+Both numbers are now reported. The silhouette is kept because it is what a reader would
+expect to see, and the recovery rate is kept because it is the one that is true.
+
+---
+
 ## M3 — baselines
 
 ### FBCSP + LDA reproduced: 64.6% against 67.8% published
@@ -136,7 +152,7 @@ Per subject, against Ang et al. (2012) on the same train-on-T, test-on-E split:
 A 3.2-point gap, at M3's "within ~3 points" criterion. The per-subject pattern matches the
 literature — A02 and A06 are the known poor performers in every published table.
 
-**Finding 5 — the cause was the feature budget, and the two obvious explanations were both
+**Finding 6 — the cause was the feature budget, and the two obvious explanations were both
 wrong.** The first implementation scored 61.6% and three candidate causes were measured
 rather than argued:
 
@@ -230,19 +246,35 @@ not only between sessions, and it sets a ceiling on what alignment alone can del
 Worth stating in the report as a limitation of the approach rather than discovering it in
 the cross-subject numbers and explaining it away afterwards.
 
-## Finding 6 — silhouette is the wrong statistic for subject clustering
+## Finding 9 — the validation holdout was the cause, and it was worth up to 30 points
 
-Analysis 7 expects "clustering by subject before alignment". Silhouette score came out
-**negative before alignment** (−0.076 in 2-D, −0.040 in the full 22-D), which reads as "no
-subject structure" — the opposite of the premise the whole project rests on.
+Resolution of the M3 blocker. E1 held back a stratified 20% of session T to early-stop on,
+leaving ~230 training trials. Removing that holdout and training on all 288 for a fixed,
+fully annealed 500-epoch run:
 
-Silhouette measures cluster *separation* and goes negative whenever clusters overlap, which
-nine real subjects do heavily. The measure that answers the actual question is
-nearest-subject-centroid recovery: **46.8% before alignment against 11.1% chance, falling to
-22.9% after**. Strong subject structure, substantially removed by Euclidean alignment.
+| EEGNet, E1 | A05 | A06 | A01 | A08 |
+|---|---|---|---|---|
+| 80/20 split, best checkpoint (§13 as written) | 26.7% | 35.6% | 70.5% | 65.2% |
+| 80/20 split, final annealed model | 31.6% | 33.7% | 68.4% | 69.5% |
+| **All 288 trials, final annealed model** | **56.6%** | **42.2%** | **74.3%** | **77.0%** |
 
-Both numbers are now reported. The silhouette is kept because it is what a reader would
-expect to see, and the recovery rate is kept because it is the one that is true.
+The middle row isolates the cause: taking the annealed model instead of the best checkpoint
+is worth almost nothing on its own. It is the **20% of training data** that mattered, and it
+mattered most on the subjects that were already weakest — A05 gains 29.9 points.
+
+Two conditions had to coincide. Session T is only 288 trials, so a fifth of it is expensive;
+and 58 validation trials quantise accuracy to 1.7% steps, which is too coarse for checkpoint
+selection to do better than latch onto an early noise peak. Finding 7 showed the second
+condition on its own is not fixable by training longer.
+
+**E1 now trains on all of session T with a fixed schedule.** Nothing is selected on test
+data: the epoch budget is fixed in advance and session E is touched once, to score. This is
+also what the reference implementations effectively do.
+
+**Section 13's early stopping is unchanged for E2 and E3**, where validation is a whole
+held-out subject — 576 trials rather than 58, and no training data is sacrificed to get it,
+since the validation subject is not one of the seven training subjects. The weakness was
+specific to the within-subject protocol.
 
 ---
 

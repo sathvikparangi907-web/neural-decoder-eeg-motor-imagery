@@ -45,9 +45,17 @@ phase3/
   fbcsp.py        FBCSP + LDA, the classical baseline                         (M3)
   models.py       EEGNet, ATCNet, EEGConformer, CTNet via braindecode         (M3)
   train.py        training loop and the within-subject experiment E1          (M3)
+  loso.py         leave-one-subject-out, experiment E2                        (M6)
+  stats.py        Wilcoxon signed-rank with Holm-Bonferroni correction        (M7)
+  report.py       result tables, confusion matrices, accuracy against size    (M8)
   eda/            exploratory figures
+results/          per-fold metrics as CSV, one row per fold per seed
 review2/          the Phase 2 deliverables and the scripts that build them
 ```
+
+The proposed model is deliberately absent. §19.1 fixes three ordering rules, and the second
+says it is not written until at least two baselines reproduce their published within-subject
+accuracy. That has not happened yet, so it has not been written.
 
 Two deliberate departures from §18 of the solution design, both open to reversal:
 

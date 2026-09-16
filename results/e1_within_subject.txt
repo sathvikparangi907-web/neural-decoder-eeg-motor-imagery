@@ -1,0 +1,11 @@
+E1 within-subject: train session T (stratified 80/20 train/val), test session E
+4 models x 9 subjects on cuda, Euclidean alignment on, max 500 epochs, patience 50
+
+model                      A01             A02             A03             A04             A05             A06             A07             A08             A09    mean  published
+  EEGNet          74.3%  123s    49.3%  116s    86.0%  122s    52.8%  139s    56.6%  133s    41.1%  126s    80.2%   55s    76.6%   49s    76.5%   38s   65.9%      71.5%
+  ATCNet          71.2%  203s    52.9%  241s    87.0%  244s    49.3%  274s    43.4%  291s    39.6%  286s    67.0%  291s    81.9%  284s    72.8%  221s   62.8%      81.1%
+  EEGConformer    89.9%  380s    63.1%  209s    90.9%  302s    69.2%  342s    67.4%  344s    57.4%  339s    90.3%  341s    87.2%  332s    80.3%  262s   77.3%      78.7%
+  CTNet           70.1%  284s    49.6%  244s    89.1%  239s    52.4%  238s    50.3%  239s    35.9%  232s    71.2%  237s    83.3%  231s    75.6%  182s   64.2%      82.5%
+
+  accuracy and wall-clock seconds per run; chance is 25.0% over 4 classes
+PASS  every model is well clear of chance; published means are different protocols, for orientation only

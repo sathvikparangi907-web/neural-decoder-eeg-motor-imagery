@@ -386,6 +386,25 @@ finding 9 — E1's difficulty was always about data volume.
 EEGNet does not beat FBCSP everywhere: it loses on A02 (−0.9) and A07 (−2.4). The two methods
 disagree most on the subjects where both are near chance.
 
+### ATCNet under LOSO: 52.4% ± 16.5% — 36× the parameters for 1.2 points
+
+| | mean | std | κ | parameters |
+|---|---|---|---|---|
+| FBCSP | 44.2% | 12.3 | 0.256 | — |
+| EEGNet | 51.2% | 16.1 | 0.349 | 3,188 |
+| ATCNet | 52.4% | 16.5 | 0.365 | 113,732 |
+
+ATCNet is the largest baseline and beats EEGNet cross-subject by **1.2 points while carrying
+36 times as many parameters**. Under the within-subject protocol ATCNet was *behind* EEGNet
+(62.8% against 65.9%).
+
+This is the project's thesis appearing in its own measurements before the proposed model has
+run: on a 5,184-trial dataset, capacity is close to free of return cross-subject. §4 argues
+that extra capacity is spent fitting subject-specific structure that does not transfer, and
+a 36× parameter increase buying 1.2 points is what that looks like. It also sets the bar
+HCT-Net has to clear — at 20,996 parameters it sits between the two, so the interesting
+question is not whether it wins outright but where it lands on accuracy per parameter.
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

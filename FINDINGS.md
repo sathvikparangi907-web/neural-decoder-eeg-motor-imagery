@@ -419,17 +419,23 @@ statistically significant.
 | **HCT-Net** | 72.7 | 28.3 | 70.1 | 34.7 | 34.4 | 33.0 | 34.9 | 62.0 | 52.1 | **46.9%** | 0.292 | 20,996 |
 | FBCSP | 54.3 | 29.2 | 60.9 | 35.2 | 29.3 | 32.3 | 43.2 | 55.9 | 57.3 | **44.2%** | 0.256 | — |
 
-Wilcoxon signed-rank paired across the nine subjects, Holm-corrected over the three
-comparisons:
+Wilcoxon signed-rank paired across the nine subjects, Holm-corrected across **all five
+baselines** as §17 rule 3 requires. (An earlier version of this section corrected across only
+three, because CTNet and EEGConformer had not yet run cross-subject. The larger family is
+stricter and changes two verdicts — the corrected figures below are the ones that stand.)
 
-| against | mean difference | p | p (Holm) | |
+| against | mean difference | p | p (Holm over 5) | |
 |---|---|---|---|---|
-| ATCNet | **−5.5** | 0.0039 | 0.0117 | significantly worse |
-| EEGNet | **−4.3** | 0.0234 | 0.0469 | significantly worse |
+| ATCNet | **−5.5** | 0.0039 | **0.0195** | significantly worse |
+| EEGConformer | −5.2 | 0.0195 | 0.0781 | worse, not significant after correction |
+| EEGNet | −4.3 | 0.0234 | 0.0781 | worse, not significant after correction |
+| CTNet | −3.3 | 0.2109 | 0.4219 | not significant |
 | FBCSP | +2.7 | 0.4961 | 0.4961 | not significant |
 
-**The proposed model is significantly worse than both deep baselines and not significantly
-better than the classical one, while carrying 6.6× EEGNet's parameters.** §1's claim that no
+**The proposed model is significantly worse than ATCNet, worse than EEGConformer and EEGNet
+at uncorrected p < 0.05 but not after correction, and not better than the classical baseline
+— while carrying 6.6× EEGNet's parameters.** It is last but one of six. Both corrected and
+uncorrected values are reported, per §17 rule 3. §1's claim that no
 performance claim would be made before the experiments ran is the reason this is reportable
 rather than embarrassing — but it has to be stated exactly this plainly in the report.
 
@@ -538,10 +544,19 @@ largest**, behind only HCT-Net.
 | FBCSP | 64.7% | 44.2% | −20.5 | — |
 | ATCNet | 62.8% | 52.4% | −10.4 | 113,732 |
 
-Across the five models, within-subject accuracy against transfer drop gives **Pearson
-r = −0.848 (p = 0.070)**, Spearman −0.800. With five models that is not significant, and it
-should be reported as a strong effect on a small sample rather than as an established law —
-but it was a prediction that held on new data, not a pattern fitted after the fact.
+Across all six models — E2 is now complete — within-subject accuracy against transfer drop
+gives **Pearson r = −0.864 (p = 0.026)** and **Spearman r = −0.886 (p = 0.019)**. With the
+fifth and sixth models added the relationship is **significant at 0.05**, and it was a
+prediction registered before EEGConformer and CTNet ran, not a pattern fitted afterwards.
+
+| model | within | cross | drop | parameters |
+|---|---|---|---|---|
+| ATCNet | 62.8% | **52.4%** | −10.4 | 113,732 |
+| EEGConformer | 77.3% | 52.1% | −25.2 | 697,412 |
+| EEGNet | 65.9% | 51.2% | −14.7 | 3,188 |
+| CTNet | 64.2% | 50.2% | −14.0 | 152,364 |
+| HCT-Net | 73.2% | 46.9% | −26.3 | 20,996 |
+| FBCSP | 64.7% | 44.2% | −20.5 | — |
 
 ### Capacity buys almost nothing cross-subject
 
@@ -553,7 +568,9 @@ The three best cross-subject models are within **1.2 points** of each other:
 | EEGConformer | 52.1% | 697,412 | **219× EEGNet** |
 | EEGNet | **51.2%** | **3,188** | — |
 
-**EEGConformer spends 219 times EEGNet's parameters to gain 0.9 points.** Correlation between
+**EEGConformer spends 219 times EEGNet's parameters to gain 0.9 points.** With E2 complete,
+the top four cross-subject models fall within **2.2 points** of each other (52.4% to 50.2%)
+while spanning 3,188 to 697,412 parameters. Correlation between
 log parameter count and cross-subject accuracy across the four deep models is +0.397 — weak,
 and driven entirely by EEGNet being unusually good for its size.
 

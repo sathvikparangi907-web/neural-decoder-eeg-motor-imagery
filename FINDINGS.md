@@ -278,6 +278,58 @@ specific to the within-subject protocol.
 
 ---
 
+## M6 — cross-subject evaluation (E2, in progress)
+
+### FBCSP under LOSO: 44.2% ± 12.3%
+
+First cross-subject result, classical baseline, nine folds, alignment on, rejection applied
+to training subjects only.
+
+| A01 | A02 | A03 | A04 | A05 | A06 | A07 | A08 | A09 | mean | κ |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 54.3% | 29.2% | 60.9% | 35.2% | 29.3% | 32.3% | 43.2% | 55.9% | 57.3% | **44.2%** | 0.256 |
+
+**Against 64.6% within-subject, that is a 20.4-point drop.** The project is built on CTNet's
+reported 23.88-point drop for a deep model; this shows the same phenomenon, at a similar
+magnitude, for a classical method on our own pipeline under one protocol. It is evidence
+that the gap is a property of the problem rather than of any one architecture.
+
+The spread matters as much as the mean: 29.2% to 60.9% across folds, standard deviation
+12.3. Three subjects (A02, A05, A06) land within 5 points of the 25% chance level. These are
+the same subjects that are weakest within subject and that have the largest session shift
+(finding 8) — subject difficulty is consistent across every protocol tried so far.
+
+## Finding 10 — cross-subject, left/right is as hard as feet/tongue
+
+Pooled confusion over all nine folds, row-normalised:
+
+| true \ predicted | left | right | feet | tongue | recall |
+|---|---|---|---|---|---|
+| **left** | 50.0% | 27.2% | 13.3% | 9.6% | 50.0% |
+| **right** | 24.7% | 45.0% | 19.3% | 11.0% | 45.0% |
+| **feet** | 19.0% | 18.8% | 37.3% | 24.9% | 37.3% |
+| **tongue** | 18.8% | 14.4% | 22.2% | 44.5% | 44.5% |
+
+No collapse onto one class — predictions are near-uniform at 28.1 / 26.4 / 23.0 / 22.5%, so
+the classifier is not simply guessing a favourite.
+
+§8.5 predicts that feet and tongue are the hard pair, because both produce midline activity,
+while left and right hand are separated by hemisphere. Feet does have the worst recall at
+37.3%, and its largest confusion is indeed tongue — so far as predicted.
+
+But **left↔right confusion is 51.9% against feet↔tongue's 47.1%**: cross-subject, the hand
+pair is no easier than the midline pair. The lateralisation that makes left-versus-right the
+easy discrimination within a subject does not survive the move to an unseen subject. That is
+consistent with finding 4, where the ERD lateralisation was visible only as a class contrast
+and not in absolute per-channel power, and it suggests the transferable signal is a spatial
+*pattern* across electrodes rather than which hemisphere is more active.
+
+Worth re-checking once the deep models have run: if they recover the left/right advantage
+where FBCSP does not, that is an argument for learned spatial filters over fixed CSP, and it
+belongs in the report.
+
+---
+
 ## Environment note — the Kaggle assumption may not be needed
 
 The development machine has an RTX 4050 (6 GB) with a working CUDA build

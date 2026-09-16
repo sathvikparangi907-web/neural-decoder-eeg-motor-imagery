@@ -48,9 +48,19 @@ def accuracy(model, X, y, batch=BATCH, amp=False):
     return correct / len(X)
 
 
-def train(name, X, y, session, train_idx, val_idx, test_idx,
-          align=True, seed=0, epochs=MAX_EPOCHS, batch=BATCH):
+@torch.no_grad()
+def predict(model, X, batch=BATCH, amp=False):
+    model.eval()
+    out = [model(X[b]).argmax(1) for b in torch.arange(len(X), device=X.device).split(batch)]
+    return torch.cat(out).cpu().numpy()
+
+
+def train(name, X, y, session, train_idx, val_idx, test_idx, align=True, seed=0,
+          epochs=MAX_EPOCHS, batch=BATCH, return_pred=False):
     """Train one model on one split; return (test accuracy, best validation accuracy).
+
+    With return_pred, also returns the per-trial test predictions, which section
+    12.7 needs for the per-fold confusion matrices.
 
     Preprocessing follows Table 9.1's order: Euclidean alignment (unsupervised and
     per session, so held-out trials may take part), then standardisation from the
@@ -99,6 +109,9 @@ def train(name, X, y, session, train_idx, val_idx, test_idx,
                 break
 
     model.load_state_dict(best_state)              # the best epoch, not the last one
+    if return_pred:
+        pred = predict(model, Xte, batch, amp)
+        return float((pred == y[test_idx]).mean()), best, pred
     return accuracy(model, Xte, yte, batch, amp), best
 
 

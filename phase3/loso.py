@@ -48,12 +48,19 @@ def fold_data(fold, align=True, cache={}):
     train_subjects, val_subject, test_subject = fold
     X, y, session, keep, subject = [], [], [], [], []
     for s in [*train_subjects, val_subject, test_subject]:
-        if s not in cache:
-            cache[s] = load_subject(s)
-        Xs, ys, sess, rejected = cache[s]
-        # Alignment is per subject and per session, and is unsupervised, so the
-        # held-out subjects take part in their own alignment and nothing else.
-        X.append(align_subject(Xs, sess) if align else Xs)
+        # Cache the ALIGNED arrays, not the raw ones. Aligning per fold allocated a
+        # fresh 400 MB every time on top of the 400 MB cache and the 400 MB
+        # concatenation, which is what ran this machine out of memory when two
+        # experiments overlapped. Alignment is per subject, so the result is
+        # identical across folds and there is no reason to recompute it.
+        if (s, align) not in cache:
+            Xs, ys, sess, rejected = load_subject(s)
+            cache[(s, align)] = (align_subject(Xs, sess) if align else Xs,
+                                 ys, sess, rejected)
+        Xs, ys, sess, rejected = cache[(s, align)]
+        # Alignment is unsupervised, so the held-out subjects take part in their
+        # own alignment and contribute nothing else.
+        X.append(Xs)
         y.append(ys)
         session.append(sess)
         keep.append(~rejected if s in train_subjects else np.ones(len(ys), bool))

@@ -12,6 +12,8 @@ import sys
 import warnings
 from pathlib import Path
 
+from functools import partial
+
 import torch
 
 # Two warnings from inside braindecode's own code that fire on every run and mean
@@ -33,14 +35,19 @@ N_CLASSES = 4
 MODELS = {"EEGNet": EEGNet, "ATCNet": ATCNet, "EEGConformer": EEGConformer,
           "CTNet": CTNet, "HCT-Net": HCTNet}
 
+# Experiment E5, attention depth. The depth of 2 was chosen on the budget argument
+# in section 11.6 and never measured; these are the comparisons that measure it.
+# Named separately rather than added to MODELS so a default run does not include them.
+VARIANTS = {f"HCT-Net-L{n}": partial(HCTNet, layers=n) for n in (1, 6)}
+
 # Table 15.1 quotes these for the *papers'* own input configurations, not for 875
 # samples, so they are a reference to print against and not something to assert.
 QUOTED = {"EEGNet": 2548, "ATCNet": 113732, "HCT-Net": 20996}
 
 
 def build(name, n_chans=N_EEG, n_times=N_SAMP, n_outputs=N_CLASSES):
-    """One braindecode model, freshly initialised."""
-    return MODELS[name](n_chans=n_chans, n_outputs=n_outputs, n_times=n_times)
+    """One model, freshly initialised. Accepts a baseline or an E5 depth variant."""
+    return {**MODELS, **VARIANTS}[name](n_chans=n_chans, n_outputs=n_outputs, n_times=n_times)
 
 
 def n_params(model):

@@ -37,7 +37,7 @@ BUDGET = 20_996                # Table 11.3
 
 
 class HCTNet(nn.Module):
-    def __init__(self, n_chans=N_EEG, n_outputs=4, n_times=N_SAMP):
+    def __init__(self, n_chans=N_EEG, n_outputs=4, n_times=N_SAMP, layers=LAYERS):
         super().__init__()
         # Block 1-8: EEGNet-style convolutional front end, no bias anywhere, since
         # every convolution is followed by batch normalisation.
@@ -63,7 +63,7 @@ class HCTNet(nn.Module):
         layer = nn.TransformerEncoderLayer(
             D_MODEL, HEADS, dim_feedforward=FF, dropout=DROPOUT,
             activation="gelu", batch_first=True)
-        self.encoder = nn.TransformerEncoder(layer, LAYERS)
+        self.encoder = nn.TransformerEncoder(layer, layers)
 
         self.classifier = nn.Linear(D_MODEL, n_outputs)
         nn.init.trunc_normal_(self.positional, std=0.02)
@@ -125,6 +125,11 @@ def _check():
         assert got == expected[name], f"{name}: {got:,} against Table 11.3's {expected[name]:,}"
         print(f"  {name:<14} {got:>7,}  matches Table 11.3")
     assert total == BUDGET, f"total {total:,} against Table 11.3's {BUDGET:,}"
+    # Section 11.6's budget argument, checked rather than asserted: six layers is
+    # what CTNet uses and is the comparison E5 makes.
+    six = sum(p.numel() for p in HCTNet(layers=6).parameters() if p.requires_grad)
+    print(f"             6 layers would be {six:,}, "
+          f"{'over' if six > 50_000 else 'inside'} the 50,000 budget of Table 11.1")
     print(f"parameters   OK  {total:,} exactly, {100 * total / 113732:.1f}% of ATCNet")
 
     # Max-norm: inflate the spatial filters and confirm the forward pass pulls them back.

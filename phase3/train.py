@@ -58,7 +58,7 @@ def predict(model, X, batch=BATCH, amp=False):
 
 def train(name, X, y, session, train_idx, val_idx, test_idx, align=True, seed=0,
           epochs=MAX_EPOCHS, batch=BATCH, return_pred=False, patience=PATIENCE,
-          min_epochs=MIN_EPOCHS):
+          min_epochs=MIN_EPOCHS, augment_train=True, restore_best=True):
     """Train one model on one split; return (test accuracy, best validation accuracy).
 
     With return_pred, also returns the per-trial test predictions, which section
@@ -73,7 +73,9 @@ def train(name, X, y, session, train_idx, val_idx, test_idx, align=True, seed=0,
     if align:
         X = align_subject(X, session)
     Xtr, Xval, Xte = standardise(X[train_idx], X[val_idx], X[test_idx])
-    Xtr, ytr = augment(Xtr, y[train_idx], rng=np.random.default_rng(seed))
+    ytr = y[train_idx]
+    if augment_train:
+        Xtr, ytr = augment(Xtr, ytr, rng=np.random.default_rng(seed))
 
     f = lambda a: torch.as_tensor(a, dtype=torch.float32, device=DEVICE)
     i = lambda a: torch.as_tensor(a, dtype=torch.int64, device=DEVICE)
@@ -110,7 +112,8 @@ def train(name, X, y, session, train_idx, val_idx, test_idx, align=True, seed=0,
             if stale >= patience and epoch >= min_epochs:
                 break
 
-    model.load_state_dict(best_state)              # the best epoch, not the last one
+    if restore_best:
+        model.load_state_dict(best_state)          # the best epoch, not the last one
     if return_pred:
         pred = predict(model, Xte, batch, amp)
         return float((pred == y[test_idx]).mean()), best, pred

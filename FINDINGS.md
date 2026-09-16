@@ -155,6 +155,51 @@ Worth noting that the window result cuts against an intuition the project relies
 2.5–4.0 s tail is *not* dead weight for a variance-based classifier, even though the ERD
 analysis shows mu rebounding from about 1.3 s.
 
+### The deep baselines do not reproduce — M3 not met
+
+E1, within-subject, train on session T and test on session E, all nine subjects, alignment
+on, §13 hyperparameters:
+
+| | EEGNet | ATCNet | EEGConformer | CTNet |
+|---|---|---|---|---|
+| Ours | 55.5% | 60.1% | **74.4%** | 52.9% |
+| Published | 71.50% | 81.10% | 78.66% | 82.52% |
+| Gap | −16.0 | −21.0 | −4.3 | −29.6 |
+
+Only EEGConformer is close. **M3's criterion — all five baselines within ~3 points — is not
+met, and ordering rule 2 therefore blocks writing HCT-Net.** That rule is being respected:
+the proposed model has not been written.
+
+The failure is not uniform across subjects. On the strong subjects the gap is small (A01
+70.5%, A03 82.5% for EEGNet); on the weak ones it collapses (A05 26.7%, barely above the
+25% chance level). FBCSP scores 50.7% on that same subject and split, so the subject is
+decodable and the deep pipeline is what fails on it.
+
+## Finding 7 — three plausible causes for that, all refuted by measurement
+
+Recorded because each was convincing enough to act on, and acting on any of them would have
+been wasted work.
+
+| Hypothesis | Test | Result |
+|---|---|---|
+| Early stopping fires too soon — A05's run ended at epoch 65 of 500 | 200-epoch floor before stopping may fire | **Refuted.** Byte-identical accuracy. Training longer does not help because the restored checkpoint is still the early one, and validation accuracy never beats it even by epoch 200 |
+| Augmentation is injecting bad trials — synthetic trials are discontinuous at segment joins | `augment_train=False` | **Refuted.** Worse or unchanged on 5 of 6 cases. A01 EEGNet drops 70.5% → 61.5% |
+| Euclidean alignment is harmful within subject, since published pipelines do not use it | `align=False` | **Refuted.** Alignment is worth +5.2 to +7.2 points on three of four models. Removing it *and* augmentation is worst of all |
+
+That last row is worth keeping for its own sake: it is the first direct evidence for the
+project's central claim, measured under our own pipeline rather than quoted.
+
+The pattern that survives all three: the gap tracks subject difficulty, and the runs that
+score worst are the ones that trained for the fewest epochs. With 58 validation trials,
+accuracy is quantised to 1.7% steps, so checkpoint selection has very little signal to work
+with — and because training halts around epoch 65 of a 500-epoch cosine schedule, the
+selected weights are also weights whose learning rate never annealed.
+
+Note this is specific to E1. E1 validates against session T, which is all that is available
+when session E is the test set. E2 and E3 validate against a **whole held-out subject** —
+576 trials, roughly ten times the signal — so the headline cross-subject experiments do not
+inherit this weakness.
+
 ## Finding 6 — silhouette is the wrong statistic for subject clustering
 
 Analysis 7 expects "clustering by subject before alignment". Silhouette score came out

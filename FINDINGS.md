@@ -405,6 +405,50 @@ a 36× parameter increase buying 1.2 points is what that looks like. It also set
 HCT-Net has to clear — at 20,996 parameters it sits between the two, so the interesting
 question is not whether it wins outright but where it lands on accuracy per parameter.
 
+---
+
+## M6/E3 — the proposed model, and it loses
+
+**HCT-Net under LOSO: 46.9% ± 16.5%.** Below both deep baselines, and the gap is
+statistically significant.
+
+| | A01 | A02 | A03 | A04 | A05 | A06 | A07 | A08 | A09 | mean | κ | params |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ATCNet | 75.3 | 30.9 | 78.8 | 42.5 | 37.8 | 38.7 | 43.4 | 62.7 | 61.5 | **52.4%** | 0.365 | 113,732 |
+| EEGNet | 70.8 | 28.3 | 73.8 | 35.9 | 37.8 | 44.6 | 40.8 | 65.5 | 63.0 | **51.2%** | 0.349 | 3,188 |
+| **HCT-Net** | 72.7 | 28.3 | 70.1 | 34.7 | 34.4 | 33.0 | 34.9 | 62.0 | 52.1 | **46.9%** | 0.292 | 20,996 |
+| FBCSP | 54.3 | 29.2 | 60.9 | 35.2 | 29.3 | 32.3 | 43.2 | 55.9 | 57.3 | **44.2%** | 0.256 | — |
+
+Wilcoxon signed-rank paired across the nine subjects, Holm-corrected over the three
+comparisons:
+
+| against | mean difference | p | p (Holm) | |
+|---|---|---|---|---|
+| ATCNet | **−5.5** | 0.0039 | 0.0117 | significantly worse |
+| EEGNet | **−4.3** | 0.0234 | 0.0469 | significantly worse |
+| FBCSP | +2.7 | 0.4961 | 0.4961 | not significant |
+
+**The proposed model is significantly worse than both deep baselines and not significantly
+better than the classical one, while carrying 6.6× EEGNet's parameters.** §1's claim that no
+performance claim would be made before the experiments ran is the reason this is reportable
+rather than embarrassing — but it has to be stated exactly this plainly in the report.
+
+Where it loses is specific. HCT-Net is competitive on the strong subjects (A01 72.7% against
+EEGNet's 70.8%, A08 62.0% against 65.5%) and collapses on the middle of the distribution:
+A07 34.9% against EEGNet's 40.8% and ATCNet's 43.4%, A09 52.1% against 63.0%, A06 33.0%
+against 44.6%. It is not uniformly weaker — it fails to generalise on the subjects where the
+baselines still manage something.
+
+**Not yet established: whether this is the architecture or the training.** The obvious next
+test is E1 for HCT-Net — if it also underperforms within subject, the architecture is simply
+weaker than its parts; if it performs well within subject and poorly across, the problem is
+transfer, which is what the design was meant to address and would be the more interesting
+failure. That test is running.
+
+Related open question, and the reason §19.1 listed E5: the encoder depth of 2 was chosen on a
+budget argument (§11.6), not measured. It is possible that 2 layers underfits and that the
+budget reasoning, while sound about parameter count, picked the wrong side of the trade.
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

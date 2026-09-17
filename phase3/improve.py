@@ -29,9 +29,6 @@ from train import (BATCH, DEVICE, LR, MAX_EPOCHS, PATIENCE, SMOOTHING,  # noqa: 
 OUT = "e9_improve.csv"
 
 # Each step is the previous configuration plus one change, so a gain is
-# attributable to the change on its row. C6 is applied last and kept only if
-# validation says it helps, since it roughly triples the attention parameters.
-# Each step is the previous configuration plus one change, so a gain is
 # attributable to the change on its row.
 #
 # C4 (dropout 0.40 / 0.50) and C6 (six encoder layers) were dropped from the plan:

@@ -83,19 +83,26 @@ phase3/
   preprocess.py   Euclidean alignment, standardisation, augmentation, folds   (M2)
   explore.py      the seven Table 10.1 analyses, each with a verdict          (M1)
   fbcsp.py        FBCSP + LDA, the classical baseline                         (M3)
-  models.py       EEGNet, ATCNet, EEGConformer, CTNet via braindecode         (M3)
-  train.py        training loop and the within-subject experiment E1          (M3)
-  loso.py         leave-one-subject-out, experiment E2                        (M6)
+  models.py       the four braindecode baselines, plus the variant registry   (M3)
+  hctnet.py       HCT-Net, the proposed model - 20,996 parameters             (M4)
+  train.py        training loop and the within-subject experiment E1          (M5)
+  loso.py         leave-one-subject-out, experiments E2 and E3                (M6)
+  components.py   component study V0-V5, experiment E4                        (M7)
+  adversarial.py  subject-invariant variant, section 13.2
   stats.py        Wilcoxon signed-rank with Holm-Bonferroni correction        (M7)
-  report.py       result tables, confusion matrices, accuracy against size    (M8)
+  report.py       every result table, the significance tests, the figures     (M8)
   eda/            exploratory figures
+  results_fig/    result figures
 results/          per-fold metrics as CSV, one row per fold per seed
+FINDINGS.md       every result, including the negative ones
 review2/          the Phase 2 deliverables and the scripts that build them
 ```
 
-The proposed model is deliberately absent. §19.1 fixes three ordering rules, and the second
-says it is not written until at least two baselines reproduce their published within-subject
-accuracy. That has not happened yet, so it has not been written.
+The proposed model was written only after §19.1's second ordering rule was satisfied — two
+baselines reproducing their published within-subject accuracy — which happened once the E1
+protocol was corrected. What it found is in `FINDINGS.md`: **HCT-Net loses.** It is second
+best within subject and worst at transferring to an unseen subject, and the component study
+attributes that to the attention block rather than to size or depth.
 
 Two deliberate departures from §18 of the solution design, both open to reversal:
 

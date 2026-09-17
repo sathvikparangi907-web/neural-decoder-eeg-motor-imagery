@@ -38,7 +38,8 @@ BUDGET = 20_996                # Table 11.3
 
 class HCTNet(nn.Module):
     def __init__(self, n_chans=N_EEG, n_outputs=4, n_times=N_SAMP, layers=LAYERS,
-                 use_encoder=True, global_attention=False):
+                 use_encoder=True, global_attention=False, flatten_head=False,
+                 dropout=DROPOUT):
         super().__init__()
         # Block 1-8: EEGNet-style convolutional front end, no bias anywhere, since
         # every convolution is followed by batch normalisation.
@@ -52,7 +53,7 @@ class HCTNet(nn.Module):
         self.separable_point = nn.Conv2d(F1 * D, F2, (1, 1), bias=False)
         self.bn3 = nn.BatchNorm2d(F2)
         self.pool2 = nn.AvgPool2d((1, 8))
-        self.drop = nn.Dropout(DROPOUT)
+        self.drop = nn.Dropout(dropout)
         self.act = nn.ELU()
 
         # Blocks 9-12: windowed attention. The positional encoding is learned and
@@ -67,7 +68,7 @@ class HCTNet(nn.Module):
         self.n_windows = (n_steps - self.window) // self.stride + 1
         self.positional = nn.Parameter(torch.zeros(self.window, D_MODEL))
         layer = nn.TransformerEncoderLayer(
-            D_MODEL, HEADS, dim_feedforward=FF, dropout=DROPOUT,
+            D_MODEL, HEADS, dim_feedforward=FF, dropout=dropout,
             activation="gelu", batch_first=True)
         # use_encoder=False is variant V0 of the component study: the convolutional
         # front end, windowing and fusion are untouched and only the attention is
@@ -75,7 +76,12 @@ class HCTNet(nn.Module):
         # than to the many small ways EEGNet differs from this front end.
         self.encoder = nn.TransformerEncoder(layer, layers) if use_encoder else nn.Identity()
 
-        self.classifier = nn.Linear(D_MODEL, n_outputs)
+        # C1. Global average pooling hands the classifier D_MODEL numbers and throws
+        # the temporal profile away; EEGNet's final layer reads every time step. The
+        # Stage 1 diagnostic measured that difference as 32 numbers against 432.
+        self.flatten_head = flatten_head
+        head_in = D_MODEL * self.window if flatten_head else D_MODEL
+        self.classifier = nn.Linear(head_in, n_outputs)
         nn.init.trunc_normal_(self.positional, std=0.02)
 
     def _apply_max_norm(self):
@@ -110,7 +116,10 @@ class HCTNet(nn.Module):
         x = x.permute(0, 2, 3, 1).reshape(b * w, self.window, D_MODEL)
         x = self.encoder(x + self.positional)
 
-        return x.reshape(b, w, self.window, D_MODEL).mean(dim=(1, 2))  # windows, then time
+        x = x.reshape(b, w, self.window, D_MODEL).mean(dim=1)      # fuse the windows
+        if self.flatten_head:
+            return x.flatten(1)                                    # keep the time steps
+        return x.mean(dim=1)                                       # or average them away
 
     def forward(self, x):
         return self.classifier(self.features(x))

@@ -147,7 +147,7 @@ def _write_e1(per_subject, subjects, name="e1_within_subject.csv"):
     print(f"  wrote per-subject accuracies to {path.name}")
 
 
-def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True):
+def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True, epochs=MAX_EPOCHS):
     """E1, within-subject: fit on session T, test on session E, per subject.
 
     Trains on ALL of session T for a fixed, fully annealed run of MAX_EPOCHS, with
@@ -183,7 +183,8 @@ def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True):
             # beyond the epoch budget it is computed and never acted on, so no part
             # of the fit depends on it and session E stays untouched.
             acc, _ = train(name, X, y, session, tr, tr, np.flatnonzero(session == 1),
-                           align=align, patience=MAX_EPOCHS + 1, restore_best=False)
+                           align=align, epochs=epochs, patience=epochs + 1,
+                           restore_best=False)
             cells.append(f"{acc:9.1%} {time.perf_counter() - t0:4.0f}s")
             accs.append(acc)
         results[name] = float(np.mean(accs))
@@ -204,9 +205,17 @@ def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True):
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if a != "--no-align"]
+    argv = sys.argv[1:]
+    epochs = MAX_EPOCHS
+    if "--epochs" in argv:
+        # Drop the flag AND its value before anything else reads the arguments,
+        # or "--epochs" is taken for a model name and its value for a subject.
+        i = argv.index("--epochs")
+        epochs = int(argv[i + 1])
+        argv = argv[:i] + argv[i + 2:]
+    args = [a for a in argv if not a.startswith("--")]
     subjects = tuple(int(a) for a in args if a.isdigit())
     names = tuple(a for a in args if not a.isdigit())     # e.g. `py train.py HCT-Net 1 2 3`
     e1(subjects=subjects or E1_SUBJECTS,
        names=names or tuple(MODELS),
-       align="--no-align" not in sys.argv)
+       align="--no-align" not in sys.argv, epochs=epochs)

@@ -112,7 +112,7 @@ All land in `fig/` as PNGs at 200 dpi. Both scripts define their own palette con
 ## 4. Folder map
 
 ```
-review2/
+Neural Decoder using EEG & Motor Imagery/
 ├── HANDOFF.md                      this file
 ├── Phase2_Solution_Design.docx     DELIVERABLE — the document
 ├── Phase2_Presentation.pptx        DELIVERABLE — the deck

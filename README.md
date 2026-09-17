@@ -1,15 +1,17 @@
-# Cross-Subject Motor Imagery EEG Classification
+# Neural Decoder using EEG & Motor Imagery
+
+Cross-subject motor imagery classification with deep learning.
 
 Deep learning decoder for four-class motor imagery EEG, evaluated on subjects it was never
 trained on. BCI Competition IV Dataset 2a, nine subjects, leave-one-subject-out.
 
 The problem in one line: motor imagery decoders work on the people they were trained on and
 badly on anyone new — CTNet reports 82.52% within-subject and 58.64% cross-subject, a
-23.88-point drop. Full argument in `review2/HANDOFF.md` §5.
+23.88-point drop. Full argument in `Neural Decoder using EEG & Motor Imagery/HANDOFF.md` §5.
 
 | Phase | What | Where |
 |---|---|---|
-| 2 — Solution design | Submitted 15 Sep 2026 | `review2/` |
+| 2 — Solution design | Submitted 15 Sep 2026 | `Neural Decoder using EEG & Motor Imagery/` |
 | 3 — Implementation | 16 Sep – 3 Oct 2026 | `phase3/` |
 
 Results and negative results as they are found: **`FINDINGS.md`**.
@@ -95,7 +97,7 @@ phase3/
   results_fig/    result figures
 results/          per-fold metrics as CSV, one row per fold per seed
 FINDINGS.md       every result, including the negative ones
-review2/          the Phase 2 deliverables and the scripts that build them
+"Neural Decoder using EEG & Motor Imagery/"   the Phase 2 deliverables
 ```
 
 The proposed model was written only after §19.1's second ordering rule was satisfied — two

@@ -702,6 +702,75 @@ attention, alignment, augmentation. That is still below EEGNet's 51.2%. The evid
 at a model that keeps alignment, drops the windowing, and does not obviously need the
 encoder at all: which is to say, it points back at EEGNet plus Euclidean alignment.
 
+---
+
+## Finding 15 — ATCNet and CTNet are not broken, and every fixable cause was refuted
+
+M3 recorded both models 18.3 points below their published within-subject accuracy.
+A focused diagnostic tested each plausible cause. All came back negative, which is
+itself the result.
+
+| hypothesis | test | outcome |
+|---|---|---|
+| wrong architecture, or our own re-implementation | inspected braindecode 1.8.1 against both papers | **refuted** — reference implementations, paper defaults (`n_windows=5`, `tcn_depth=2`, `num_layers=6`) |
+| undertrained: heaviest dropout in the field on a uniform 500-epoch budget | re-ran both at 1500 epochs | **refuted** — ATCNet 80.0% → 77.6%, CTNet 80.8% → 80.4%, slightly *worse* |
+| input window: 875 samples against the 1125 both papers used | ran ATCNet on the weak subjects at both lengths | **refuted** — 43.9% at ours, 41.1% at the paper's; longer is worse |
+
+**The deficit is entirely in the weak subjects.** On A01/A03/A08, ATCNet reaches
+80.0% against its published mean of 81.1%, and CTNet 80.8% against 82.5% — both
+reproduce. On A04/A05/A06, ATCNet scores 49.3 / 43.4 / 38.9.
+
+So the correct statement is not "our implementation of ATCNet is wrong" but
+**"ATCNet reproduces on decodable subjects and collapses on hard ones under this
+pipeline."** The published means average over a cohort whose weak subjects did not
+collapse as far as ours did.
+
+**Untested, and the next thing to check:** the shared preprocessing. Euclidean
+alignment whitens each session's covariance, which is exactly the spatial structure
+a CSP-like spatial convolution exploits, and the weak subjects have the least signal
+to spare. Testing it means changing the pipeline for one model, which is outside a
+diagnostic's remit; it is recorded here as the open question.
+
+**What this does to the leaderboard: nothing.** The numbers survived every test, so
+ATCNet stays at 62.8% within subject and 52.4% cross subject. The interpretation
+changes, not the values.
+
+## Finding 16 — the V1-to-EEGNet gap has two causes, and only one was suspected
+
+V1 is our model with attention removed, and was described as "essentially EEGNet plus
+alignment". It is not.
+
+| | EEGNet | our V1 |
+|---|---|---|
+| classifier input | **432 numbers** (27 time steps x 16 filters) | **32 numbers** |
+| classifier weights | 1,732 | 132 |
+| temporal filters F1 | 8 | **16** |
+| separable filters F2 | 16 | **32** |
+| kernel lengths, pooling, dropout | — | identical |
+
+1. **The classifier head.** Global average pooling collapses the temporal profile
+   before the classifier; EEGNet's final convolution reads every time step. The
+   classifier sees 13 times less information.
+2. **Width.** V1's convolutional block is twice EEGNet's in both filter counts — a
+   difference that was never intended as a design choice and was not noticed until
+   the two were compared layer by layer.
+
+The first is the larger effect and is the change C1 addresses. The second means any
+claim that V1 "isolates the attention block against EEGNet" was overstated: V1 and
+EEGNet differ in three ways, not one.
+
+## Correction to finding 13's noise estimate
+
+An earlier note here said single-seed differences below about 1.4 points should be
+read as noise, generalising from one observation: HCT-Net scored 71.5% and then
+72.9% on A01 under the adversarial variant with the same seed. These diagnostics
+show ATCNet reproducing its E1 numbers **exactly** (49.3%, 43.4%) on re-runs of the
+same configuration. So run-to-run variation is not a property of the pipeline in
+general; it appeared in the adversarial training path specifically. The broad claim
+was wrong and should not be repeated in the report. Where a genuine noise floor is
+needed, it has to be measured with repeated seeds rather than inferred from one pair
+of runs.
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

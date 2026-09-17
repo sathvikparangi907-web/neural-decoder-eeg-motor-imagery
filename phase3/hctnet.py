@@ -38,7 +38,7 @@ BUDGET = 20_996                # Table 11.3
 
 class HCTNet(nn.Module):
     def __init__(self, n_chans=N_EEG, n_outputs=4, n_times=N_SAMP, layers=LAYERS,
-                 use_encoder=True):
+                 use_encoder=True, global_attention=False):
         super().__init__()
         # Block 1-8: EEGNet-style convolutional front end, no bias anywhere, since
         # every convolution is followed by batch normalisation.
@@ -59,8 +59,13 @@ class HCTNet(nn.Module):
         # shared across windows, so a step is identified by its place within a
         # window rather than within the trial.
         n_steps = n_times // 4 // 8
-        self.n_windows = (n_steps - WINDOW) // STRIDE + 1
-        self.positional = nn.Parameter(torch.zeros(WINDOW, D_MODEL))
+        # V2 of the component study: one sequence over all 27 steps instead of 5
+        # overlapping windows of 11, which is the arrangement EEG Conformer uses
+        # and the one Table 11.1 rejected in favour of a locality prior.
+        self.window = n_steps if global_attention else WINDOW
+        self.stride = 1 if global_attention else STRIDE
+        self.n_windows = (n_steps - self.window) // self.stride + 1
+        self.positional = nn.Parameter(torch.zeros(self.window, D_MODEL))
         layer = nn.TransformerEncoderLayer(
             D_MODEL, HEADS, dim_feedforward=FF, dropout=DROPOUT,
             activation="gelu", batch_first=True)
@@ -95,12 +100,12 @@ class HCTNet(nn.Module):
         x = self.drop(self.pool2(self.act(self.bn3(x))))     # (B, F2, 1, steps)
 
         x = x.squeeze(2)                                     # (B, F2, steps)
-        x = x.unfold(2, WINDOW, STRIDE)                      # (B, F2, windows, WINDOW)
+        x = x.unfold(2, self.window, self.stride)            # (B, F2, windows, window)
         b, _, w, _ = x.shape
-        x = x.permute(0, 2, 3, 1).reshape(b * w, WINDOW, D_MODEL)
+        x = x.permute(0, 2, 3, 1).reshape(b * w, self.window, D_MODEL)
         x = self.encoder(x + self.positional)
 
-        x = x.reshape(b, w, WINDOW, D_MODEL).mean(dim=(1, 2))   # fuse windows, then time
+        x = x.reshape(b, w, self.window, D_MODEL).mean(dim=(1, 2))  # fuse windows, then time
         return self.classifier(x)
 
 

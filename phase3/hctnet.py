@@ -91,7 +91,12 @@ class HCTNet(nn.Module):
             norm = w.flatten(1).norm(dim=1).clamp(min=1e-8)
             w.mul_((norm.clamp(max=MAX_NORM) / norm).view(-1, 1, 1, 1))
 
-    def forward(self, x):
+    def features(self, x):
+        """Everything up to the classifier: (B, chans, time) -> (B, D_MODEL).
+
+        Separated out so an auxiliary head can attach to the same representation
+        the classifier sees, which is what the §13.2 adversarial variant needs.
+        """
         self._apply_max_norm()
         x = x.unsqueeze(1)                                  # (B, 1, chans, time)
         x = self.bn1(self.temporal(x))
@@ -105,8 +110,10 @@ class HCTNet(nn.Module):
         x = x.permute(0, 2, 3, 1).reshape(b * w, self.window, D_MODEL)
         x = self.encoder(x + self.positional)
 
-        x = x.reshape(b, w, self.window, D_MODEL).mean(dim=(1, 2))  # fuse windows, then time
-        return self.classifier(x)
+        return x.reshape(b, w, self.window, D_MODEL).mean(dim=(1, 2))  # windows, then time
+
+    def forward(self, x):
+        return self.classifier(self.features(x))
 
 
 def _check():

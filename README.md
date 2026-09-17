@@ -14,18 +14,58 @@ badly on anyone new — CTNet reports 82.52% within-subject and 58.64% cross-sub
 
 Results and negative results as they are found: **`FINDINGS.md`**.
 
-## Running it
+## Seeing the results
+
+Everything already measured, in one command — no GPU, no dataset needed, a second to run:
+
+```bash
+py phase3/report.py
+```
+
+It prints every experiment's per-subject accuracy, the means, and the Wilcoxon
+significance tests, and regenerates the figures into `phase3/results_fig/`.
+
+Accuracy is the share of trials whose imagined movement was identified correctly.
+Four classes, so **25% is chance**. The two protocols answer different questions:
+
+- **within subject** — trained on your session 1, tested on your session 2. What a
+  decoder does for a user it was calibrated on.
+- **cross subject** — trained on seven other people, tested on someone it has never
+  seen. What a new user gets when they put the cap on. This is the number the
+  project is about, and it is far lower.
+
+For one experiment on its own, with a chosen reference model for the statistics:
+
+```bash
+py phase3/report.py results/e2_loso.csv HCT-Net
+```
+
+## Running the experiments yourself
 
 Python 3.14, with `numpy scipy scikit-learn matplotlib torch braindecode`. A CUDA GPU is
 used if present. Everything is run from the repository root.
 
+Only needed to reproduce the numbers from scratch. The first command downloads
+744 MB and the training commands need a GPU; each takes minutes to hours.
+
 ```bash
-py phase3/data.py        # download (744 MB), preprocess, cache, verify against Table 8.2
-py phase3/preprocess.py  # M2 alignment check: mean covariance must equal the identity
-py phase3/explore.py     # the seven exploratory analyses of Table 10.1 -> phase3/eda/
-py phase3/fbcsp.py       # classical baseline, within subject
-py phase3/train.py 1 2 3 4 5 6 7 8 9    # deep baselines, within subject (E1)
+py phase3/data.py        # download, preprocess, cache, verify against Table 8.2   (~15 min)
+py phase3/preprocess.py  # M2 alignment check: mean covariance must equal identity  (~1 min)
+py phase3/explore.py     # the seven Table 10.1 analyses -> phase3/eda/            (~10 min)
+
+py phase3/fbcsp.py                    # classical baseline, within subject          (~2 min)
+py phase3/train.py HCT-Net 1 2 3      # any model, any subjects, within subject
+py phase3/loso.py EEGNet --seeds 1    # one model, cross subject, nine folds        (~30 min)
+py phase3/components.py               # component study V0-V5                        (~3 h)
+py phase3/adversarial.py              # adversarial variant, section 13.2            (~2 h)
 ```
+
+Long runs write after every fold and skip work already recorded, so if one is
+interrupted, re-running the same command continues from where it stopped.
+
+Model names accepted anywhere: `FBCSP`, `EEGNet`, `ATCNet`, `EEGConformer`,
+`CTNet`, `HCT-Net`, and the variants `HCT-Net-L1`, `HCT-Net-L6`, `HCT-Net-V1`,
+`HCT-Net-V2`, `HCT-Net-V5`.
 
 `data.py` downloads the dataset on first run, from the Graz mirror at
 `lampx.tugraz.at/~bci/database/001-2014/`. It fetches the `.mat` release rather than the

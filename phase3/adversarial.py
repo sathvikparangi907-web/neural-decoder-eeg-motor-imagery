@@ -133,10 +133,16 @@ def run(fold_ids=None):
     if fold_ids:
         folds = [f for f in folds if f[2] in fold_ids]
     rows, accs = [], []
+    finished = done_already(OUT)
     print(f"E7 adversarial subject invariance: {len(folds)} fold(s), "
-          f"lambda from {LAMBDAS} chosen on the validation subject\n")
+          f"lambda from {LAMBDAS} chosen on the validation subject")
+    if finished:
+        print(f"Resuming: {len(finished)} fold(s) already recorded.")
+    print()
 
     for train_subjects, val_subject, test_subject in folds:
+        if ("HCT-Net-ADV", test_subject, 0) in finished:
+            continue
         X, y, session, tr, va, te = fold_data((train_subjects, val_subject, test_subject))
         subject = np.concatenate([np.full(576, s)
                                   for s in [*train_subjects, val_subject, test_subject]])

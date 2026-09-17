@@ -186,6 +186,65 @@ def save(fig, name):
     print(f"  wrote {FIGURES.name}/{out.name}")
 
 
+BASELINES = ("FBCSP", "EEGNet", "ATCNet", "EEGConformer", "CTNet")
+
+# (file, heading, reference model, family for the Holm correction). Section 17
+# rule 3 fixes the family as the five baselines; the depth and component variants
+# share the E2 file but are not part of that family, and including them would
+# over-correct every baseline comparison.
+EXPERIMENTS = [
+    ("e1_within_subject.csv", "E1 - within subject: train session 1, test session 2 (same person)",
+     None, None),
+    ("e2_loso.csv", "E2/E3 - cross subject: trained on 7 others, tested on an unseen person",
+     "HCT-Net", BASELINES),
+    ("e4_components.csv", "E4 - component study: which part of the proposed model earns its place",
+     "V0", None),
+    ("e7_adversarial.csv", "E7 - adversarial subject invariance (section 13.2)", None, None),
+]
+
+
+def summarise(path, title, reference, family=None):
+    """One experiment's table, tolerant of both result schemas and of absence."""
+    path = Path(path)
+    if not path.exists():
+        print(f"\n{title}\n  not run yet ({path.name} missing)")
+        return None
+    simple = "kappa" not in open(path, encoding="utf-8").readline()
+    rows = load_simple(path) if simple else load(path)
+    acc = by_subject(rows)
+    subjects = sorted({r["test_subject"] for r in rows})
+
+    print(f"\n{title}")
+    print(f"  {'model':<14}" + "".join(f"{f'A{s:02d}':>7}" for s in subjects)
+          + f"{'mean':>8}{'std':>7}")
+    for m in sorted(acc, key=lambda k: -np.mean(list(acc[k].values()))):
+        v = np.array([acc[m].get(s, np.nan) for s in subjects])
+        print(f"  {m:<14}" + "".join("      -" if np.isnan(x) else f"{x:6.1%} " for x in v)
+              + f"{np.nanmean(v):8.1%}{np.nanstd(v):7.1%}")
+    if reference and reference in acc and len(acc) > 1:
+        complete = {m: [v[s] for s in subjects] for m, v in acc.items()
+                    if len(v) == len(subjects)
+                    and (family is None or m == reference or m in family)}
+        if reference in complete and len(complete) > 1:
+            print()
+            significance(complete, reference)
+    return acc
+
+
+def show_all():
+    """Every experiment's results in one pass - the whole project's findings."""
+    print("=" * 78)
+    print("  Cross-Subject Motor Imagery EEG Classification - all results")
+    print("  Accuracy = share of trials whose imagined movement was identified")
+    print("  correctly. Four classes, so 25.0% is chance.")
+    print("=" * 78)
+    for name, title, ref, family in EXPERIMENTS:
+        summarise(ROOT / "results" / name, title, ref, family)
+    print(f"\n{'=' * 78}\n  Figures: phase3/results_fig/ and phase3/eda/")
+    print("  Full write-up including negative results: FINDINGS.md")
+    print("=" * 78)
+
+
 def main(path, reference=None):
     global PREFIX
     PREFIX = "" if Path(path).stem.startswith("e2") else Path(path).stem.split("_")[0] + "_"
@@ -206,7 +265,10 @@ def main(path, reference=None):
 
 
 if __name__ == "__main__":
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "results" / "e2_loso.csv"
+    if "--all" in sys.argv or len(sys.argv) == 1:
+        show_all()
+        sys.exit()
+    path = Path(sys.argv[1])
     if not path.exists():
         sys.exit(f"no results at {path} -- run phase3/loso.py first")
     main(path, sys.argv[2] if len(sys.argv) > 2 else None)

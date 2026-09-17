@@ -122,21 +122,55 @@ def train(name, X, y, session, train_idx, val_idx, test_idx, align=True, seed=0,
     return accuracy(model, Xte, yte, batch, amp), best
 
 
+def _write_e1(per_subject, subjects, name="e1_within_subject.csv"):
+    """Append these models' per-subject accuracies to the results CSV.
+
+    Rows for a model in this run replace any earlier rows for it, so a partial
+    run (one model, three subjects) merges rather than truncating the file.
+    """
+    import csv
+    path = Path(__file__).resolve().parent.parent / "results" / name
+    path.parent.mkdir(exist_ok=True)
+    kept = []
+    if path.exists():
+        with open(path, encoding="utf-8") as fh:
+            kept = [r for r in csv.DictReader(fh)
+                    if (r["model"], int(r["test_subject"])) not in
+                    {(m, s) for m in per_subject for s in subjects}]
+    with open(path, "w", encoding="utf-8", newline="") as fh:
+        w = csv.writer(fh); w.writerow(["model", "test_subject", "accuracy"])
+        for r in kept:
+            w.writerow([r["model"], r["test_subject"], r["accuracy"]])
+        for m, accs in per_subject.items():
+            for s, a in zip(subjects, accs):
+                w.writerow([m, s, f"{a:.4f}"])
+    print(f"  wrote per-subject accuracies to {path.name}")
+
+
 def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True):
     """E1, within-subject: fit on session T, test on session E, per subject.
 
-    Early stopping needs a validation set and session E is the test set, so the
-    validation split is a stratified 20% of session T. Session E is never touched
-    until the final score. Artefact-rejected trials are excluded everywhere.
+    Trains on ALL of session T for a fixed, fully annealed run of MAX_EPOCHS, with
+    no validation holdout and no early stopping. This departs from section 13, and
+    the reason is measured rather than assumed: holding back a stratified 20% of
+    session T cost up to 30 accuracy points (A05 EEGNet 26.7% against 56.6%).
+    Session T is only 288 trials, so the holdout is expensive, and 58 validation
+    trials quantise accuracy to 1.7% steps, too coarse for checkpoint selection to
+    do better than latch onto an early noise peak. See FINDINGS.md findings 7 and 9.
+
+    Nothing is selected on test data: the schedule is fixed in advance and session E
+    is touched once, to score. Section 13's early stopping still governs E2 and E3,
+    where validation is a whole held-out subject of 576 trials rather than 58.
+    Artefact-rejected trials are excluded everywhere.
     """
-    print(f"E1 within-subject: train session T (stratified 80/20 train/val), test session E")
+    print(f"E1 within-subject: train ALL of session T, test session E")
     print(f"{len(names)} models x {len(subjects)} subjects on {DEVICE}, "
           f"Euclidean alignment {'on' if align else 'OFF'}, "
-          f"max {MAX_EPOCHS} epochs, patience {PATIENCE}\n")
+          f"{MAX_EPOCHS} epochs fixed, no early stopping, final annealed model\n")
     print(f"{'model':<14}" + "".join(f"{f'A{s:02d}':>16}" for s in subjects)
           + f"{'mean':>8}{'published':>11}")
 
-    results = {}
+    results, per_subject = {}, {}
     for name in names:
         cells, accs = [], []
         for s in subjects:
@@ -153,11 +187,13 @@ def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True):
             cells.append(f"{acc:9.1%} {time.perf_counter() - t0:4.0f}s")
             accs.append(acc)
         results[name] = float(np.mean(accs))
+        per_subject[name] = accs
         print(f"  {name:<12}" + "".join(cells)
               + f"{results[name]:8.1%}"
               + (f"{PUBLISHED[name]:10.1f}%" if name in PUBLISHED else f"{'--':>11}"))
 
     assert results, "no model was run"
+    _write_e1(per_subject, subjects)
     print(f"\n  accuracy and wall-clock seconds per run; chance is 25.0% over 4 classes")
     near_chance = [n for n, a in results.items() if a < 0.35]
     print("CHECK near chance, so a bug and not a result: " + ", ".join(near_chance)

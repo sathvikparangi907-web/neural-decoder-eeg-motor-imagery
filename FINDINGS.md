@@ -4,7 +4,7 @@ Running record of what the implementation actually showed, including results tha
 contradicted the plan. M8 requires findings written up including negative results, and
 they are easier to write down when they happen than to reconstruct in October.
 
-Milestone definitions are in §19.3 of `review2/Phase2_Solution_Design.docx`.
+Milestone definitions are in §19.3 of `Neural Decoder using EEG & Motor Imagery/Phase2_Solution_Design.docx`.
 
 ---
 

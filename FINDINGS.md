@@ -619,10 +619,31 @@ ATCNet and CTNet on the argument that local attention suits short EEG trials —
 the part that hurts. It buys within-subject accuracy (HCT-Net is 7.3 points ahead of EEGNet
 within subject) and loses more than that in transfer.
 
-Variant V0 is now running to make this airtight: HCT-Net with `use_encoder=False`, which
-keeps the front end, the windowing and the fusion exactly as they are and removes only the
-attention. EEGNet differs from this front end in several small ways, so V0 is the comparison
-that attributes the loss to the encoder alone.
+### V0 — the encoder accounts for about half the gap, and neither half is significant alone
+
+Variant V0 is HCT-Net with `use_encoder=False`: the front end, windowing and fusion exactly
+as they are, attention removed.
+
+| | cross-subject | |
+|---|---|---|
+| HCT-Net (L2) | 46.9% | |
+| **HCT-Net-V0** | **48.8%** | +1.9 removing the encoder, p = 0.098, helps on 8 of 9 folds |
+| EEGNet | 51.2% | +2.4 further, p = 0.164 |
+
+So the 4.3-point gap to EEGNet splits roughly in half. The encoder costs about 1.9 points,
+consistently — 8 of 9 folds move the same way — and the remaining 2.4 comes from the several
+small ways this front end differs from EEGNet's, which the design never intended as changes.
+
+Neither half reaches significance on its own at n = 9; only the combined gap does (p = 0.023).
+That is the honest statement: **removing the attention improves cross-subject accuracy, the
+direction is consistent, and nine subjects are not enough to establish either half
+separately.** It is the same n = 9 ceiling as finding 11 — an effect of this size simply
+cannot be proven on this dataset, which is an argument about the dataset rather than about
+the effect.
+
+What it means for the design: the windowed encoder is not merely failing to help, it is
+costing accuracy on unseen subjects while buying it on seen ones. The component the model is
+named for is the component to remove.
 
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 

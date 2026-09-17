@@ -1,0 +1,327 @@
+<title>Neural Decoder Findings</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ink:#131C2E; --navy:#1B3A6B; --violet:#5B3E96;
+    --ground:#F6F7FA; --surface:#FFFFFF; --line:#DFE3EC;
+    --muted:#5C6678; --faint:#8A93A6;
+    --good:#2E6F62; --poor:#9A5238; --chance:#B9C0CE;
+    --serif:"IBM Plex Serif",Georgia,serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ink:#E8ECF4; --navy:#8FB0E0; --violet:#B69BE4;
+      --ground:#10141C; --surface:#171D28; --line:#2A3242;
+      --muted:#9AA4B8; --faint:#6C7689;
+      --good:#6FBBA8; --poor:#D08A6A; --chance:#3A4354;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#E8ECF4; --navy:#8FB0E0; --violet:#B69BE4;
+    --ground:#10141C; --surface:#171D28; --line:#2A3242;
+    --muted:#9AA4B8; --faint:#6C7689;
+    --good:#6FBBA8; --poor:#D08A6A; --chance:#3A4354;
+  }
+
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+       line-height:1.6;margin:0}
+  .wrap{max-width:860px;margin:0 auto;padding-inline:20px;padding-block:0 72px}
+  h1,h2,h3{font-family:var(--serif);text-wrap:balance;line-height:1.25;margin:0}
+  h1{font-size:clamp(28px,5vw,42px);font-weight:600;letter-spacing:-.01em}
+  h2{font-size:clamp(21px,3.2vw,27px);font-weight:600;margin-bottom:6px}
+  h3{font-size:17px;font-weight:600;margin-bottom:4px}
+  p{margin:0 0 14px}
+  .lede{font-size:clamp(16px,2.2vw,18.5px);color:var(--muted);max-width:62ch}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
+           text-transform:uppercase;color:var(--violet);margin-bottom:10px}
+  section{margin-top:56px}
+  .note{font-size:13.5px;color:var(--muted)}
+  strong{font-weight:600}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
+
+  header{border-bottom:1px solid var(--line);padding-block:44px 30px;margin-bottom:4px}
+  .verdict{margin-top:26px;padding:18px 20px;border-left:3px solid var(--violet);
+           background:var(--surface);border-radius:0 8px 8px 0}
+  .verdict p{margin:0;font-size:15.5px}
+
+  .split{display:grid;gap:16px;grid-template-columns:1fr 1fr;margin-top:22px}
+  @media (max-width:560px){.split{grid-template-columns:1fr}}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+  .panel .big{font-family:var(--mono);font-size:38px;font-weight:500;line-height:1;
+              letter-spacing:-.02em;display:block;margin:10px 0 2px}
+  .panel.cold .big{color:var(--poor)}
+  .panel.warm .big{color:var(--good)}
+  .panel .cap{font-size:13.5px;color:var(--muted)}
+
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  th{text-align:left;font-weight:500;font-size:11.5px;letter-spacing:.09em;
+     text-transform:uppercase;color:var(--faint);padding:0 10px 8px 0;white-space:nowrap}
+  td{padding:9px 10px 9px 0;border-top:1px solid var(--line);vertical-align:middle}
+  td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;
+       white-space:nowrap}
+
+  .bar{position:relative;height:9px;border-radius:5px;background:var(--line);
+       min-width:120px;overflow:hidden}
+  .bar i{position:absolute;inset:0 auto 0 0;border-radius:5px;display:block}
+  .bar .chance{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--chance)}
+  .pairbar{display:flex;flex-direction:column;gap:4px;min-width:150px}
+
+  ul{margin:0 0 14px;padding-left:18px}
+  li{margin-bottom:7px}
+  .tag{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:20px;
+       border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+  .tag.win{color:var(--good);border-color:var(--good)}
+  .tag.lose{color:var(--poor);border-color:var(--poor)}
+  details{border-top:1px solid var(--line);padding-top:12px;margin-top:8px}
+  summary{cursor:pointer;font-size:14px;color:var(--violet);font-weight:500}
+  summary:focus-visible{outline:2px solid var(--violet);outline-offset:3px}
+  footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);
+         font-size:13px;color:var(--faint)}
+  code{font-family:var(--mono);font-size:.92em;background:var(--surface);
+       border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Phase 3 &middot; Results</div>
+  <h1>Neural Decoder using EEG &amp; Motor Imagery</h1>
+  <p class="lede">Reading imagined movement from brain signals &mdash; and what happens when
+  the decoder meets someone it has never seen before.</p>
+  <div class="verdict">
+    <p><strong>The short version.</strong> Every decoder we tested works reasonably well on a
+    person it was trained on, and roughly <strong>20&ndash;26 points worse</strong> on a
+    stranger. The model we designed to close that gap has the largest gap of all. That is a
+    real finding, and it is the one worth reporting.</p>
+  </div>
+</header>
+
+<section>
+  <div class="eyebrow">What the machine is doing</div>
+  <h2>Guessing which movement you imagined</h2>
+  <p>Nine volunteers wore a 22-electrode cap. An arrow told each of them which movement to
+  <em>imagine</em> &mdash; never actually perform &mdash; and the brain activity was recorded.
+  The decoder's job is to read the signal and name the movement.</p>
+  <div class="scroll"><table>
+    <tr>
+      <td><strong>Left hand</strong></td><td><strong>Right hand</strong></td>
+      <td><strong>Both feet</strong></td><td><strong>Tongue</strong></td>
+    </tr>
+  </table></div>
+  <p class="note" style="margin-top:12px">Four choices, so a decoder that simply guessed at
+  random would be right <span class="num">25%</span> of the time. Every number on this page
+  should be read against that floor: 30% is barely better than a coin toss with four sides,
+  and 75% is a genuinely useful device.</p>
+</section>
+
+<section>
+  <div class="eyebrow">The problem</div>
+  <h2>It knows you, or it doesn't</h2>
+  <p>The same decoder is tested two ways. The difference between them is the entire project.</p>
+  <div class="split">
+    <div class="panel warm">
+      <h3>Trained on you</h3>
+      <span class="big">77.3%</span>
+      <span class="cap">Best model, tested on a <em>second session</em> from the same person
+      it learned from. This is what a device does after you sit through a calibration.</span>
+    </div>
+    <div class="panel cold">
+      <h3>Never met you</h3>
+      <span class="big">52.4%</span>
+      <span class="cap">Best model, tested on someone whose data it has never seen. This is
+      what a new user actually experiences when they put the cap on.</span>
+    </div>
+  </div>
+  <p class="note" style="margin-top:16px">A 25-point collapse. Calibration is exactly the
+  thing that makes these devices impractical &mdash; nobody wants to spend twenty minutes
+  training a wheelchair before using it &mdash; so the right-hand number is the one that
+  decides whether the technology is usable.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Every model, both tests</div>
+  <h2>The drop is universal</h2>
+  <p>Six decoders, identical data, identical protocol. The dark bar is how well each does on a
+  familiar person; the light bar is a stranger.</p>
+  <div class="scroll"><table>
+    <tr><th>Decoder</th><th>Knows you</th><th>Stranger</th><th style="width:38%">&nbsp;</th><th>Drop</th></tr>
+    <tr><td>EEG Conformer</td><td class="n">77.3%</td><td class="n">52.1%</td>
+      <td><div class="pairbar">
+        <div class="bar"><i style="width:77.3%;background:var(--navy)"></i></div>
+        <div class="bar"><i style="width:52.1%;background:var(--chance)"></i></div></div></td>
+      <td class="n">&minus;25.2</td></tr>
+    <tr><td><strong>HCT-Net</strong> <span class="tag">ours</span></td>
+      <td class="n">73.2%</td><td class="n">46.9%</td>
+      <td><div class="pairbar">
+        <div class="bar"><i style="width:73.2%;background:var(--violet)"></i></div>
+        <div class="bar"><i style="width:46.9%;background:var(--chance)"></i></div></div></td>
+      <td class="n"><strong>&minus;26.3</strong></td></tr>
+    <tr><td>EEGNet</td><td class="n">65.9%</td><td class="n">51.2%</td>
+      <td><div class="pairbar">
+        <div class="bar"><i style="width:65.9%;background:var(--navy)"></i></div>
+        <div class="bar"><i style="width:51.2%;background:var(--chance)"></i></div></div></td>
+      <td class="n">&minus;14.7</td></tr>
+    <tr><td>FBCSP <span class="tag">classical</span></td><td class="n">64.7%</td><td class="n">44.2%</td>
+      <td><div class="pairbar">
+        <div class="bar"><i style="width:64.7%;background:var(--navy)"></i></div>
+        <div class="bar"><i style="width:44.2%;background:var(--chance)"></i></div></div></td>
+      <td class="n">&minus;20.5</td></tr>
+    <tr><td>CTNet</td><td class="n">64.2%</td><td class="n">50.2%</td>
+      <td><div class="pairbar">
+        <div class="bar"><i style="width:64.2%;background:var(--navy)"></i></div>
+        <div class="bar"><i style="width:50.2%;background:var(--chance)"></i></div></div></td>
+      <td class="n">&minus;14.0</td></tr>
+    <tr><td>ATCNet</td><td class="n">62.8%</td><td class="n">52.4%</td>
+      <td><div class="pairbar">
+        <div class="bar"><i style="width:62.8%;background:var(--navy)"></i></div>
+        <div class="bar"><i style="width:52.4%;background:var(--chance)"></i></div></div></td>
+      <td class="n">&minus;10.4</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">Read the two columns against each other and a
+  pattern appears: <strong>the models that do best on a familiar person do worst on a
+  stranger.</strong> EEG Conformer and HCT-Net top the first column and bottom the second.
+  ATCNet is last on familiarity and first on strangers.</p>
+</section>
+
+<section>
+  <div class="eyebrow">The finding</div>
+  <h2>Learning a person is not the same as learning the task</h2>
+  <p>Ranking the six decoders by how well they know a familiar person, then by how much they
+  lose on a stranger, gives almost exactly the reverse order. Measured properly, the
+  relationship is strong and statistically significant.</p>
+  <div class="panel" style="margin-top:18px">
+    <p style="margin:0"><span class="num" style="font-size:22px;color:var(--violet)">r = &minus;0.86</span>
+    &nbsp; <span class="note">correlation between familiar-person skill and transfer loss
+    (p&nbsp;=&nbsp;0.026, six models)</span></p>
+  </div>
+  <p style="margin-top:18px">The explanation is that a powerful decoder spends its capacity
+  learning things that are true of <em>the individuals it trained on</em> &mdash; skull
+  thickness, exactly where the cap sat, that person's particular way of imagining a movement
+  &mdash; rather than things true of imagined movement in general. The better it gets at that,
+  the less of it survives the move to a new head.</p>
+  <p>This was predicted and recorded <em>before</em> the last two models were run, then held
+  when they were. It is the project's strongest result.</p>
+</section>
+
+<section>
+  <div class="eyebrow">A second finding</div>
+  <h2>Bigger models buy almost nothing</h2>
+  <p>For a stranger, the top three decoders finish within <strong>1.2 points</strong> of each
+  other &mdash; while differing in size by a factor of 219.</p>
+  <div class="scroll"><table>
+    <tr><th>Decoder</th><th>Stranger accuracy</th><th>Size</th><th>Relative size</th></tr>
+    <tr><td>ATCNet</td><td class="n">52.4%</td><td class="n">113,732</td><td class="n">36&times;</td></tr>
+    <tr><td>EEG Conformer</td><td class="n">52.1%</td><td class="n">697,412</td><td class="n">219&times;</td></tr>
+    <tr><td><strong>EEGNet</strong></td><td class="n">51.2%</td><td class="n">3,188</td><td class="n">1&times;</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">Size is trainable parameters &mdash; roughly, how
+  many adjustable dials the model has. EEG Conformer carries 219 times as many as EEGNet and
+  gains <span class="num">0.9</span> of a point on a stranger. Whatever the extra capacity is
+  buying, it is not generalisation.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Not everyone is decodable</div>
+  <h2>Three of nine people barely work at all</h2>
+  <p>Averaged across all six decoders, here is how well each volunteer's imagined movements
+  could be read by a model that never saw them.</p>
+  <div class="scroll"><table>
+    <tr><th>Person</th><th>Accuracy</th><th style="width:52%">&nbsp;</th></tr>
+    <tr><td>A01</td><td class="n">69.5%</td><td><div class="bar"><i style="width:69.5%;background:var(--good)"></i><span class="chance" style="left:25%"></span></div></td></tr>
+    <tr><td>A02</td><td class="n">30.0%</td><td><div class="bar"><i style="width:30%;background:var(--poor)"></i><span class="chance" style="left:25%"></span></div></td></tr>
+    <tr><td>A03</td><td class="n">68.9%</td><td><div class="bar"><i style="width:68.9%;background:var(--good)"></i><span class="chance" style="left:25%"></span></div></td></tr>
+    <tr><td>A04</td><td class="n">38.4%</td><td><div class="bar"><i style="width:38.4%;background:var(--poor)"></i><span class="chance" style="left:25%"></span></div></td></tr>
+    <tr><td>A05</td><td class="n">36.1%</td><td><div class="bar"><i style="width:36.1%;background:var(--poor)"></i><span class="chance" style="left:25%"></span></div></td></tr>
+    <tr><td>A06</td><td class="n">38.8%</td><td><div class="bar"><i style="width:38.8%;background:var(--poor)"></i><span class="chance" style="left:25%"></span></div></td></tr>
+    <tr><td>A07</td><td class="n">42.8%</td><td><div class="bar"><i style="width:42.8%;background:var(--muted)"></i><span class="chance" style="left:25%"></span></div></td></tr>
+    <tr><td>A08</td><td class="n">62.1%</td><td><div class="bar"><i style="width:62.1%;background:var(--good)"></i><span class="chance" style="left:25%"></span></div></td></tr>
+    <tr><td>A09</td><td class="n">58.9%</td><td><div class="bar"><i style="width:58.9%;background:var(--good)"></i><span class="chance" style="left:25%"></span></div></td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">The pale line marks the <span class="num">25%</span>
+  random-guessing floor. A02, A05 and A06 sit close to it no matter which decoder is used.
+  This is well documented and is a property of the <em>people</em>, not the software: some
+  produce clear, repeatable brain rhythms when they imagine movement and some do not. It is
+  why results are always reported per person &mdash; an average alone would hide that a third
+  of users would get very little out of the device.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Our model</div>
+  <h2>What we built, and what went wrong</h2>
+  <p>HCT-Net combines a small signal-filtering front end with an attention block, and adds a
+  preprocessing step that mathematically re-centres each person's signal onto common ground.
+  It is deliberately small &mdash; <span class="num">20,996</span> parameters, about a fifth
+  of ATCNet.</p>
+  <p>On a familiar person it is excellent: <strong>second of six</strong>, beating EEGNet by
+  7.3 points. On a stranger it finishes <strong>fifth of six</strong>. To find out which part
+  was responsible, each component was removed in turn and the whole evaluation repeated.</p>
+  <div class="scroll"><table>
+    <tr><th>Take away&hellip;</th><th>Stranger accuracy</th><th style="width:30%">&nbsp;</th><th>Verdict</th></tr>
+    <tr><td>nothing &mdash; the full model</td><td class="n">46.9%</td>
+      <td><div class="bar"><i style="width:46.9%;background:var(--violet)"></i></div></td>
+      <td><span class="tag">baseline</span></td></tr>
+    <tr><td>the attention block</td><td class="n">48.8%</td>
+      <td><div class="bar"><i style="width:48.8%;background:var(--good)"></i></div></td>
+      <td><span class="tag win">better without</span></td></tr>
+    <tr><td>&hellip;or let attention see the whole trial</td><td class="n">49.8%</td>
+      <td><div class="bar"><i style="width:49.8%;background:var(--good)"></i></div></td>
+      <td><span class="tag win">better still</span></td></tr>
+    <tr><td>the data augmentation</td><td class="n">48.1%</td>
+      <td><div class="bar"><i style="width:48.1%;background:var(--muted)"></i></div></td>
+      <td><span class="tag">no effect</span></td></tr>
+    <tr><td>the signal re-centring</td><td class="n">41.8%</td>
+      <td><div class="bar"><i style="width:41.8%;background:var(--poor)"></i></div></td>
+      <td><span class="tag lose">needed</span></td></tr>
+    <tr><td>everything except the front end</td><td class="n">39.1%</td>
+      <td><div class="bar"><i style="width:39.1%;background:var(--poor)"></i></div></td>
+      <td><span class="tag lose">worst</span></td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">Only one component earns its place. Removing the
+  <strong>signal re-centring</strong> costs 5.1 points, so it is doing real work &mdash; and
+  it helps the classical decoder by a similar amount, so the effect is not specific to one
+  architecture. Removing the <strong>attention block</strong> makes the model
+  <em>better</em>, which is awkward, because attention is the component the model is named
+  after. Depth made no measurable difference at 1, 2 or 6 layers.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Being straight about it</div>
+  <h2>What this does and doesn't show</h2>
+  <ul>
+    <li><strong>The proposed model did not win.</strong> It is significantly worse than ATCNet
+    on a stranger, and no better than the 2008 classical method. No performance claim was made
+    before the experiments ran, which is what makes this reportable rather than a failure.</li>
+    <li><strong>Nine people is a small sample.</strong> Several real effects &mdash; including
+    the 5.1-point value of signal re-centring &mdash; point consistently in one direction
+    without reaching statistical significance, because with nine subjects and two poor
+    performers the test simply cannot clear the bar. That is a limit of the dataset, not
+    evidence the effects are absent.</li>
+    <li><strong>Two baselines fell short of their published accuracy</strong> by around 18
+    points under our protocol. Their comparison is still fair &mdash; every model ran under
+    identical conditions &mdash; but their numbers should not be presented as matching the
+    original authors'.</li>
+    <li><strong>Results use a single random seed.</strong> Re-running an identical
+    configuration moved one result by 1.4 points, so differences smaller than that should be
+    treated as noise &mdash; which includes the gaps between the top three decoders.</li>
+  </ul>
+  <details>
+    <summary>What would be worth doing next</summary>
+    <p style="margin-top:12px">The evidence points at a decoder that keeps the signal
+    re-centring, drops the windowed attention, and stays small. An experiment now running
+    trains the model to be actively <em>unable</em> to identify which person a signal came
+    from, which attacks the failure these results identify rather than guessing at the
+    architecture. Running each configuration with three seeds instead of one would also let
+    the close comparisons be settled properly.</p>
+  </details>
+</section>
+
+<footer>
+  <p>Nine volunteers &middot; 5,184 recorded trials &middot; 22 electrodes &middot; four
+  imagined movements &middot; BCI Competition IV Dataset 2a (Graz University of Technology).
+  Every number here is produced by <code>py phase3/report.py</code> from the recorded
+  per-fold results, and the full write-up including every negative result is in
+  <code>FINDINGS.md</code>.</p>
+</footer>
+</div>

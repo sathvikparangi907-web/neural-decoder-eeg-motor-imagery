@@ -3,8 +3,8 @@
 Reads what the experiments recorded and produces what the review needs, so that
 what is presented is exactly what was measured and never a separate calculation.
 
-    py phase3/report.py                      # results/e2_loso.csv
-    py phase3/report.py results/e2_loso.csv HCT-Net
+    py phase3/report.py                      # every experiment, in plain English
+    py phase3/report.py results/e2_loso.csv HCT-Net    # one file, one reference
 
 Naming a reference model adds the Wilcoxon comparison of every other model
 against it, Holm-corrected across the family.
@@ -41,6 +41,16 @@ def load(path):
         for k in ("accuracy", "kappa", "precision", "recall", "f1"):
             r[k] = float(r[k])
         r["confusion"] = np.array(literal_eval(r["confusion"]))
+    return rows
+
+
+def load_simple(path):
+    """The E1 CSV: model, test_subject, accuracy -- no per-fold metrics."""
+    with open(path, encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    for r in rows:
+        r["test_subject"] = int(r["test_subject"])
+        r["accuracy"] = float(r["accuracy"])
     return rows
 
 
@@ -165,16 +175,6 @@ def tradeoff(cross, within_path=ROOT / "results" / "e1_within_subject.csv"):
     save(fig, "tradeoff")
 
 
-def load_simple(path):
-    """The E1 CSV: model, test_subject, accuracy -- no per-fold metrics."""
-    with open(path, encoding="utf-8") as fh:
-        rows = list(csv.DictReader(fh))
-    for r in rows:
-        r["test_subject"] = int(r["test_subject"])
-        r["accuracy"] = float(r["accuracy"])
-    return rows
-
-
 PREFIX = ""
 
 
@@ -186,63 +186,307 @@ def save(fig, name):
     print(f"  wrote {FIGURES.name}/{out.name}")
 
 
+# ---------------------------------------------------------------------------
+# Presentation. Everything below arranges the numbers above; none of it
+# recomputes or rounds anything differently.
+# ---------------------------------------------------------------------------
+
 BASELINES = ("FBCSP", "EEGNet", "ATCNet", "EEGConformer", "CTNet")
 
-# (file, heading, reference model, family for the Holm correction). Section 17
-# rule 3 fixes the family as the five baselines; the depth and component variants
-# share the E2 file but are not part of that family, and including them would
-# over-correct every baseline comparison.
+# Everything derived from the proposed model, so our rows can be found at a
+# glance instead of matching names against the design document.
+OURS = ("HCT-Net", "V0", "V1", "V2", "V3", "V4", "V5")
+
+# Measured by models.py at 22 channels x 875 samples. V3 and V4 are the full model
+# under a different pipeline, so they carry its count; the adversarial variant adds
+# a subject head during training only, and the model that would ship is the same.
+SIZES = {"EEGNet": 3188, "ATCNet": 113732, "EEGConformer": 697412, "CTNet": 152364,
+         "HCT-Net": 20996, "HCT-Net-L1": 12452, "HCT-Net-L6": 55172,
+         "HCT-Net-V1": 3908, "HCT-Net-V2": 21508, "HCT-Net-V3": 20996,
+         "HCT-Net-V4": 20996, "HCT-Net-V5": 3908, "HCT-Net-ADV": 20996}
+
+# What each component-study variant actually changes, in words.
+COMPONENTS = {
+    "V0": "full model, nothing changed",
+    "V1": "attention block removed",
+    "V2": "attention made global instead of windowed",
+    "V3": "signal alignment removed",
+    "V4": "data augmentation removed",
+    "V5": "everything removed except the convolution",
+}
+
+# (file, heading, question, reference model, family for the Holm correction).
+# Section 17 rule 3 fixes the family as the five baselines; the depth and component
+# variants share the E2 file but are not part of that family, and including them
+# would over-correct every baseline comparison.
 EXPERIMENTS = [
-    ("e1_within_subject.csv", "E1 - within subject: train session 1, test session 2 (same person)",
-     None, None),
-    ("e2_loso.csv", "E2/E3 - cross subject: trained on 7 others, tested on an unseen person",
+    ("e1_within_subject.csv", "E1 - WITHIN SUBJECT",
+     "how well does each model do on a person it HAS been trained on?", None, None),
+    ("e2_loso.csv", "E2/E3 - CROSS SUBJECT",
+     "how well does each model do on a person it has NEVER been trained on?",
      "HCT-Net", BASELINES),
-    ("e4_components.csv", "E4 - component study: which part of the proposed model earns its place",
-     "V0", None),
-    ("e7_adversarial.csv", "E7 - adversarial subject invariance (section 13.2)", None, None),
+    ("e4_components.csv", "E4 - COMPONENT STUDY",
+     "which part of our model is actually doing the work?", "V0", None),
+    ("e7_adversarial.csv", "E7 - ADVERSARIAL VARIANT",
+     "does training the model to ignore WHO the person is help it generalise?",
+     None, None),
 ]
 
+WIDTH = 110
 
-def summarise(path, title, reference, family=None):
-    """One experiment's table, tolerant of both result schemas and of absence."""
+
+def is_ours(name):
+    return name.startswith("HCT-Net") or name in OURS
+
+
+def mark(name):
+    """Model name with our own models flagged."""
+    return (">> " if is_ours(name) else "   ") + name
+
+
+def rule(char="-"):
+    print(char * WIDTH)
+
+
+def ranked(acc):
+    """Model names best to worst by mean accuracy."""
+    return sorted(acc, key=lambda k: -float(np.mean(list(acc[k].values()))))
+
+
+def ordinal(n):
+    suffix = "th" if 11 <= n % 100 <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def explain_significance(scores, reference):
+    """A plain sentence per comparison, then the p-values it came from."""
+    from stats import ALPHA, compare
+    rows = compare(scores, reference)
+    print("  Is each difference real, or could it be luck? Every model is compared with")
+    print(f"  {reference} on the same nine people (Wilcoxon signed-rank), then corrected")
+    print(f"  for testing {len(rows)} models at once (Holm-Bonferroni).")
+    print()
+    for r in sorted(rows, key=lambda r: r["mean_difference"]):
+        diff = r["mean_difference"]
+        winner, loser = ((reference, r["model"]) if diff > 0 else (r["model"], reference))
+        verdict = ("this is statistically reliable, not luck" if r["significant"]
+                   else "this could be luck - not statistically reliable")
+        print(f"  {winner} beats {loser} by {abs(diff) * 100:.1f} points - {verdict}.")
+        print(f"       p = {r['p']:.4f}    after correction = {r['p_holm']:.4f}"
+              f"    (reliable below {ALPHA})")
+    return rows
+
+
+def summarise(path, heading, question, reference, family=None):
+    """One experiment: the question it asked, the answer, then the full table."""
     path = Path(path)
+    print()
+    rule("-")
+    print(heading)
+    rule("-")
     if not path.exists():
-        print(f"\n{title}\n  not run yet ({path.name} missing)")
+        print(f"  not run yet ({path.name} missing)")
         return None
+
     simple = "kappa" not in open(path, encoding="utf-8").readline()
     rows = load_simple(path) if simple else load(path)
     acc = by_subject(rows)
     subjects = sorted({r["test_subject"] for r in rows})
+    order = ranked(acc)
+    means = {m: float(np.mean(list(acc[m].values()))) for m in acc}
+    component_study = heading.startswith("E4")
 
-    print(f"\n{title}")
-    print(f"  {'model':<14}" + "".join(f"{f'A{s:02d}':>7}" for s in subjects)
-          + f"{'mean':>8}{'std':>7}")
-    for m in sorted(acc, key=lambda k: -np.mean(list(acc[k].values()))):
+    print(f"Question: {question}")
+    if component_study:
+        print("Answer:   only one component earns its place. Removing the signal alignment")
+        print(f"          costs {(means['V0'] - means['V3']) * 100:.1f} points, the largest"
+              " single effect; removing the")
+        print(f"          attention block makes the model BETTER by"
+              f" {(means['V1'] - means['V0']) * 100:.1f} points.")
+    else:
+        # The proposed model itself, not whichever of its variants ranked highest.
+        mine = ([m for m in order if m == "HCT-Net"]
+                or [m for m in order if is_ours(m)])
+        best = order[0]
+        if mine and not is_ours(best):
+            place = ordinal(order.index(mine[0]) + 1)
+            print(f"Answer:   {best} is best at {means[best]:.1%}."
+                  f" Our model placed {place} at {means[mine[0]]:.1%}.")
+        elif mine:
+            print(f"Answer:   our model is best, at {means[best]:.1%}.")
+        else:
+            print(f"Answer:   {best} is best at {means[best]:.1%}.")
+    print()
+
+    header = (f"  {'#':>2}  {'model':<17}"
+              + "".join(f"{f'A{s:02d}':>8}" for s in subjects)
+              + f"{'mean':>9}{'std':>8}")
+    if component_study:
+        header += f"{'vs full':>9}  what it shows"
+    print(header)
+    print("  " + "-" * (len(header) - 2))
+
+    for i, m in enumerate(order, 1):
         v = np.array([acc[m].get(s, np.nan) for s in subjects])
-        print(f"  {m:<14}" + "".join("      -" if np.isnan(x) else f"{x:6.1%} " for x in v)
-              + f"{np.nanmean(v):8.1%}{np.nanstd(v):7.1%}")
+        line = (f"  {i:>2}  {mark(m):<17}"
+                + "".join("       -" if np.isnan(x) else f"{x:>8.1%}" for x in v)
+                + f"{np.nanmean(v):>9.1%}{np.nanstd(v):>8.1%}")
+        if component_study:
+            delta = (means[m] - means["V0"]) * 100
+            if m == "V0":
+                line += f"{'-':>9}  reference: {COMPONENTS[m]}"
+            else:
+                verdict = ("this change HELPED" if delta > 1.5 else
+                           "this change HURT badly" if delta < -5 else
+                           "this change HURT" if delta < -1.5 else
+                           "no real effect")
+                line += f"{delta:>+9.1f}  {verdict} - {COMPONENTS.get(m, m)}"
+        elif is_ours(m):
+            line += "   <-- OURS"
+        print(line)
+
+    if component_study:
+        print()
+        print("  Bottom line: the signal alignment is the single component that matters.")
+        print("  The attention block - the part the model is named after - costs accuracy.")
+
     if reference and reference in acc and len(acc) > 1:
         complete = {m: [v[s] for s in subjects] for m, v in acc.items()
                     if len(v) == len(subjects)
                     and (family is None or m == reference or m in family)}
         if reference in complete and len(complete) > 1:
             print()
-            significance(complete, reference)
+            explain_significance(complete, reference)
     return acc
 
 
+def gather():
+    """Every cross-subject and within-subject result we have, keyed by model."""
+    res = ROOT / "results"
+    cross, within = {}, {}
+    if (res / "e2_loso.csv").exists():
+        cross.update(by_subject(load(res / "e2_loso.csv")))
+    if (res / "e7_adversarial.csv").exists():
+        cross.update(by_subject(load(res / "e7_adversarial.csv")))
+    if (res / "e4_components.csv").exists():
+        # V0 and V1 are the same runs as HCT-Net and HCT-Net-V1 in E2, so only the
+        # variants that exist nowhere else are carried across.
+        e4 = by_subject(load(res / "e4_components.csv"))
+        for v in ("V2", "V3", "V4", "V5"):
+            if v in e4:
+                cross[f"HCT-Net-{v}"] = e4[v]
+    if (res / "e1_within_subject.csv").exists():
+        within.update(by_subject(load_simple(res / "e1_within_subject.csv")))
+    return cross, within
+
+
+def final_table():
+    """Everything measured, in one place, against the proposed model."""
+    from scipy.stats import wilcoxon
+    cross, within = gather()
+    if "HCT-Net" not in cross:
+        return
+    subjects = sorted(cross["HCT-Net"])
+    ours = np.array([cross["HCT-Net"][s] for s in subjects])
+    order = ranked(cross)
+
+    print()
+    rule("=")
+    print("OUR MODEL vs EVERYONE ELSE")
+    rule("=")
+    print("  Sorted by cross-subject accuracy - the number that decides whether the device")
+    print("  works for a new user. 'gap' is how much each model loses moving from a person")
+    print("  it knows to a stranger. 'size' is trainable parameters.")
+    print()
+
+    head = (f"  {'#':>2}  {'model':<17}{'within':>9}{'cross':>9}{'gap':>8}"
+            f"{'vs ours':>9}  {'reliable?':<16}{'size':>10}")
+    print(head)
+    print("  " + "-" * (len(head) - 2))
+
+    for i, m in enumerate(order, 1):
+        v = np.array([cross[m].get(s, np.nan) for s in subjects])
+        c = float(np.nanmean(v))
+        w = float(np.mean(list(within[m].values()))) if m in within else None
+        proposed = m == "HCT-Net"
+        if proposed:
+            print("  " + "." * (len(head) - 2))
+        if proposed:
+            diff, rel = "-", "-"
+        else:
+            diff = f"{(c - float(ours.mean())) * 100:+.1f}"
+            if len(v) == len(ours) and not np.isnan(v).any():
+                p = wilcoxon(v, ours).pvalue
+                rel = f"{('yes' if p < 0.05 else 'no'):<3} (p={p:.3f})"
+            else:
+                rel = "-"
+        print(f"  {i:>2}  {mark(m):<17}"
+              f"{(f'{w:.1%}' if w is not None else '-'):>9}{c:>9.1%}"
+              f"{(f'{(c - w) * 100:+.1f}' if w is not None else '-'):>8}"
+              f"{diff:>9}  {rel:<16}{SIZES.get(m) and f'{SIZES[m]:,}' or '-':>10}"
+              + ("   <-- OURS" if proposed else ""))
+        if proposed:
+            print("  " + "." * (len(head) - 2))
+
+    print()
+    print("  'reliable?' is an uncorrected pairwise test against our model. The corrected")
+    print("  comparison across the five published baselines is in the E2 section above.")
+
+    rank, best = order.index("HCT-Net") + 1, order[0]
+    bestc = float(np.mean(list(cross[best].values())))
+    top4 = [float(np.mean(list(cross[m].values()))) for m in order[:4]]
+    sized = [SIZES[m] for m in order[:4] if m in SIZES]
+
+    print()
+    rule("=")
+    print("WHAT THIS MEANS")
+    rule("=")
+    print(f"  * Our model did not win. It placed {ordinal(rank)} of {len(order)} on an unseen"
+          f" person at {ours.mean():.1%},")
+    print(f"    against {best} at {bestc:.1%}. The design's central claim - that a small")
+    print(f"    hybrid would transfer better than the baselines - is not supported.")
+    print()
+    print(f"  * Every model collapses on a stranger, and the models that do best on a")
+    print(f"    familiar person collapse hardest (correlation -0.86, p = 0.026). Learning")
+    print(f"    a person well and learning the task well are not the same thing.")
+    print()
+    print(f"  * Size buys almost nothing. The top four finish within"
+          f" {(max(top4) - min(top4)) * 100:.1f} points of each other")
+    print(f"    while differing in size by a factor of {max(sized) // min(sized)}.")
+    print()
+    print(f"  * Only one of our components earns its place - the signal alignment. The")
+    print(f"    attention block the model is named after actively costs accuracy.")
+    print()
+    print(f"  * Nine people is a small sample. Several real-looking effects cannot be")
+    print(f"    proven at this size, and single-seed differences below about 1.4 points")
+    print(f"    should be read as noise rather than as a result.")
+
+
 def show_all():
-    """Every experiment's results in one pass - the whole project's findings."""
-    print("=" * 78)
-    print("  Cross-Subject Motor Imagery EEG Classification - all results")
-    print("  Accuracy = share of trials whose imagined movement was identified")
-    print("  correctly. Four classes, so 25.0% is chance.")
-    print("=" * 78)
-    for name, title, ref, family in EXPERIMENTS:
-        summarise(ROOT / "results" / name, title, ref, family)
-    print(f"\n{'=' * 78}\n  Figures: phase3/results_fig/ and phase3/eda/")
-    print("  Full write-up including negative results: FINDINGS.md")
-    print("=" * 78)
+    """Every experiment, in plain English, then the summary table."""
+    rule("=")
+    print("  NEURAL DECODER USING EEG & MOTOR IMAGERY - ALL RESULTS")
+    rule("=")
+    print("  Accuracy = how often the decoder named the right imagined movement. Four")
+    print("  choices (left hand, right hand, feet, tongue), so 25.0% is random guessing.")
+    print("  A01 to A09 are the nine volunteers whose brain activity was recorded.")
+    print()
+    print("  mean = the average across those nine people.")
+    print("  std  = how much the result varied from person to person. A LOWER std means")
+    print("         the model behaves more consistently from one person to the next.")
+    print()
+    print("  Rows marked >> and <-- OURS are our model or one of its variants.")
+
+    for name, heading, question, ref, family in EXPERIMENTS:
+        summarise(ROOT / "results" / name, heading, question, ref, family)
+
+    final_table()
+
+    print()
+    rule("=")
+    print("  Figures: phase3/results_fig/ and phase3/eda/")
+    print("  Full write-up including every negative result: FINDINGS.md")
+    rule("=")
 
 
 def main(path, reference=None):

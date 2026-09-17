@@ -145,6 +145,10 @@ def run(names=("FBCSP", *MODELS), seeds=SEEDS, align=True, out="e2_loso.csv"):
                 print(f"  {name:14s} fold A{test_subject:02d}  seed {seed}  "
                       f"acc {m['accuracy']:6.1%}  kappa {m['kappa']:+.3f}  "
                       f"({time.time() - t0:.0f}s)")
+                # Written per fold, not at the end. done_already() can only resume
+                # from what is on disk, and a run killed at fold 8 of 9 previously
+                # lost all eight -- which is exactly what happened to V0.
+                write(rows, out, quiet=True)
         if accs:
             print(f"  {name:14s} mean {np.mean(accs):6.1%} +/- {np.std(accs):.1%} over "
                   f"{len(accs)} new run(s)\n")
@@ -156,7 +160,7 @@ def run(names=("FBCSP", *MODELS), seeds=SEEDS, align=True, out="e2_loso.csv"):
     return rows
 
 
-def write(rows, name="e2_loso.csv"):
+def write(rows, name="e2_loso.csv", quiet=False):
     """Merge this run's rows into the results file, keeping other models' rows.
 
     Runs happen one model at a time, over hours. Truncating the file would throw
@@ -183,8 +187,9 @@ def write(rows, name="e2_loso.csv"):
         for r in kept + rows:
             fh.write(",".join(str(r[k]) for k in keys) +
                      ',"' + str(r["confusion"]) + '"\n')
-    print(f"wrote {len(rows)} rows to {path}"
-          + (f", keeping {len(kept)} from earlier runs" if kept else ""))
+    if not quiet:
+        print(f"wrote {len(rows)} rows to {path}"
+              + (f", keeping {len(kept)} from earlier runs" if kept else ""))
 
 
 if __name__ == "__main__":

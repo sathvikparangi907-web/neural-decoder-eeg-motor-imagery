@@ -39,6 +39,9 @@ MODELS = {"EEGNet": EEGNet, "ATCNet": ATCNet, "EEGConformer": EEGConformer,
 # in section 11.6 and never measured; these are the comparisons that measure it.
 # Named separately rather than added to MODELS so a default run does not include them.
 VARIANTS = {f"HCT-Net-L{n}": partial(HCTNet, layers=n) for n in (1, 6)}
+# V0, component study: everything except the attention. E5 showed depth barely
+# matters, so the question is whether the encoder helps at all.
+VARIANTS["HCT-Net-V0"] = partial(HCTNet, use_encoder=False)
 
 # Table 15.1 quotes these for the *papers'* own input configurations, not for 875
 # samples, so they are a reference to print against and not something to assert.

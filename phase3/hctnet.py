@@ -37,7 +37,8 @@ BUDGET = 20_996                # Table 11.3
 
 
 class HCTNet(nn.Module):
-    def __init__(self, n_chans=N_EEG, n_outputs=4, n_times=N_SAMP, layers=LAYERS):
+    def __init__(self, n_chans=N_EEG, n_outputs=4, n_times=N_SAMP, layers=LAYERS,
+                 use_encoder=True):
         super().__init__()
         # Block 1-8: EEGNet-style convolutional front end, no bias anywhere, since
         # every convolution is followed by batch normalisation.
@@ -63,7 +64,11 @@ class HCTNet(nn.Module):
         layer = nn.TransformerEncoderLayer(
             D_MODEL, HEADS, dim_feedforward=FF, dropout=DROPOUT,
             activation="gelu", batch_first=True)
-        self.encoder = nn.TransformerEncoder(layer, layers)
+        # use_encoder=False is variant V0 of the component study: the convolutional
+        # front end, windowing and fusion are untouched and only the attention is
+        # removed, so the difference is attributable to the encoder alone rather
+        # than to the many small ways EEGNet differs from this front end.
+        self.encoder = nn.TransformerEncoder(layer, layers) if use_encoder else nn.Identity()
 
         self.classifier = nn.Linear(D_MODEL, n_outputs)
         nn.init.trunc_normal_(self.positional, std=0.02)

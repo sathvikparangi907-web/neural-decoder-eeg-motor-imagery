@@ -586,6 +586,44 @@ argument turns out to be right about transfer and irrelevant to cross-subject ac
 EEGNet at 3,188 is within 1.2 points of models 36× and 219× its size, and HCT-Net at 20,996
 is worse than both. Size was never the binding constraint.
 
+---
+
+## E5 / Finding 14 — attention depth is not the lever; the encoder itself is
+
+Depth 2 was chosen on §11.6's budget argument and never measured. Measured now, cross-subject
+under LOSO:
+
+| variant | parameters | cross-subject |
+|---|---|---|
+| HCT-Net-L1 | 12,452 | 46.0% |
+| HCT-Net (L2) | 20,996 | 46.9% |
+| HCT-Net-L6 | 55,172 | 47.7% |
+
+Paired across the nine subjects: L1→L2 +0.9 (p = 0.250), L2→L6 +0.8 (p = 0.496), L1→L6 +1.7
+(p = 0.156). **No comparison is significant.** Depth 1 to 6 spans 1.7 points for 4.4× the
+parameters.
+
+Two things follow. §11.6's choice of 2 layers is vindicated, though not for the reason given
+— it is not that 2 is the right depth, it is that depth barely matters here, so the cheapest
+defensible choice was as good as any. And the hypothesis at the end of finding 12, that depth
+drives the within-subject skill that costs transfer, is **refuted**.
+
+### The encoder is what costs the transfer
+
+EEGNet is close to HCT-Net's convolutional front end with no attention on top. It beats
+HCT-Net by **4.3 points cross-subject (p = 0.023)** with 6.6× fewer parameters, and the gap
+does not close at any encoder depth.
+
+So the windowed Transformer encoder — the component the design is named for, adapted from
+ATCNet and CTNet on the argument that local attention suits short EEG trials — appears to be
+the part that hurts. It buys within-subject accuracy (HCT-Net is 7.3 points ahead of EEGNet
+within subject) and loses more than that in transfer.
+
+Variant V0 is now running to make this airtight: HCT-Net with `use_encoder=False`, which
+keeps the front end, the windowing and the fusion exactly as they are and removes only the
+attention. EEGNet differs from this front end in several small ways, so V0 is the comparison
+that attributes the loss to the encoder alone.
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

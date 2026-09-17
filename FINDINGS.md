@@ -645,6 +645,63 @@ What it means for the design: the windowed encoder is not merely failing to help
 costing accuracy on unseen subjects while buying it on seen ones. The component the model is
 named for is the component to remove.
 
+---
+
+## M7 / E4 — component study: only alignment earns its place
+
+Six configurations, same nine folds, Table 17.3. Differences are V0 minus the variant, so a
+negative number means the variant **beat** the full model.
+
+| variant | cross-subject | vs V0 | p | p (Holm over 5) |
+|---|---|---|---|---|
+| V0 full model | 46.9% | — | — | — |
+| V1 no attention | **48.8%** | −1.9 | 0.098 | 0.293 |
+| V2 global attention | **49.8%** | −2.9 | 0.164 | 0.328 |
+| V3 no alignment | 41.8% | **+5.1** | 0.027 | 0.137 |
+| V4 no augmentation | 48.1% | −1.2 | 0.910 | 0.910 |
+| V5 convolution only | 39.1% | **+7.8** | 0.027 | 0.137 |
+
+**Of the three things added to the convolutional core, one helps, one hurts and one does
+nothing.**
+
+- **Euclidean alignment earns its place.** Removing it costs 5.1 points (uncorrected
+  p = 0.027) — the largest single effect in the study, and close to the +5.5 it gave FBCSP
+  in finding 11. It is the one component that works on both a classical and a deep model.
+- **Attention costs accuracy.** Removing it entirely gains 1.9 points, and it is not that the
+  windowing is wrong in some fixable way: V2, with global attention over all 27 steps,
+  gains 2.9 — beating both the full model and the no-attention variant.
+- **Augmentation does nothing measurable.** V4 gains 1.2 points at p = 0.910, which is as
+  close to no effect as this study can report. §9.3 argued segmentation-and-reconstruction
+  was "a necessity rather than a refinement" on a dataset this small. Cross-subject, it is
+  neither.
+
+### Two design constraints fixed in advance turn out to be wrong
+
+Table 11.1 fixed three constraints before the design. The parameter budget was vindicated
+(finding 13: size barely matters cross-subject). The other two did not survive:
+
+- **"Windowed attention, not global"**, justified by a locality prior suiting short EEG
+  trials. V2 says global attention is *better* by 2.9 points. The prior is wrong, or at least
+  not worth what it costs.
+- **"Encoder depth 2"** — finding 14 showed depth makes no significant difference at all, so
+  the constraint was harmless but also uninformative.
+
+### The multiple-comparison ceiling, again
+
+Nothing in the table survives Holm correction across the five comparisons, though V3 and V5
+are significant uncorrected. This is the third time the same ceiling has been hit (findings
+11 and the V0/V1 comparison). With nine subjects and a family of five, an effect needs to be
+very large to clear correction — V3's 5.1 points does not. Both values are reported, per §17
+rule 3, and the honest summary is: **the direction of every component effect is consistent
+and the magnitudes are plausible, but this dataset cannot establish them individually.**
+
+### What the study says to build next
+
+The best configuration measured here is **V2 at 49.8%** — convolutional front end, global
+attention, alignment, augmentation. That is still below EEGNet's 51.2%. The evidence points
+at a model that keeps alignment, drops the windowing, and does not obviously need the
+encoder at all: which is to say, it points back at EEGNet plus Euclidean alignment.
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

@@ -81,6 +81,10 @@ def metrics(y_true, y_pred):
     return {"accuracy": float((y_true == y_pred).mean()),
             "kappa": cohen_kappa_score(y_true, y_pred),
             "precision": p, "recall": r, "f1": f1,
+            # Per-trial predictions, not just the confusion matrix. A majority vote
+            # across models needs to know which trial each model got wrong, and a
+            # confusion matrix has already thrown that away.
+            "predictions": "".join(str(int(v)) for v in y_pred),
             "confusion": confusion_matrix(y_true, y_pred, labels=[0, 1, 2, 3]).tolist()}
 
 

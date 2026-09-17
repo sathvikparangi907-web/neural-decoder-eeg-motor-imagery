@@ -31,6 +31,14 @@ OUT = "e9_improve.csv"
 # Each step is the previous configuration plus one change, so a gain is
 # attributable to the change on its row. C6 is applied last and kept only if
 # validation says it helps, since it roughly triples the attention parameters.
+# Each step is the previous configuration plus one change, so a gain is
+# attributable to the change on its row.
+#
+# C4 (dropout 0.40 / 0.50) and C6 (six encoder layers) were dropped from the plan:
+# E5 already measured depth at 1, 2 and 6 layers and found no significant
+# difference, so C6 would spend hours re-confirming a null result, and C4 was the
+# least evidence-backed of the six. Both remain available as keyword arguments on
+# HCTNet if they are wanted later.
 STEPS = [
     ("base", "the model as submitted", {}, {}),
     ("C1", "flatten head instead of average pooling",
@@ -39,15 +47,8 @@ STEPS = [
      {"flatten_head": True, "global_attention": True}, {}),
     ("C3", "test-time batch-norm adaptation on the unlabelled test subject",
      {"flatten_head": True, "global_attention": True}, {"bn_adapt": True}),
-    ("C4a", "dropout 0.25 -> 0.40",
-     {"flatten_head": True, "global_attention": True, "dropout": 0.40}, {"bn_adapt": True}),
-    ("C4b", "dropout 0.40 -> 0.50",
-     {"flatten_head": True, "global_attention": True, "dropout": 0.50}, {"bn_adapt": True}),
     ("C5", "average the softmax over three seeds",
      {"flatten_head": True, "global_attention": True}, {"bn_adapt": True, "seeds": 3}),
-    ("C6", "six encoder layers instead of two",
-     {"flatten_head": True, "global_attention": True, "layers": 6},
-     {"bn_adapt": True, "seeds": 3}),
 ]
 
 

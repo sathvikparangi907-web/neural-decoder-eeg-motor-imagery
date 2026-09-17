@@ -118,20 +118,84 @@ def complexity(acc):
     save(fig, "complexity")
 
 
+def tradeoff(cross, within_path=ROOT / "results" / "e1_within_subject.csv"):
+    """Within-subject accuracy against cross-subject accuracy, one point per model.
+
+    The project's central measured claim: the better a model decodes a subject it
+    has seen, the worse it does on one it has not. The diagonal is where a model
+    would transfer perfectly; distance below it is the transfer loss.
+    """
+    if not Path(within_path).exists():
+        print("  (trade-off figure needs results/e1_within_subject.csv)")
+        return
+    within = by_subject(load_simple(within_path))
+    shared = [m for m in cross if m in within]
+    if len(shared) < 3:
+        print("  (trade-off figure needs at least three models measured both ways)")
+        return
+
+    fig, ax = plt.subplots(figsize=(6.6, 5.4))
+    lo, hi = 0.35, 0.85
+    ax.plot([lo, hi], [lo, hi], color="#8C96AC", lw=1, ls="--", zorder=1)
+    ax.text(hi - 0.01, hi - 0.005, "perfect transfer", ha="right", va="top",
+            fontsize=8, color="#5A6478", rotation=45, rotation_mode="anchor")
+    # Four of the six models sit within three points of each other on both axes.
+    # Inline labels collide or detach at that density whatever the offsets, so the
+    # names and drops go in the legend and the drop line is left unannotated.
+    ordered = sorted(shared, key=lambda m: -np.mean(list(within[m].values())))
+    palette = ["#1B3A6B", "#4A6FA5", "#8A6FC4", "#5A6478", "#2E7D6E", "#A15C3E"]
+    for i, m in enumerate(ordered):
+        w = float(np.mean(list(within[m].values())))
+        c = float(np.mean(list(cross[m].values())))
+        proposed = m == "HCT-Net"
+        ax.plot([w, w], [c, w], color="#8C96AC", lw=0.8, zorder=2)   # the drop
+        ax.scatter(w, c, s=130 if proposed else 70, zorder=3,
+                   color="#5B3E96" if proposed else palette[i % len(palette)],
+                   marker="D" if proposed else "o", edgecolor="white", linewidth=0.8,
+                   label=f"{m}  ({100 * (c - w):+.1f} pts)")
+    ax.legend(loc="upper left", fontsize=8.5, frameon=True, framealpha=0.95,
+              title="model (transfer loss)", title_fontsize=8.5)
+    ax.set(xlim=(lo, hi), ylim=(lo, hi),
+           xlabel="within-subject accuracy (train session T, test session E)",
+           ylabel="cross-subject accuracy (leave-one-subject-out)",
+           title="Within-subject skill costs cross-subject transfer")
+    for axis in (ax.xaxis, ax.yaxis):
+        axis.set_major_formatter(lambda v, _: f"{v:.0%}")
+    ax.grid(alpha=0.3, zorder=0)
+    save(fig, "tradeoff")
+
+
+def load_simple(path):
+    """The E1 CSV: model, test_subject, accuracy -- no per-fold metrics."""
+    with open(path, encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    for r in rows:
+        r["test_subject"] = int(r["test_subject"])
+        r["accuracy"] = float(r["accuracy"])
+    return rows
+
+
+PREFIX = ""
+
+
 def save(fig, name):
     FIGURES.mkdir(exist_ok=True)
-    fig.savefig(FIGURES / f"{name}.png", dpi=150, bbox_inches="tight")
+    out = FIGURES / f"{PREFIX}{name}.png"
+    fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  wrote {FIGURES.name}/{name}.png")
+    print(f"  wrote {FIGURES.name}/{out.name}")
 
 
 def main(path, reference=None):
+    global PREFIX
+    PREFIX = "" if Path(path).stem.startswith("e2") else Path(path).stem.split("_")[0] + "_"
     rows = load(path)
     print(f"{path}: {len(rows)} runs\n")
     acc = table(rows)
     print()
     confusions(rows)
     complexity(acc)
+    tradeoff(acc)
 
     if reference:
         subjects = sorted({r["test_subject"] for r in rows})

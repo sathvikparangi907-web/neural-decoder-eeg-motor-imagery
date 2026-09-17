@@ -48,7 +48,8 @@ class GradientReversal(torch.autograd.Function):
         return -ctx.lambda_ * grad, None
 
 
-def train_adversarial(X, y, subject, tr, va, te, lambda_max, seed=0, epochs=EPOCHS):
+def train_adversarial(X, y, subject, tr, va, te, lambda_max, seed=0,
+                      epochs=EPOCHS, build=HCTNet):
     """One fold. Returns (validation accuracy, test predictions).
 
     The subject head sees only training subjects - the validation and test
@@ -71,7 +72,7 @@ def train_adversarial(X, y, subject, tr, va, te, lambda_max, seed=0, epochs=EPOC
     Xva, yva = f(Xva), i(y[va])
     Xte = f(Xte)
 
-    model = HCTNet().to(DEVICE)
+    model = build().to(DEVICE)
     head = nn.Linear(D_MODEL, len(codes)).to(DEVICE)
     opt = torch.optim.Adam([*model.parameters(), *head.parameters()],
                            lr=LR, weight_decay=WEIGHT_DECAY)
@@ -128,12 +129,12 @@ def _augment_with_subject(X, y, subj, seed):
     return np.concatenate(Xs), np.concatenate(ys), np.concatenate(ss)
 
 
-def run(fold_ids=None):
+def run(fold_ids=None, build=HCTNet, name="HCT-Net-ADV", out=OUT):
     folds = loso_folds()
     if fold_ids:
         folds = [f for f in folds if f[2] in fold_ids]
     rows, accs = [], []
-    finished = done_already(OUT)
+    finished = done_already(out)
     print(f"E7 adversarial subject invariance: {len(folds)} fold(s), "
           f"lambda from {LAMBDAS} chosen on the validation subject")
     if finished:
@@ -141,7 +142,7 @@ def run(fold_ids=None):
     print()
 
     for train_subjects, val_subject, test_subject in folds:
-        if ("HCT-Net-ADV", test_subject, 0) in finished:
+        if (name, test_subject, 0) in finished:
             continue
         X, y, session, tr, va, te = fold_data((train_subjects, val_subject, test_subject))
         subject = np.concatenate([np.full(576, s)
@@ -150,22 +151,22 @@ def run(fold_ids=None):
 
         best_lambda, best_val, best_pred = None, -1.0, None
         for lam in LAMBDAS:
-            val, pred = train_adversarial(X, y, subject, tr, va, te, lam)
+            val, pred = train_adversarial(X, y, subject, tr, va, te, lam, build=build)
             print(f"    A{test_subject:02d}  lambda {lam:<5} validation {val:6.1%}")
             if val > best_val:
                 best_lambda, best_val, best_pred = lam, val, pred
 
         m = metrics(y[te], best_pred)
         accs.append(m["accuracy"])
-        rows.append({"model": "HCT-Net-ADV", "test_subject": test_subject, "seed": 0,
+        rows.append({"model": name, "test_subject": test_subject, "seed": 0,
                      "seconds": round(time.time() - t0, 1), **m})
         print(f"  A{test_subject:02d}  lambda {best_lambda} chosen on validation "
               f"({best_val:.1%}) -> test {m['accuracy']:6.1%}  "
               f"kappa {m['kappa']:+.3f}  ({time.time() - t0:.0f}s)\n")
-        write(rows, OUT, quiet=True)
+        write(rows, out, quiet=True)
 
     if accs:
-        print(f"  HCT-Net-ADV  mean {np.mean(accs):6.1%} +/- {np.std(accs):.1%} "
+        print(f"  {name}  mean {np.mean(accs):6.1%} +/- {np.std(accs):.1%} "
               f"over {len(accs)} new fold(s)")
     print(f"  (HCT-Net 46.9%, EEGNet 51.2%, ATCNet 52.4% under the same protocol)")
     return rows
@@ -173,4 +174,13 @@ def run(fold_ids=None):
 
 if __name__ == "__main__":
     ids = [int(a) for a in sys.argv[1:] if a.isdigit()]
-    run(ids or None)
+    if "--global" in sys.argv:
+        # HCT-Net v2: the two changes the evidence supports, combined. Global
+        # attention beat windowed by 2.9 points in the component study (V2) and
+        # adversarial training beat the plain model by 1.9; neither had been tried
+        # with the other.
+        from functools import partial
+        run(ids or None, build=partial(HCTNet, global_attention=True),
+            name="HCT-Net-v2", out="e8_hctnet_v2.csv")
+    else:
+        run(ids or None)

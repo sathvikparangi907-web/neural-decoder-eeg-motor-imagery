@@ -44,8 +44,10 @@ STEPS = [
      {"flatten_head": True, "global_attention": True}, {}),
     ("C3", "test-time batch-norm adaptation on the unlabelled test subject",
      {"flatten_head": True, "global_attention": True}, {"bn_adapt": True}),
+    # C3 was rejected on validation (55.6% against C2's 56.0%), so C5 builds on
+    # C2 and does not carry the batch-norm adaptation forward.
     ("C5", "average the softmax over three seeds",
-     {"flatten_head": True, "global_attention": True}, {"bn_adapt": True, "seeds": 3}),
+     {"flatten_head": True, "global_attention": True}, {"seeds": 3}),
 ]
 
 

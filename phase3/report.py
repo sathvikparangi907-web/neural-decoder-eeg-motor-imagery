@@ -157,7 +157,7 @@ def tradeoff(cross, within_path=ROOT / "results" / "e1_within_subject.csv"):
     for i, m in enumerate(ordered):
         w = float(np.mean(list(within[m].values())))
         c = float(np.mean(list(cross[m].values())))
-        proposed = m == "HCT-Net"
+        proposed = m == ref
         ax.plot([w, w], [c, w], color="#8C96AC", lw=0.8, zorder=2)   # the drop
         ax.scatter(w, c, s=130 if proposed else 70, zorder=3,
                    color="#5B3E96" if proposed else palette[i % len(palette)],
@@ -203,7 +203,17 @@ OURS = ("HCT-Net", "V0", "V1", "V2", "V3", "V4", "V5")
 SIZES = {"EEGNet": 3188, "ATCNet": 113732, "EEGConformer": 697412, "CTNet": 152364,
          "HCT-Net": 20996, "HCT-Net-L1": 12452, "HCT-Net-L6": 55172,
          "HCT-Net-V1": 3908, "HCT-Net-V2": 21508, "HCT-Net-V3": 20996,
-         "HCT-Net-V4": 20996, "HCT-Net-V5": 3908, "HCT-Net-ADV": 20996}
+         "HCT-Net-V4": 20996, "HCT-Net-V5": 3908, "HCT-Net-ADV": 20996,
+         # Three networks of 24,836 each - the three-seed ensemble from Stage 2.
+         "HCT-Net-final": 74508}
+
+# Stage 2 (improve.py): what each step changed, and the model the report leads with.
+STEPS = [("base", "model as submitted"),
+         ("C1", "classifier reads every time step, not an average"),
+         ("C2", "attention over the whole trial, not in windows"),
+         ("C3", "batch-norm statistics adapted to the new person"),
+         ("C5", "three trained copies, predictions averaged")]
+FINAL = "HCT-Net-final"
 
 # What each component-study variant actually changes, in words.
 COMPONENTS = {
@@ -375,9 +385,74 @@ def gather():
         for v in ("V2", "V3", "V4", "V5"):
             if v in e4:
                 cross[f"HCT-Net-{v}"] = e4[v]
+    if (res / "e9_improve.csv").exists():
+        # The Stage 2 configuration chosen on validation subjects.
+        e9 = by_subject(load(res / "e9_improve.csv"))
+        if "C5" in e9:
+            cross[FINAL] = e9["C5"]
     if (res / "e1_within_subject.csv").exists():
         within.update(by_subject(load_simple(res / "e1_within_subject.csv")))
     return cross, within
+
+
+def improvement_steps():
+    """Stage 2: each change, what validation said, and the test result read once."""
+    path = ROOT / "results" / "e9_improve.csv"
+    print()
+    rule("-")
+    print("E9 - IMPROVING OUR MODEL, ONE CHANGE AT A TIME")
+    rule("-")
+    if not path.exists():
+        print("  not run yet (e9_improve.csv missing)")
+        return
+    rows = list(csv.DictReader(path.open(encoding="utf-8")))
+    val, test = defaultdict(dict), defaultdict(dict)
+    for r in rows:
+        val[r["model"]][int(r["test_subject"])] = float(r["validation"])
+        test[r["model"]][int(r["test_subject"])] = float(r["accuracy"])
+    steps = [(k, d) for k, d in STEPS if k in val]
+    subjects = sorted(test[steps[0][0]])
+
+    # Replay the decisions exactly as they were made: a change is kept only if it
+    # beats the last kept configuration on the validation subjects.
+    kept, decision = steps[0][0], {steps[0][0]: "starting point"}
+    for k, _ in steps[1:]:
+        better = np.mean(list(val[k].values())) > np.mean(list(val[kept].values()))
+        decision[k] = "KEPT" if better else "rejected"
+        kept = k if better else kept
+
+    start = np.mean(list(test[steps[0][0]].values()))
+    end = np.mean(list(test[kept].values()))
+    print("Question: which changes to our model actually help on a person it has never")
+    print("          been trained on?")
+    print(f"Answer:   {sum(d == 'KEPT' for d in decision.values())} of {len(steps) - 1} changes"
+          f" helped. The final model reaches {end:.1%}, up {100 * (end - start):.1f} points")
+    print(f"          from {start:.1%}.")
+    print()
+    print("  Every fold keeps one extra person aside as a 'validation' person. Changes were")
+    print("  kept or rejected on that person's accuracy only; the test column was read once,")
+    print("  after every decision had been made, so it could not influence them.")
+    print()
+
+    head = (f"  {'step':<6}" + "".join(f"{f'A{s:02d}':>8}" for s in subjects)
+            + f"{'test':>9}{'valid.':>9}  decision")
+    print(head)
+    print("  " + "-" * (len(head) - 2))
+    for k, desc in steps:
+        t = [test[k][s] for s in subjects]
+        print(f"  {k:<6}" + "".join(f"{x:>8.1%}" for x in t)
+              + f"{np.mean(t):>9.1%}{np.mean(list(val[k].values())):>9.1%}  {decision[k]}")
+    print()
+    for k, desc in steps:
+        print(f"    {k:<5} {desc}")
+    for k in [k for k in decision if decision[k] == "rejected"]:
+        if np.mean(list(test[k].values())) > end:
+            print()
+            print(f"  Note: {k} was rejected on validation but scores"
+                  f" {np.mean(list(test[k].values())):.1%} on test - higher than the")
+            print("  final model. It was left out on purpose: picking it now would mean")
+            print("  choosing the model by its test score, and the result would stop being")
+            print("  an honest estimate.")
 
 
 def final_table():
@@ -386,8 +461,9 @@ def final_table():
     cross, within = gather()
     if "HCT-Net" not in cross:
         return
-    subjects = sorted(cross["HCT-Net"])
-    ours = np.array([cross["HCT-Net"][s] for s in subjects])
+    ref = FINAL if FINAL in cross else "HCT-Net"
+    subjects = sorted(cross[ref])
+    ours = np.array([cross[ref][s] for s in subjects])
     order = ranked(cross)
 
     print()
@@ -408,7 +484,7 @@ def final_table():
         v = np.array([cross[m].get(s, np.nan) for s in subjects])
         c = float(np.nanmean(v))
         w = float(np.mean(list(within[m].values()))) if m in within else None
-        proposed = m == "HCT-Net"
+        proposed = m == ref
         if proposed:
             print("  " + "." * (len(head) - 2))
         if proposed:
@@ -424,7 +500,8 @@ def final_table():
               f"{(f'{w:.1%}' if w is not None else '-'):>9}{c:>9.1%}"
               f"{(f'{(c - w) * 100:+.1f}' if w is not None else '-'):>8}"
               f"{diff:>9}  {rel:<16}{SIZES.get(m) and f'{SIZES[m]:,}' or '-':>10}"
-              + ("   <-- OURS" if proposed else ""))
+              + ("   <-- OURS (FINAL)" if proposed else
+                 "   <-- as submitted" if m == "HCT-Net" and ref != m else ""))
         if proposed:
             print("  " + "." * (len(head) - 2))
 
@@ -432,34 +509,50 @@ def final_table():
     print("  'reliable?' is an uncorrected pairwise test against our model. The corrected")
     print("  comparison across the five published baselines is in the E2 section above.")
 
-    rank, best = order.index("HCT-Net") + 1, order[0]
+    best = order[0]
     bestc = float(np.mean(list(cross[best].values())))
-    top4 = [float(np.mean(list(cross[m].values()))) for m in order[:4]]
-    sized = [SIZES[m] for m in order[:4] if m in SIZES]
+    subm = float(np.mean(list(cross["HCT-Net"].values())))
+    rank_subm = order.index("HCT-Net") + 1
+    main = [m for m in order if m in BASELINES or m == ref]
+    top4 = [float(np.mean(list(cross[m].values()))) for m in main[:4]]
+    main_rank = main.index(ref) + 1
 
     print()
     rule("=")
     print("WHAT THIS MEANS")
     rule("=")
-    print(f"  * Our model did not win. It placed {ordinal(rank)} of {len(order)} on an unseen"
-          f" person at {ours.mean():.1%},")
-    print(f"    against {best} at {bestc:.1%}. The design's central claim - that a small")
-    print(f"    hybrid would transfer better than the baselines - is not supported.")
+    if ref == FINAL:
+        print(f"  * Our improved model reaches {ours.mean():.1%} on a person it has never seen,")
+        print(f"    {ordinal(main_rank)} of {len(main)} against the published models"
+              f" ({best} leads at {bestc:.1%}). None of")
+        print("    the gaps to the models around it is statistically reliable: it is level")
+        print("    with the leaders, not ahead of them.")
+        print()
+        print(f"  * It got there in steps. The model as submitted scored {subm:.1%} and placed")
+        print(f"    {ordinal(rank_subm)} of {len(order)}; reading the whole time series and"
+              " attending over the")
+        print("    whole trial helped, adapting to the new person did not, and averaging")
+        print("    three trained copies helped most.")
+        print()
+        print(f"  * The price is size. Three copies make {SIZES[FINAL]:,} parameters -"
+              " still under ATCNet's")
+        print(f"    {SIZES['ATCNet']:,}, but 3.5 times the {SIZES['HCT-Net']:,}"
+              " the design promised.")
+    else:
+        print(f"  * Our model did not win. It placed {ordinal(main_rank)} of {len(main)} at"
+              f" {ours.mean():.1%}, against {best} at {bestc:.1%}.")
     print()
-    print(f"  * Every model collapses on a stranger, and the models that do best on a")
-    print(f"    familiar person collapse hardest (correlation -0.86, p = 0.026). Learning")
-    print(f"    a person well and learning the task well are not the same thing.")
+    print("  * Every model collapses on a stranger, and the models that do best on a")
+    print("    familiar person collapse hardest (correlation -0.86, p = 0.026). Learning")
+    print("    a person well and learning the task well are not the same thing.")
     print()
-    print(f"  * Size buys almost nothing. The top four finish within"
-          f" {(max(top4) - min(top4)) * 100:.1f} points of each other")
-    print(f"    while differing in size by a factor of {max(sized) // min(sized)}.")
+    print("  * The design's windowed attention was wrong: attending over the whole trial is")
+    print("    better, measured twice. Of the original components only the signal")
+    print("    alignment clearly earns its place.")
     print()
-    print(f"  * Only one of our components earns its place - the signal alignment. The")
-    print(f"    attention block the model is named after actively costs accuracy.")
-    print()
-    print(f"  * Nine people is a small sample. Several real-looking effects cannot be")
-    print(f"    proven at this size, and single-seed differences below about 1.4 points")
-    print(f"    should be read as noise rather than as a result.")
+    print(f"  * Nine people is a small sample. The top four finish within"
+          f" {(max(top4) - min(top4)) * 100:.1f} points and no")
+    print("    difference among them can be proven at this size.")
 
 
 def show_all():
@@ -480,6 +573,7 @@ def show_all():
     for name, heading, question, ref, family in EXPERIMENTS:
         summarise(ROOT / "results" / name, heading, question, ref, family)
 
+    improvement_steps()
     final_table()
 
     print()

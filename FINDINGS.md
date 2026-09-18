@@ -787,7 +787,7 @@ not read until the final configuration had been fixed.
 | C3 | test-time batch-norm adaptation | 55.6% | 53.2% | **rejected** |
 | C5 | softmax averaged over three seeds | 58.6% | **51.9%** | kept, final |
 
-**Final: 51.9% cross-subject**, up 4.8 points on the model as submitted (47.1% in this
+**Final: 51.9% cross-subject**, up 4.9 points on the model as submitted (47.1% in this
 re-run; 46.9% in the original E2).
 
 | rank | model | cross-subject |
@@ -831,6 +831,15 @@ therefore cannot be compared with a final figure yet.
    seed averaging were applied only to the test subject, while validation was scored
    before either happened. That was fixed, and both were re-run, before any decision was
    made.
+
+### Six E1 rows were overwritten by a diagnostic, and restored
+
+The Stage 1 epoch diagnostic ran ATCNet and CTNet at 1500 epochs through `train.py`,
+whose within-subject run writes to `results/e1_within_subject.csv`. It replaced the
+500-epoch protocol values for A01, A03 and A08 of both models, and that version was
+committed. It showed up as ATCNet reading 62.0% within subject instead of 62.8%. The six
+rows were restored from the first committed version of the file, and `train.py` now
+writes any run at a non-protocol epoch budget to a separate file.
 
 ### What changes in the design document
 

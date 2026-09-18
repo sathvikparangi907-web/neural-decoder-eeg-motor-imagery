@@ -1,0 +1,17 @@
+{
+  "run": "step1_eegnet_fixed8",
+  "protocol": "v2",
+  "window_samples": 875,
+  "seed": 0,
+  "model": "EEGNet",
+  "align": true,
+  "mode": "fixed",
+  "epochs": 64,
+  "train_on_val": true,
+  "stop_fraction": 0.1,
+  "max_epochs": 500,
+  "patience": 50,
+  "lr": 0.001,
+  "weight_decay": 0.0001,
+  "batch": 64
+}

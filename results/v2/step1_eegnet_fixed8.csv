@@ -1,0 +1,10 @@
+run,commit,seed,test_subject,val_subject,val_acc,val_kappa,test_acc,test_kappa,stop_set_acc,best_epoch,stopped_at,n_fit,n_stop,seconds
+step1_eegnet_fixed8,d186505,0,1,,,,0.7604,0.6806,,64,64,4384,0,104.1
+step1_eegnet_fixed8,d186505,0,2,,,,0.3194,0.0926,,64,64,4398,0,120.3
+step1_eegnet_fixed8,d186505,0,3,,,,0.783,0.7106,,64,64,4390,0,112.8
+step1_eegnet_fixed8,d186505,0,4,,,,0.4375,0.25,,64,64,4386,0,119.8
+step1_eegnet_fixed8,d186505,0,5,,,,0.3438,0.125,,64,64,4384,0,132.7
+step1_eegnet_fixed8,d186505,0,6,,,,0.4601,0.2801,,64,64,4419,0,92.9
+step1_eegnet_fixed8,d186505,0,7,,,,0.4549,0.2731,,64,64,4384,0,92.8
+step1_eegnet_fixed8,d186505,0,8,,,,0.7222,0.6296,,64,64,4407,0,101.5
+step1_eegnet_fixed8,d186505,0,9,,,,0.6024,0.4699,,64,64,4528,0,87.8

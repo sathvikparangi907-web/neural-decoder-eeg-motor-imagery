@@ -859,6 +859,85 @@ separate row. Step 1 measured eight subjects with fixed epochs at +2.4 points fo
 (not significant, test only), and it is the protocol CTNet's own cross-subject table used.
 The same treatment must be given to every baseline in that row.
 
+---
+
+## Audit of published figures quoted in the Phase 2 document and deck (2026-09-19)
+
+Every published number in `doc3*.js`, `deck2.js`, `figs2.py` and `HANDOFF.md`, traced to
+its source. "Verified" means read in the primary source in this audit.
+
+| figure | where we quote it | source | protocol that produced it | verified |
+|---|---|---|---|---|
+| CTNet 82.52% (IV-2a) | §3, Table 15.1, Fig 4.1, Fig 4.2, deck | Zhao et al., Sci Rep 2024 | within-subject: session 1 train, session 2 test, 30% of training as validation, 1000 epochs | yes |
+| CTNet 58.64% (IV-2a) | §3, Fig 4.2, deck | Zhao et al. 2024, cross-subject table | LOSO, 8 training subjects, both sessions, 600 fixed epochs, batch 512, 2-6 s window (1000 samples), z-score, no alignment, no fine-tuning | yes |
+| CTNet 88.49% (IV-2b) | Fig 4.2 | Zhao et al. 2024 | within-subject | yes |
+| CTNet 76.27% (IV-2b) | Fig 4.2 | Zhao et al. 2024 | LOSO | yes |
+| EEG Conformer 78.66% | Table 15.1, Fig 4.1 | authors' repository README | "hold out", i.e. session split, within-subject | yes |
+| ATCNet 81.10% | Table 15.1, HANDOFF | ATCNet repository README table | `main_TrainValTest.py`, train-val-test split, within-subject. The paper itself reports **85.38%** subject-dependent | yes (README), and the document does not say it is the README figure |
+| **EEGNet 68.67%** | Table 15.1, §15 note, deck notes | ATCNet repository README table | same train-val-test within-subject script as ATCNet's 81.10% | README only. **Within-subject.** HANDOFF and an earlier draft treat it as a LOSO figure, which is wrong |
+| **EEGNet 71.50%** | Table 15.1, §15 note, deck notes | attributed in an earlier draft to the SATrans-Net authors | unknown | **no** |
+| **SATrans-Net 72.33%** | HANDOFF only | none found | the accessible SATrans-Net abstract reports 84.72% cross-session (within-subject); no 72.33% cross-subject figure located | **no** |
+| **ATCNet 70.97% "subject-independent"** | not quoted in any of our documents | ATCNet paper abstract | protocol not recoverable: paper paywalled, poster returns 403 | **no** |
+| "EEGNet and Conformer 68-70% under LOSO" | HANDOFF, superseded drafts | **no source cited anywhere** | appears to be the within-subject 68.67% mislabelled | **no** |
+| ShallowConvNet 67.48% / 66.41% | HANDOFF | 67.48 from the ATCNet README table; 66.41 unknown | within-subject (67.48) | 67.48 yes, 66.41 no |
+
+**Parameter counts** (Table 11.4 says they are "from the ATCNet reference implementation",
+which uses 1125-sample input). Recomputed in braindecode 1.8.1:
+
+| model | quoted | braindecode at 875 | at 1000 | at 1125 | verdict |
+|---|---|---|---|---|---|
+| ATCNet | 113,732 | 113,732 | 113,732 | 113,732 | matches at every length |
+| ShallowConvNet | 47,364 | 44,644 | 46,084 | 47,364 | matches at 1125 |
+| EEGNet | 2,548 | 3,188 | 3,444 | 3,700 | matches only at 539-570 samples (~2.2 s), not at 1125 |
+| EEG-TCNet | 4,096 | 4,304 | 4,304 | 4,304 | does not match braindecode at any length |
+| DeepConvNet | 553,654 | 282,079 | 282,879 | 284,479 | does not match - about twice braindecode's count, a different implementation |
+
+EEGNet's classifier sizes itself from the input length, so 2,548 and our measured 3,188
+are both correct for their own windows; the document should say which window its figure
+assumes rather than implying 1125.
+
+### Corrected cross-subject comparison, using CTNet's own LOSO table
+
+CTNet re-ran every baseline under one LOSO protocol, which makes it the only verified
+like-for-like reference. Their protocol differs from ours in five ways: 8 training subjects
+(ours 7 plus a validation subject), 600 fixed epochs (ours: early stopping), batch 512
+(ours 64), 2-6 s / 1000 samples (ours 2.5-6.0 s / 875) and no alignment (ours: Euclidean
+alignment).
+
+| model | CTNet paper, LOSO | ours | gap |
+|---|---|---|---|
+| DeepConvNet+ | 60.15 | not run | - |
+| CTNet | 58.64 | 50.2 (v1) | -8.4 |
+| EEGNet+ | 56.85 | 54.3 (v2, 8 subjects, fixed 64 epochs) / 51.9 (v2, 7 subjects) | -2.6 / -5.0 |
+| ShallowConvNet+ | 56.75 | not run | - |
+| EEG Conformer+ | 53.41 | 52.1 (v1) | -1.3 |
+| ATCNet | not in their table | 52.4 (v1) | - |
+| FBCSP | not in their table | 44.2 (v1) | - |
+
+The premise that every model sits 8-18 points below published LOSO does not hold. Against
+the one verified source, EEGNet is 2.6 points below under the closest protocol and EEG
+Conformer 1.3 below. CTNet, 8.4 below, is the only real outlier.
+
+### What the Phase 2 document needs corrected
+
+1. Table 15.1: EEGNet 68.67% and ATCNet 81.10% are both from the ATCNet repository's
+   within-subject train-val-test script; say so. ATCNet's own paper figure is 85.38%.
+2. Table 15.1: EEGNet 71.50% has no verified source. Either find it or remove it.
+3. The "68-70% LOSO" claim and SATrans-Net 72.33% (HANDOFF) have no verified source and
+   must not be carried into the final report.
+4. Table 11.4: EEG-TCNet 4,096 and DeepConvNet 553,654 do not match the reference
+   implementation we use; EEGNet 2,548 corresponds to a ~2.2 s window.
+5. Add CTNet's LOSO table as the cross-subject reference, with its protocol stated.
+
+## Plan note for Step 7 (instruction recorded 2026-09-19)
+
+Use **each paper's own window**, not one shared long window:
+
+- CTNet: **2-6 s, 1000 samples** (verified in Zhao et al. 2024). Not 1125.
+- ATCNet: braindecode's default is 4.5 s / 1125 samples. The ATCNet paper's own window has
+  not been verified yet and must be read from the paper before Step 7 runs.
+- EEG Conformer: window not yet verified; read it from the paper before Step 7.
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

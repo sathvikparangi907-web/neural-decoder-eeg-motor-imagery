@@ -93,8 +93,9 @@
   <div class="verdict">
     <p><strong>The short version.</strong> Every decoder we tested works reasonably well on a
     person it was trained on, and roughly <strong>20&ndash;26 points worse</strong> on a
-    stranger. The model we designed to close that gap has the largest gap of all. That is a
-    real finding, and it is the one worth reporting.</p>
+    stranger. The model we first designed to close that gap had the largest gap of all.
+    Improved one measured change at a time, it now reaches <strong>51.9%</strong> on a
+    stranger &mdash; third of six, and statistically level with the two models above it.</p>
   </div>
 </header>
 
@@ -287,12 +288,67 @@
 </section>
 
 <section>
+  <div class="eyebrow">Fixing our model</div>
+  <h2>From 47% to 52%, one change at a time</h2>
+  <p>Each change was stacked on the last one kept, and every one was judged on a
+  <strong>separate validation person</strong> set aside in each test round &mdash; never on
+  the people the final score is measured on. The test column below was read only once,
+  after every decision had been made.</p>
+  <div class="scroll"><table>
+    <tr><th>Change</th><th>Validation</th><th>Stranger</th><th style="width:26%">&nbsp;</th><th>Decision</th></tr>
+    <tr><td>the model as first designed</td><td class="n">53.8%</td><td class="n">47.1%</td>
+      <td><div class="bar"><i style="width:47.1%;background:var(--violet)"></i></div></td>
+      <td><span class="tag">start</span></td></tr>
+    <tr><td>read the whole signal over time, not its average</td><td class="n">55.0%</td><td class="n">48.5%</td>
+      <td><div class="bar"><i style="width:48.5%;background:var(--good)"></i></div></td>
+      <td><span class="tag win">kept</span></td></tr>
+    <tr><td>attend to the whole trial, not five windows</td><td class="n">56.0%</td><td class="n">49.1%</td>
+      <td><div class="bar"><i style="width:49.1%;background:var(--good)"></i></div></td>
+      <td><span class="tag win">kept</span></td></tr>
+    <tr><td>re-tune to each new person's signal statistics</td><td class="n">55.6%</td><td class="n">53.2%</td>
+      <td><div class="bar"><i style="width:53.2%;background:var(--muted)"></i></div></td>
+      <td><span class="tag lose">rejected</span></td></tr>
+    <tr><td>train three copies and average their answers</td><td class="n">58.6%</td><td class="n"><strong>51.9%</strong></td>
+      <td><div class="bar"><i style="width:51.9%;background:var(--violet)"></i></div></td>
+      <td><span class="tag win">kept &middot; final</span></td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">The rejected row scores <strong>53.2%</strong> on
+  strangers &mdash; higher than the final model and higher than every published decoder. It
+  was left out anyway, because the person used to judge it said no. Picking it now, knowing
+  its test score, would turn the result into a choice made by looking at the answers.</p>
+
+  <h3 style="margin-top:28px">Where the final model lands</h3>
+  <div class="scroll"><table>
+    <tr><th>#</th><th>Decoder</th><th>Stranger</th><th>Size</th><th>Gap to ours</th></tr>
+    <tr><td class="n">1</td><td>ATCNet</td><td class="n">52.4%</td><td class="n">113,732</td><td class="n">+0.5, could be luck</td></tr>
+    <tr><td class="n">2</td><td>EEG Conformer</td><td class="n">52.1%</td><td class="n">697,412</td><td class="n">+0.2, could be luck</td></tr>
+    <tr><td class="n">3</td><td><strong>HCT-Net, final</strong> <span class="tag">ours</span></td><td class="n"><strong>51.9%</strong></td><td class="n">74,508</td><td class="n">&mdash;</td></tr>
+    <tr><td class="n">4</td><td>EEGNet</td><td class="n">51.2%</td><td class="n">3,188</td><td class="n">&minus;0.8, could be luck</td></tr>
+    <tr><td class="n">5</td><td>CTNet</td><td class="n">50.2%</td><td class="n">152,364</td><td class="n">&minus;1.7, could be luck</td></tr>
+    <tr><td class="n">6</td><td>FBCSP <span class="tag">classical</span></td><td class="n">44.2%</td><td class="n">&mdash;</td><td class="n">&minus;7.8</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">None of the gaps between the top five can be told
+  apart from chance with nine people. The honest summary is that our model now
+  <strong>ties</strong> with the best published decoders rather than beating them. It does so
+  at 74,508 parameters &mdash; two thirds of ATCNet's &mdash; but that is three copies of a
+  24,836-parameter network, so the "small model" promise of the original design is only
+  partly kept.</p>
+</section>
+
+<section>
   <div class="eyebrow">Being straight about it</div>
   <h2>What this does and doesn't show</h2>
   <ul>
-    <li><strong>The proposed model did not win.</strong> It is significantly worse than ATCNet
-    on a stranger, and no better than the 2008 classical method. No performance claim was made
-    before the experiments ran, which is what makes this reportable rather than a failure.</li>
+    <li><strong>Our model ties, it does not win.</strong> As first designed it was significantly
+    worse than ATCNet. After the improvements it sits within half a point of the leader, and no
+    difference among the top five is statistically reliable.</li>
+    <li><strong>One improvement was not chosen blind.</strong> Attending over the whole trial
+    was tried because an earlier experiment had already shown it winning on the test people.
+    It was then confirmed on the separate validation people, but its test result had been
+    seen first.</li>
+    <li><strong>The design's reasoning about windowed attention was wrong.</strong> Attending
+    over the whole trial beat it twice, so that part of the design document has to be
+    rewritten rather than defended.</li>
     <li><strong>Nine people is a small sample.</strong> Several real effects &mdash; including
     the 5.1-point value of signal re-centring &mdash; point consistently in one direction
     without reaching statistical significance, because with nine subjects and two poor
@@ -302,18 +358,17 @@
     points under our protocol. Their comparison is still fair &mdash; every model ran under
     identical conditions &mdash; but their numbers should not be presented as matching the
     original authors'.</li>
-    <li><strong>Results use a single random seed.</strong> Re-running an identical
-    configuration moved one result by 1.4 points, so differences smaller than that should be
-    treated as noise &mdash; which includes the gaps between the top three decoders.</li>
+    <li><strong>The baselines ran with a single random seed.</strong> Only our final model
+    averages three. How much a single-seed result moves between runs was not measured
+    properly, so small gaps between baselines should not be over-read.</li>
   </ul>
   <details>
     <summary>What would be worth doing next</summary>
-    <p style="margin-top:12px">The evidence points at a decoder that keeps the signal
-    re-centring, drops the windowed attention, and stays small. An experiment now running
-    trains the model to be actively <em>unable</em> to identify which person a signal came
-    from, which attacks the failure these results identify rather than guessing at the
-    architecture. Running each configuration with three seeds instead of one would also let
-    the close comparisons be settled properly.</p>
+    <p style="margin-top:12px">Measure the final model on familiar people too, so its
+    familiar-to-stranger drop can be compared with the original 26.3 points. Run the
+    baselines with three seeds each, so the comparison with our three-copy model is like for
+    like. And test whether the signal re-centring step is what drags ATCNet down on the three
+    hardest people &mdash; the one explanation for its shortfall that was not ruled out.</p>
   </details>
 </section>
 

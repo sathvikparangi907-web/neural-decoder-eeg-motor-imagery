@@ -106,12 +106,20 @@ def train_one(model_kwargs, X, y, tr, va, te, seed, bn_adapt):
 
     model.load_state_dict(best_state)
     model.eval()
-    if bn_adapt:
-        adapt_batchnorm(model, Xte)
-    with torch.no_grad():
-        probs = torch.cat([torch.softmax(model(Xte[b]), dim=1)
-                           for b in torch.arange(len(Xte), device=DEVICE).split(BATCH)])
-    return best, probs.cpu().numpy()
+
+    # The validation subject has to go through exactly what the test subject goes
+    # through, or validation cannot judge a test-time change. Batch-norm adaptation
+    # is per subject, so the trained state is restored before adapting to each.
+    def softmax_on(Xs):
+        model.load_state_dict(best_state)
+        if bn_adapt:
+            adapt_batchnorm(model, Xs)
+        with torch.no_grad():
+            out = torch.cat([torch.softmax(model(Xs[b]), dim=1)
+                             for b in torch.arange(len(Xs), device=DEVICE).split(BATCH)])
+        return out.cpu().numpy()
+
+    return softmax_on(Xva), softmax_on(Xte)
 
 
 def run(names=None):
@@ -134,11 +142,14 @@ def run(names=None):
 
             # C5 averages the softmax across seeds, which is not the same as
             # averaging their accuracies: a trial two seeds get right and one gets
-            # wrong is recovered here and lost by the other arrangement.
-            val, probs = 0.0, 0.0
+            # wrong is recovered here and lost by the other arrangement. The same
+            # averaging is applied to the validation subject, so validation measures
+            # the ensemble rather than the mean of its members.
+            val_probs, probs = 0.0, 0.0
             for seed in range(seeds):
-                v, p = train_one(model_kwargs, X, y, tr, va, te, seed, bn_adapt)
-                val, probs = val + v / seeds, probs + p / seeds
+                vp, p = train_one(model_kwargs, X, y, tr, va, te, seed, bn_adapt)
+                val_probs, probs = val_probs + vp / seeds, probs + p / seeds
+            val = float((val_probs.argmax(1) == y[va]).mean())
             pred = probs.argmax(1)
 
             m = metrics(y[te], pred)

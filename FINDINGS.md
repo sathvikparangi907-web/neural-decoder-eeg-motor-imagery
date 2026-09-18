@@ -771,6 +771,75 @@ was wrong and should not be repeated in the report. Where a genuine noise floor 
 needed, it has to be measured with repeated seeds rather than inferred from one pair
 of runs.
 
+---
+
+## Stage 2 — improving HCT-Net, one change at a time
+
+Each change was stacked on the last one kept and run over all nine LOSO folds. Only the
+**validation subject** decided whether a change stayed. Test accuracy was recorded but
+not read until the final configuration had been fixed.
+
+| step | change | validation | test | decision |
+|---|---|---|---|---|
+| base | model as submitted | 53.8% | 47.1% | reference |
+| C1 | flatten head instead of average pooling | 55.0% | 48.5% | kept |
+| C2 | global attention instead of windowed | 56.0% | 49.1% | kept |
+| C3 | test-time batch-norm adaptation | 55.6% | 53.2% | **rejected** |
+| C5 | softmax averaged over three seeds | 58.6% | **51.9%** | kept, final |
+
+**Final: 51.9% cross-subject**, up 4.8 points on the model as submitted (47.1% in this
+re-run; 46.9% in the original E2).
+
+| rank | model | cross-subject |
+|---|---|---|
+| 1 | ATCNet | 52.4% |
+| 2 | EEG Conformer | 52.1% |
+| **3** | **HCT-Net, final** | **51.9%** |
+| 4 | EEGNet | 51.2% |
+| 5 | CTNet | 50.2% |
+| 6 | FBCSP | 44.2% |
+
+Against every baseline the difference is not statistically reliable after Holm
+correction over five comparisons (ATCNet −0.5, p = 0.82; EEG Conformer −0.2,
+p = 0.84; EEGNet +0.8, p = 0.57; CTNet +1.7, p = 0.64; FBCSP +7.8, p = 0.020
+uncorrected, 0.098 corrected). The final model is statistically level with the top four:
+**it ties with them, it does not beat them.**
+
+**Size.** One C2 network has 24,836 parameters. The final model runs three of them, so
+74,508 at inference: 65% of ATCNet's 113,732, and 3.5 times the 20,996 in the submitted
+design. The ensemble buys its accuracy by giving up some of the lightweight argument, and
+the report has to say so.
+
+**Within-to-cross drop.** Not measured for the final configuration. That would need an E1
+within-subject run of C5, which was not done. The submitted model's 26.3-point drop
+therefore cannot be compared with a final figure yet.
+
+### The honesty disclosures this result depends on
+
+1. **The validation-selected configuration is not the test-best one.** C3, rejected on
+   validation (55.6% against C2's 56.0%), scores **53.2% on test**. That is higher than
+   the final model and higher than ATCNet. Choosing by test accuracy would have put it
+   first. It was not chosen, because the rule was set before the run and switching now
+   would be selection on the test set. So the reported 51.9% is the honest number, and a
+   higher figure was left on the table on purpose.
+2. **C2 was not chosen blind.** It was put forward because the E4 component study showed
+   global attention at 49.8% against 46.9%, and those were **test-fold** figures. C2 was
+   then confirmed on validation (+1.0 over C1), but it was on the list partly because its
+   test result had already been seen. C1 came from the Stage 1 architecture comparison and
+   C5 is a standard technique, so neither was prompted by test results.
+3. **An earlier version of this stage could not see C3 or C5.** Batch-norm adaptation and
+   seed averaging were applied only to the test subject, while validation was scored
+   before either happened. That was fixed, and both were re-run, before any decision was
+   made.
+
+### What changes in the design document
+
+- **§11.6 is falsified.** The final model uses global attention, and the argument that
+  windowed attention suits short EEG trials did not survive two separate measurements.
+  The section needs rewriting to say that, not to defend the original reasoning.
+- **The model is no longer 20,996 parameters** once it is deployed as a three-member
+  ensemble. Table 11.3's figure describes one member only.
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

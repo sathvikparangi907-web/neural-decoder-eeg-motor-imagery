@@ -53,6 +53,7 @@ RUNS = {
     "step0": dict(model="HCT-Net", kwargs=C2, align=True, mode="stop"),
     "step1_eegnet": dict(model="EEGNet", align=True, mode="stop"),
     "step1_eegnet_noalign": dict(model="EEGNet", align=False, mode="stop"),
+    "step1_eegnet_lw": dict(model="EEGNet", align="lw", mode="stop"),
     # epochs=None: filled in from step1_eegnet's mean best epoch, per 1.3.
     "step1_eegnet_fixed7": dict(model="EEGNet", align=True, mode="fixed", epochs=None),
     "step1_eegnet_fixed8": dict(model="EEGNet", align=True, mode="fixed", epochs=None,
@@ -71,11 +72,36 @@ def commit():
 _cache = {}
 
 
+def align_ledoit_wolf(X, session):
+    """Euclidean alignment with R estimated by Ledoit-Wolf shrinkage (Step 1, item 3).
+
+    Each session's time samples are the observations, as for the plain estimate,
+    so the only difference is the shrinkage toward a scaled identity.
+    """
+    from sklearn.covariance import LedoitWolf
+    from preprocess import inv_sqrt
+    out = np.empty_like(X)
+    for k in np.unique(session):
+        m = session == k
+        Z = X[m].astype(np.float64).transpose(1, 0, 2).reshape(X.shape[1], -1).T
+        R = LedoitWolf(assume_centered=True).fit(Z).covariance_
+        out[m] = (inv_sqrt(R) @ X[m].astype(np.float64)).astype(np.float32)
+    return out
+
+
 def subject_data(s, align):
-    """One subject, aligned per session from its own trials if align is set."""
+    """One subject, aligned per session from its own trials.
+
+    align is False, True (plain mean covariance, He and Wu 2020), or "lw"
+    (Ledoit-Wolf shrinkage estimate of R).
+    """
     if (s, align) not in _cache:
         X, y, session, rejected = load_subject(s)
-        _cache[(s, align)] = (align_subject(X, session) if align else X, y, rejected)
+        if align == "lw":
+            X = align_ledoit_wolf(X, session)
+        elif align:
+            X = align_subject(X, session)
+        _cache[(s, align)] = (X, y, rejected)
     return _cache[(s, align)]
 
 

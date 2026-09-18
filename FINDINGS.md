@@ -861,6 +861,33 @@ The same treatment must be given to every baseline in that row.
 
 ---
 
+## Noise floor - three seeds of the Step 0 baseline (2026-09-19)
+
+C2 configuration, protocol v2, 875 samples, seeds 0, 1 and 2 with nothing else changed.
+The seed controls weight initialisation, augmentation draws and the early-stopping split,
+so this is the full run-to-run randomness.
+
+| | validation | test |
+|---|---|---|
+| seed means (9-fold average) | 50.3 / 49.6 / 50.5 | 50.6 / 49.5 / 50.6 |
+| spread of the mean across seeds | range 0.9, sd 0.46 | range 1.1, sd 0.62 |
+| spread of a single fold across seeds | median range 4.7, max 8.2 | median range 3.8, max 4.7 |
+
+**Decision rule from here on:** two single-seed runs of the *same* configuration differ on
+the validation mean by up to 0.9 points, and the standard deviation of a difference between
+two single-seed means is about 0.65, so **a single-seed validation gain under about 1.3
+points (two standard deviations) cannot be told apart from seed noise.** Per-fold
+differences under about 5 points mean nothing on their own.
+
+This replaces both earlier statements about noise. The original "1.4 points" came from a
+single pair of runs; the later retraction said same-seed runs reproduce exactly, which is
+true but answers a different question. Different seeds move the 9-fold mean by about one
+point and a single fold by about four.
+
+Borderline in hindsight: Stage 2's C1 (+1.2) and C2 (+1.0 on top of C1) were each single-seed
+gains inside this band, measured under protocol v1. They may be real, but one seed was not
+enough to establish either on its own.
+
 ## Audit of published figures quoted in the Phase 2 document and deck (2026-09-19)
 
 Every published number in `doc3*.js`, `deck2.js`, `figs2.py` and `HANDOFF.md`, traced to

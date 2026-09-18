@@ -1,0 +1,15 @@
+{
+  "run": "step1_eegnet_lw",
+  "protocol": "v2",
+  "window_samples": 875,
+  "seed": 0,
+  "model": "EEGNet",
+  "align": "lw",
+  "mode": "stop",
+  "stop_fraction": 0.1,
+  "max_epochs": 500,
+  "patience": 50,
+  "lr": 0.001,
+  "weight_decay": 0.0001,
+  "batch": 64
+}

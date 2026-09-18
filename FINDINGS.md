@@ -849,6 +849,16 @@ writes any run at a non-protocol epoch budget to a separate file.
 - **The model is no longer 20,996 parameters** once it is deployed as a three-member
   ensemble. Table 11.3's figure describes one member only.
 
+---
+
+## Plan note for Step 12 (instruction recorded 2026-09-18)
+
+After every selection decision is frozen, retrain the final model on **eight training
+subjects at a fixed epoch count**, with no validation subject, and report that as a
+separate row. Step 1 measured eight subjects with fixed epochs at +2.4 points for EEGNet
+(not significant, test only), and it is the protocol CTNet's own cross-subject table used.
+The same treatment must be given to every baseline in that row.
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

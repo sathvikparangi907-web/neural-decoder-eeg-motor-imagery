@@ -166,7 +166,7 @@ def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True, epochs=MAX_EPOCHS)
     print(f"E1 within-subject: train ALL of session T, test session E")
     print(f"{len(names)} models x {len(subjects)} subjects on {DEVICE}, "
           f"Euclidean alignment {'on' if align else 'OFF'}, "
-          f"{MAX_EPOCHS} epochs fixed, no early stopping, final annealed model\n")
+          f"{epochs} epochs fixed, no early stopping, final annealed model\n")
     print(f"{'model':<14}" + "".join(f"{f'A{s:02d}':>16}" for s in subjects)
           + f"{'mean':>8}{'published':>11}")
 
@@ -194,7 +194,12 @@ def e1(subjects=E1_SUBJECTS, names=tuple(MODELS), align=True, epochs=MAX_EPOCHS)
               + (f"{PUBLISHED[name]:10.1f}%" if name in PUBLISHED else f"{'--':>11}"))
 
     assert results, "no model was run"
-    _write_e1(per_subject, subjects)
+    # Only a run under the E1 protocol may write the E1 results. A diagnostic at a
+    # different epoch budget once overwrote six protocol rows this way, so anything
+    # off-protocol goes to its own file.
+    _write_e1(per_subject, subjects,
+              name="e1_within_subject.csv" if epochs == MAX_EPOCHS
+              else f"e1_within_subject_{epochs}ep.csv")
     print(f"\n  accuracy and wall-clock seconds per run; chance is 25.0% over 4 classes")
     near_chance = [n for n, a in results.items() if a < 0.35]
     print("CHECK near chance, so a bug and not a result: " + ", ".join(near_chance)

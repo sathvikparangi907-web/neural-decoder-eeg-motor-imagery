@@ -91,6 +91,7 @@ phase3/
   loso.py         leave-one-subject-out, experiments E2 and E3                (M6)
   components.py   component study V0-V5, experiment E4                        (M7)
   adversarial.py  subject-invariant variant, section 13.2
+  improve.py      Stage 2: one change at a time, chosen on validation      (E9)
   stats.py        Wilcoxon signed-rank with Holm-Bonferroni correction        (M7)
   report.py       every result table, the significance tests, the figures     (M8)
   eda/            exploratory figures
@@ -102,9 +103,16 @@ FINDINGS.md       every result, including the negative ones
 
 The proposed model was written only after §19.1's second ordering rule was satisfied — two
 baselines reproducing their published within-subject accuracy — which happened once the E1
-protocol was corrected. What it found is in `FINDINGS.md`: **HCT-Net loses.** It is second
+protocol was corrected. What it found first is in `FINDINGS.md`: **HCT-Net as submitted loses.** It is second
 best within subject and worst at transferring to an unseen subject, and the component study
 attributes that to the attention block rather than to size or depth.
+
+Stage 2 (`phase3/improve.py`) then improved it one change at a time, keeping a change
+only if it helped on each fold's separate validation person. The final model reads the
+whole time series instead of an average, attends over the whole trial instead of in
+windows, and averages three trained copies. It reaches **51.9% cross-subject, 3rd of six
+and statistically level with ATCNet (52.4%) and EEG Conformer (52.1%)**, at 74,508
+parameters.
 
 Two deliberate departures from §18 of the solution design, both open to reversal:
 

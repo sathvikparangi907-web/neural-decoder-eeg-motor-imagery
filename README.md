@@ -60,6 +60,7 @@ py phase3/train.py HCT-Net 1 2 3      # any model, any subjects, within subject
 py phase3/loso.py EEGNet --seeds 1    # one model, cross subject, nine folds        (~30 min)
 py phase3/components.py               # component study V0-V5                        (~3 h)
 py phase3/adversarial.py              # adversarial variant, section 13.2            (~2 h)
+py phase3/improve.py                  # Stage 2, each change chosen on validation     (~2 h)
 ```
 
 Long runs write after every fold and skip work already recorded, so if one is

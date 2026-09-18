@@ -237,11 +237,14 @@ def run(name, seed=0):
     if spec["mode"] == "fixed" and spec.get("epochs") is None:
         spec["epochs"] = mean_best_epoch("step1_eegnet")
     OUT.mkdir(parents=True, exist_ok=True)
-    path = OUT / f"{name}.csv"
+    # Seed 0 keeps the original file name; other seeds get their own file so a
+    # multi-seed run never mixes with, or skips because of, another seed's folds.
+    stem = name if seed == 0 else f"{name}_seed{seed}"
+    path = OUT / f"{stem}.csv"
     done = set()
     if path.exists():
         done = {int(r["test_subject"]) for r in csv.DictReader(path.open(encoding="utf-8"))}
-    (OUT / f"{name}_config.json").write_text(json.dumps(
+    (OUT / f"{stem}_config.json").write_text(json.dumps(
         {"run": name, "protocol": "v2", "window_samples": 875, "seed": seed, **spec,
          "stop_fraction": STOP_FRACTION, "max_epochs": MAX_EPOCHS, "patience": PATIENCE,
          "lr": LR, "weight_decay": WEIGHT_DECAY, "batch": BATCH}, indent=2),
@@ -271,5 +274,11 @@ def run(name, seed=0):
 
 
 if __name__ == "__main__":
-    for name in sys.argv[1:] or ["step0"]:
-        run(name)
+    args = sys.argv[1:]
+    seed = 0
+    if "--seed" in args:
+        i = args.index("--seed")
+        seed = int(args[i + 1])
+        args = args[:i] + args[i + 2:]
+    for name in args or ["step0"]:
+        run(name, seed)

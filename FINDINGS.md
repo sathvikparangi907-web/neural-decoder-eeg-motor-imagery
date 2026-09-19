@@ -965,6 +965,62 @@ Use **each paper's own window**, not one shared long window:
   not been verified yet and must be read from the paper before Step 7 runs.
 - EEG Conformer: window not yet verified; read it from the paper before Step 7.
 
+## Step 8 — test-time adaptation, protocol v2, three seeds (2026-09-19)
+
+Run out of order (before Steps 2-7) at the user's instruction. **Disclosure:** the reason for
+moving it forward was an earlier *test* result (the v1 C3 batch-norm adaptation scored 53.2 on
+test but had been rejected on validation). The keep/reject decision below uses the validation
+subjects only; test numbers are reported and did not change it.
+
+**No labels of the adapted subject are used at any point.** Every variant adapts using only
+that subject's unlabelled trials. Labels are used afterwards only to score predictions.
+
+Code `phase3/tta.py`, summary `phase3/step8_summary.py`, results
+`results/v2/step8_{c2,eegnet}_seed{0,1,2}.csv`. Each fold trains one model; every variant
+starts from a fresh copy of the same weights, so variant-vs-none comparisons are paired exactly.
+Settings fixed before running, not tuned: TENT 1 pass, Adam 1e-3; pseudo-labels 10 epochs,
+Adam 1e-4, minimum 16 confident trials.
+
+Three-seed means, LOSO 9 folds, 875 samples. Decision: keep if validation mean beats `none`
+by >= 0.75. "Up" = subjects whose three-seed mean beats `none`. p = Wilcoxon on test vs none,
+Holm-corrected over the four variants (descriptive only).
+
+| HCT-Net (C2) | val | d val | test | d test | test kappa | val up | test up | p Holm | decision |
+|---|---|---|---|---|---|---|---|---|---|
+| none | 50.1 | — | 50.7 | — | 0.343 | — | — | — | — |
+| bn | 53.6 | +3.5 | 54.4 | +3.7 | 0.392 | 6/9 | 9/9 | 0.0156 | passes |
+| tent | 53.9 | +3.9 | 54.1 | +3.4 | 0.388 | 7/9 | 7/9 | 0.1173 | passes |
+| pl80 | 51.0 | +1.0 | 52.3 | +1.5 | 0.363 | 4/9 | 8/9 | 0.1173 | passes |
+| pl90 | 51.2 | +1.2 | 52.2 | +1.4 | 0.362 | 6/9 | 7/9 | 0.1173 | passes |
+
+| EEGNet | val | d val | test | d test | test kappa | val up | test up | p Holm | decision |
+|---|---|---|---|---|---|---|---|---|---|
+| none | 53.0 | — | 52.2 | — | 0.363 | — | — | — | — |
+| bn | 55.0 | +2.0 | 54.3 | +2.1 | 0.391 | 8/9 | 6/9 | 0.1641 | passes |
+| tent | 55.1 | +2.1 | 54.4 | +2.2 | 0.392 | 7/9 | 8/9 | 0.0468 | passes |
+| pl80 | 53.4 | +0.3 | 52.2 | +0.0 | 0.363 | 5/9 | 4/9 | 1.0000 | reject |
+| pl90 | 53.0 | -0.1 | 52.2 | -0.0 | 0.363 | 3/9 | 6/9 | 0.7656 | reject |
+
+**Decision: keep batch-norm statistics re-estimation (`bn`)** for HCT-Net, and give EEGNet the
+same. TENT scores 0.3 above `bn` on HCT-Net validation (0.1 on EEGNet), below the 0.75
+threshold, so its extra machinery (gradient updates on the new subject) is not justified; the
+simplest variant that clears the threshold is kept. Pseudo-labelling clears it on HCT-Net but
+is 2.6 below `bn` on validation.
+
+**Does HCT-Net benefit more than EEGNet?** On average yes, not reliably. `bn` gain on test:
+HCT-Net +3.7 vs EEGNet +2.1 (larger in 7/9 subjects, paired Wilcoxon p = 0.3008); on
+validation +3.5 vs +2.0 (larger in 4/9, p = 0.8203). After both are adapted they are level:
+test 54.4 vs 54.3 (p = 0.8398), validation 53.6 vs 55.0 (EEGNet ahead, p = 0.0391
+uncorrected). Adaptation closes HCT-Net's gap to EEGNet; it does not put HCT-Net ahead.
+
+**Reproducibility note.** The `none` rows retrain the Step 0 configuration. Seed 0 reproduces
+Step 0's validation mean exactly (50.35); seeds 1 and 2 differ (49.94 vs 49.63, 49.87 vs 50.50)
+because GPU training is not bit-deterministic — most folds match exactly, a few stop at a
+different epoch. This is within the measured noise floor and does not affect the paired
+comparisons above.
+
+---
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

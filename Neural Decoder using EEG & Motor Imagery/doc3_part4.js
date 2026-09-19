@@ -186,6 +186,6 @@ const doc = new Document({
 });
 
 Packer.toBuffer(doc).then(b => {
-  fs.writeFileSync('/home/claude/review2/Phase2_Solution_Design.docx', b);
+  fs.writeFileSync(require('path').join(__dirname, 'Phase2_Solution_Design.docx'), b);
   console.log('written', b.length, 'bytes,', C.length, 'blocks');
 });

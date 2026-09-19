@@ -392,11 +392,58 @@ function mkTable(rows, opts) {
                  [0.36, 0.72, 0.72, 0.72, 0.72, 0.72]),
     x: M, y: 1.5
   });
-  s.addText("Published accuracies are not shown side by side here because each paper used a different evaluation protocol, so the figures cannot be ranked against one another. Re-running all four under one leave-one-subject-out protocol is part of this project.", {
+  s.addText("Published accuracies follow on the next slide, split by protocol: cross-subject results measured under one shared protocol, and within-subject figures that come from different protocols and cannot be ranked against each other.", {
     x: M, y: 5.62, w: CW, h: 0.7, isTextBox: true, margin: 0, valign: 'top',
     fontFace: BF, fontSize: 11.8, color: GREY, italic: true
   });
-  s.addNotes("Important point to make aloud: the published numbers use different protocols. EEGNet is quoted at 68.67 per cent by one paper and 71.50 by another, for the same model on the same dataset.");
+  s.addNotes("Important point to make aloud: the published numbers use different protocols. EEGNet is 68.67 per cent in the ATCNet repository's evaluation and 77.39 per cent in the CTNet paper's re-implementation, for the same model on the same dataset.");
+}
+
+// =====================================================================
+// 9b  PUBLISHED RESULTS, SPLIT BY PROTOCOL
+// =====================================================================
+{
+  const s = slide("Published results, split by protocol", "Published results");
+  const lw = 5.55, gap = 0.45, rx = M + lw + gap, rw = CW - lw - gap;
+  const sub = (t, x, w) => s.addText(t, {
+    x, y: 1.4, w, h: 0.36, isTextBox: true, margin: 0,
+    fontFace: BF, fontSize: 12.5, bold: true, color: PURPLE
+  });
+  sub("Cross-subject: one protocol for all (Zhao et al., 2024)", M, lw);
+  sub("Within-subject: different protocols, not comparable", rx, rw);
+
+  const left = [
+    ["Model", "Unseen person", "Kappa"],
+    ["ShallowConvNet+", "56.75 ± 13.77", "0.4234"],
+    ["DeepConvNet+", "60.15 ± 12.71", "0.4686"],
+    ["EEGNet+", "56.85 ± 15.82", "0.4246"],
+    ["EEG Conformer+", "53.41 ± 17.08", "0.3789"],
+    ["CTNet", "58.64 ± 14.61", "0.4486"],
+  ];
+  s.addTable(mkTable(left, { boldFirst: true, hs: 10.5, bs: 11, center: [1, 2] }), {
+    ...tableOpts([2.05, 2.35, 1.15], [0.4, 0.42, 0.42, 0.42, 0.42, 0.42]),
+    x: M, y: 1.85, w: lw
+  });
+
+  const right = [
+    ["Model", "Same person", "Source"],
+    ["CTNet", "82.52%", "Zhao et al. (2024)"],
+    ["EEG Conformer", "78.66%", "Authors' repository, hold-out"],
+    ["ATCNet", "85.38%", "Paper, subject-dependent"],
+    ["ATCNet", "81.10%", "ATCNet repository script"],
+    ["EEGNet", "68.67%", "ATCNet repository script"],
+    ["EEGNet+", "77.39%", "Zhao et al. (2024), re-implemented"],
+  ];
+  s.addTable(mkTable(right, { boldFirst: true, hs: 10.5, bs: 11, center: [1] }), {
+    ...tableOpts([1.7, 1.25, rw - 2.95], [0.4, 0.42, 0.42, 0.42, 0.42, 0.42, 0.42]),
+    x: rx, y: 1.85, w: rw
+  });
+
+  s.addText("Cross-subject: each subject held out in turn, trained on the other eight for 600 epochs on the 2–6 s window, no alignment and no fine-tuning on the held-out subject. + marks baselines re-implemented by the CTNet authors under the same conditions. This is the reference for our own cross-subject results.", {
+    x: M, y: 5.2, w: CW, h: 0.95, isTextBox: true, margin: 0, valign: 'top',
+    fontFace: BF, fontSize: 11.5, color: GREY, italic: true
+  });
+  s.addNotes("The left table is the only published comparison of these architectures under one cross-subject protocol that we could verify, so it is our reference. The right-hand figures are all within-subject and come from different evaluations: the same EEGNet scores 68.67 per cent in one and 77.39 per cent in another. An EEGNet figure of 71.50 per cent and a claim that EEGNet and Conformer reach 68 to 70 per cent under leave-one-subject-out appeared in earlier material; neither has a verifiable source, and the second was the within-subject 68.67 per cent mislabelled.");
 }
 
 // =====================================================================
@@ -512,5 +559,5 @@ function mkTable(rows, opts) {
   s.addNotes("Close here. The point of Phase 2 is that the survey has become a concrete plan that fits the remaining time.");
 }
 
-pres.writeFile({ fileName: '/home/claude/review2/Phase2_Presentation.pptx' })
+pres.writeFile({ fileName: require('path').join(__dirname, 'Phase2_Presentation.pptx') })
   .then(f => console.log('written', f));

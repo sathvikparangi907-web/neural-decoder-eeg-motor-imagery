@@ -36,18 +36,48 @@ C.push(H1("15. Baseline Models"));
 C.push(P("Four baselines are implemented, corresponding to the four papers in the literature survey. A classical method is also included, because deep learning is not automatically superior on datasets of this size, and a deep model that cannot beat filter-bank common spatial patterns would not justify its complexity."));
 C.push(SP(40));
 C.push(table(
-  ["Model", "Architecture type", "Key idea", "Parameters", "Reported IV-2a"],
+  ["Model", "Architecture type", "Key idea", "Parameters, 875 samples", "Parameters, 1,125 samples"],
   [
-    ["EEGNet (2018)", "Compact CNN", "Depthwise and separable convolution", "2,548", "68.67% / 71.50%"],
-    ["ATCNet (2023)", "CNN with attention and TCN", "Sliding-window attention over temporal features", "113,732", "81.10%"],
-    ["EEG Conformer (2023)", "CNN with Transformer", "Convolution followed by global self-attention", "Not stated", "78.66%"],
-    ["CTNet (2024)", "CNN with Transformer", "EEGNet front end with a six-layer encoder", "Not stated", "82.52%"],
-    ["FBCSP with LDA", "Classical", "Filter-bank common spatial patterns", "Not applicable", "Approximately 68%"],
-    ["HCT-Net (proposed)", "CNN with windowed attention", "Combination of the components above", "20,996", "To be determined"],
+    ["EEGNet (2018)", "Compact CNN", "Depthwise and separable convolution", "3,188", "3,700"],
+    ["ATCNet (2023)", "CNN with attention and TCN", "Sliding-window attention over temporal features", "113,732", "113,732"],
+    ["EEG Conformer (2023)", "CNN with Transformer", "Convolution followed by global self-attention", "697,412", "871,492"],
+    ["CTNet (2024)", "CNN with Transformer", "EEGNet front end with a six-layer encoder", "152,364", "153,004"],
+    ["FBCSP with LDA", "Classical", "Filter-bank common spatial patterns", "Not applicable", "Not applicable"],
+    ["HCT-Net (proposed)", "CNN with windowed attention", "Combination of the components above", "20,996", "—"],
   ],
-  [2200, 2100, 2500, 1400, 1300], { boldFirst: true, center: [3, 4], hi: [5], size: 17 }
+  [1900, 1900, 2600, 1550, 1550], { boldFirst: true, center: [3, 4], hi: [5], size: 17 }
 ));
-C.push(CAP("Table 15.1 — Baseline models and the proposed model. Accuracies are as reported by the respective authors. EEGNet appears with two figures because different papers report it differently."));
+C.push(CAP("Table 15.1 — Baseline models and the proposed model. Parameter counts are for 22 channels and four classes, from the braindecode 1.8.1 reference implementations, at this project's 875-sample input and at the 1,125-sample input of the ATCNet reference implementation. The 2,548 often quoted for EEGNet corresponds to a window of about 2.2 s. Published accuracies are given separately, in Table 15.2 for cross-subject evaluation and Table 15.3 for within-subject evaluation, because they come from different protocols."));
+C.push(SP(40));
+C.push(table(
+  ["Model", "A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A09", "Mean ± std", "Kappa"],
+  [
+    ["ShallowConvNet+", "66.84", "46.53", "67.53", "52.26", "34.38", "39.76", "65.45", "71.18", "66.84", "56.75 ± 13.77", "0.4234"],
+    ["DeepConvNet+", "68.58", "47.40", "78.99", "52.26", "50.87", "41.84", "69.44", "71.70", "60.24", "60.15 ± 12.71", "0.4686"],
+    ["EEGNet+", "69.79", "42.01", "79.51", "50.87", "35.76", "37.15", "65.80", "67.36", "63.37", "56.85 ± 15.82", "0.4246"],
+    ["EEG Conformer+", "68.75", "37.33", "69.62", "43.58", "29.51", "35.24", "58.33", "74.48", "63.89", "53.41 ± 17.08", "0.3789"],
+    ["CTNet", "69.27", "43.92", "79.34", "55.38", "43.92", "36.11", "65.10", "70.66", "64.06", "58.64 ± 14.61", "0.4486"],
+  ],
+  [1500, 600, 600, 600, 600, 600, 600, 600, 600, 600, 1500, 1100],
+  { boldFirst: true, center: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], size: 15 }
+));
+C.push(CAP("Table 15.2 — Cross-subject reference: leave-one-subject-out accuracy (%) on BCI IV-2a as reported by Zhao et al. (2024), the CTNet paper. Each subject is held out in turn and the model is trained on the data of the other eight, for 600 epochs with batch size 512 and learning rate 0.001, on the 2–6 s window (1,000 samples) with z-score normalisation and no alignment; the held-out subject is used only for testing, with no fine-tuning. Models marked + were re-implemented by the CTNet authors under the same conditions. This is the only published comparison of these architectures under one cross-subject protocol that could be verified, and it is the reference for this project's cross-subject results."));
+C.push(SP(40));
+C.push(table(
+  ["Model", "Accuracy", "Source", "Evaluation behind the figure"],
+  [
+    ["CTNet", "82.52%", "Zhao et al. (2024)", "Session 1 trains, session 2 tests; 30% of the training data held out for validation; 1,000 epochs"],
+    ["EEG Conformer", "78.66%", "Song et al. (2023), authors' code repository", "Hold-out, as stated in the repository"],
+    ["ATCNet", "85.38%", "Altaheri et al. (2023), paper", "Subject-dependent, as stated in the paper's abstract"],
+    ["ATCNet", "81.10%", "ATCNet authors' code repository", "Train–validation–test script: session 1 trains, session 2 tests"],
+    ["EEGNet", "68.67%", "ATCNet authors' code repository", "The same train–validation–test script as the 81.10% ATCNet figure"],
+    ["EEGNet+", "77.39%", "Zhao et al. (2024), re-implemented", "The CTNet paper's subject-specific protocol, as for CTNet above"],
+    ["EEG Conformer+", "77.66%", "Zhao et al. (2024), re-implemented", "The CTNet paper's subject-specific protocol, as for CTNet above"],
+    ["FBCSP with LDA", "Approximately 68%", "BCI Competition IV results (Ang et al.)", "Competition protocol, session 1 trains, session 2 tests; not re-checked in the 2026 audit"],
+  ],
+  [1700, 1300, 2700, 3800], { boldFirst: true, center: [1], size: 16 }
+));
+C.push(CAP("Table 15.3 — Published within-subject accuracies on BCI IV-2a, with the source and the evaluation behind each. These figures come from different protocols and are comparable neither with each other nor with the cross-subject results in Table 15.2. An EEGNet figure of 71.50% that appeared in an earlier version of this table has been removed because no source for it could be verified."));
 C.push(SP(40));
 C.push(table(
   ["Model", "Main strength", "Main limitation", "Role in our experiments"],
@@ -60,10 +90,11 @@ C.push(table(
   ],
   [1700, 2700, 2500, 2600], { boldFirst: true, size: 17 }
 ));
-C.push(CAP("Table 15.2 — Strengths, limitations, and the purpose each baseline serves in this project."));
+C.push(CAP("Table 15.4 — Strengths, limitations, and the purpose each baseline serves in this project."));
 C.push(SP(40));
 C.push(note("Why the published figures cannot simply be ranked", [
-  "The accuracies in Table 15.1 were obtained under different evaluation protocols. Some use a hold-out split, some use cross-validation, and some are subject-specific. EEGNet is quoted at 68.67 per cent by one paper and 71.50 per cent by another for the same model on the same dataset, purely because the evaluation differs.",
+  "The within-subject accuracies in Table 15.3 were obtained under different evaluation protocols and cannot be ranked against one another. The same model on the same dataset differs by several points depending on who evaluated it: EEGNet is 68.67 per cent in the ATCNet repository's evaluation and 77.39 per cent in the CTNet paper's re-implementation.",
+  "Cross-subject figures are scarcer. Table 15.2 is the only published comparison of these architectures under one leave-one-subject-out protocol that could be verified, and it serves as the reference for this project's cross-subject results. This project's own protocol differs from it in stated ways — seven training subjects plus a separate validation subject, early stopping, a 3.5 s window and Euclidean alignment — so the comparison is indicative rather than exact.",
   "Re-implementing all four under one identical leave-one-subject-out protocol is therefore a necessary part of this project, and the resulting comparison is useful independently of how the proposed model performs."
 ]));
 
@@ -171,16 +202,16 @@ C.push(SP(40));
 C.push(table(
   ["Model", "Accuracy", "Kappa", "Precision", "Recall", "F1", "Parameters", "Train time / fold"],
   [
-    ["EEGNet", "—", "—", "—", "—", "—", "2,548", "—"],
+    ["EEGNet", "—", "—", "—", "—", "—", "3,188", "—"],
     ["ATCNet", "—", "—", "—", "—", "—", "113,732", "—"],
-    ["EEG Conformer", "—", "—", "—", "—", "—", "—", "—"],
-    ["CTNet", "—", "—", "—", "—", "—", "—", "—"],
+    ["EEG Conformer", "—", "—", "—", "—", "—", "697,412", "—"],
+    ["CTNet", "—", "—", "—", "—", "—", "152,364", "—"],
     ["HCT-Net", "—", "—", "—", "—", "—", "20,996", "—"],
   ],
   [1900, 1150, 900, 1150, 1000, 800, 1400, 1200],
   { boldFirst: true, center: [1, 2, 3, 4, 5, 6, 7], hi: [4], size: 16 }
 ));
-C.push(CAP("Template 17.2 — Summary of metrics and cost. The parameter column is already known and is filled in; everything else is measured."));
+C.push(CAP("Template 17.2 — Summary of metrics and cost. The parameter column is already known (braindecode 1.8.1 reference implementations at this project's 875-sample input) and is filled in; everything else is measured."));
 C.push(SP(40));
 C.push(table(
   ["Variant", "Mean accuracy", "Change from V0", "Significant?", "Interpretation"],

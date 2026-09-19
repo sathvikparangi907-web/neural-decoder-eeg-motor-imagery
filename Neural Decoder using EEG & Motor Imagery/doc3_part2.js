@@ -109,18 +109,20 @@ C.push(table(
 C.push(CAP("Table 11.3 — Calculated parameter budget for the proposed model."));
 C.push(SP(40));
 C.push(table(
-  ["Model", "Parameters", "Relative to the proposed model"],
+  ["Model", "At 875 samples", "At 1,125 samples", "Relative to the proposed model"],
   [
-    ["EEGNet", "2,548", "0.12 ×"],
-    ["EEG-TCNet", "4,096", "0.20 ×"],
-    ["HCT-Net (proposed)", "20,996", "1.00 ×"],
-    ["ShallowConvNet", "47,364", "2.26 ×"],
-    ["ATCNet", "113,732", "5.42 ×"],
-    ["DeepConvNet", "553,654", "26.37 ×"],
+    ["EEGNet", "3,188", "3,700", "0.15 ×"],
+    ["EEG-TCNet", "4,304", "4,304", "0.20 ×"],
+    ["HCT-Net (proposed)", "20,996", "—", "1.00 ×"],
+    ["ShallowConvNet", "44,644", "47,364", "2.13 ×"],
+    ["ATCNet", "113,732", "113,732", "5.42 ×"],
+    ["CTNet", "152,364", "153,004", "7.26 ×"],
+    ["DeepConvNet", "282,079", "284,479", "13.43 ×"],
+    ["EEG Conformer", "697,412", "871,492", "33.22 ×"],
   ],
-  [3600, 2900, 3000], { boldFirst: true, center: [1, 2], hi: [2] }
+  [2900, 2000, 2000, 2600], { boldFirst: true, center: [1, 2, 3], hi: [2] }
 ));
-C.push(CAP("Table 11.4 — Parameter count in context. Counts for the published models are from the ATCNet reference implementation. The proposed model is roughly one fifth the size of ATCNet and comfortably inside the 50,000 budget, leaving room for adjustment during tuning."));
+C.push(CAP("Table 11.4 — Parameter count in context, for 22 channels and four classes, computed with the braindecode 1.8.1 reference implementations at this project's 875-sample input and at the 1,125-sample input used by the ATCNet reference implementation. The ratio column compares like with like, at 875 samples. For models whose classifier sizes itself from the input, the count depends on window length: EEGNet has 3,188 parameters at 875 samples and 3,700 at 1,125, and the figure of 2,548 often quoted for EEGNet corresponds to a window of about 2.2 s. An earlier version of this table gave 4,096 for EEG-TCNet and 553,654 for DeepConvNet; neither matches the reference implementation at any input length, and both have been replaced. The proposed model is roughly one fifth the size of ATCNet and comfortably inside the 50,000 budget."));
 
 C.push(H2("11.5 Purpose of each component"));
 C.push(SP(40));

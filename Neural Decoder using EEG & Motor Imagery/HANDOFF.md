@@ -20,7 +20,7 @@ directly, otherwise your change is lost the next time anything is rebuilt.
 | File | What it is |
 |---|---|
 | `Phase2_Solution_Design.docx` | 39 pages, 24 sections, 13 figures, ~28 tables |
-| `Phase2_Presentation.pptx` | 12 slides, designed for a 5–10 minute talk, speaker notes on every slide |
+| `Phase2_Presentation.pptx` | 13 slides, designed for a 5–10 minute talk, speaker notes on every slide |
 
 PDF renders of both sit alongside them for quick viewing.
 
@@ -39,6 +39,9 @@ node deck2.js           # builds Phase2_Presentation.pptx
 ```
 
 Figures must be generated before the documents, because both documents embed the PNGs from `fig/`.
+
+Both builders write their output next to the script (`path.join(__dirname, ...)`), so they work
+from any folder; earlier versions wrote to a hard-coded `/home/claude/review2` path.
 
 ### Optional — render to PDF and page images for visual checking
 
@@ -248,8 +251,11 @@ optional adversarial variant, then inference timing. **Never cut E2/E3 or the st
 ### Known open decisions
 
 - The **≥70% LOSO accuracy target** was in an earlier draft and is no longer stated in the
-  document. Context if anyone asks: independent LOSO studies place EEGNet and EEG Conformer
-  around 68–70% on IV-2a, and SATrans-Net reports 72.33%.
+  document. Context if anyone asks: the only verified cross-subject (LOSO) reference is the CTNet
+  paper's table (Zhao et al. 2024): EEGNet+ 56.85%, EEG Conformer+ 53.41%, CTNet 58.64%. An
+  earlier version of this note said EEGNet and Conformer reach "68–70% LOSO" — that was the
+  within-subject 68.67% mislabelled — and quoted SATrans-Net at 72.33%, which could not be
+  verified. Both claims are withdrawn (audit, 2026-09).
 - The **Gantt chart uses relative day numbers**, not calendar dates, to stay consistent with the
   dateless milestone table. If you want dates back, edit `f_timeline()` in `figs2.py` — the
   original labels were `["16 Sep", "19", "21", "25", "28", "30", "2 Oct", "3 Oct"]`.
@@ -276,22 +282,34 @@ Analysis window: 0.5–4.0 s after cue = 2.5–6.0 s absolute = 3.5 s = **875 sa
 | Classifier (32 → 4) | 132 |
 | **Total** | **20,996** |
 
-**Size in context:** EEGNet 2,548 · EEG-TCNet 4,096 · **HCT-Net 20,996** ·
-ShallowConvNet 47,364 · ATCNet 113,732 · DeepConvNet 553,654
+**Size in context** (braindecode 1.8.1, 22 channels, 4 classes; at 875 samples / at 1,125):
+EEGNet 3,188 / 3,700 · EEG-TCNet 4,304 · **HCT-Net 20,996** · ShallowConvNet 44,644 / 47,364 ·
+ATCNet 113,732 · CTNet 152,364 / 153,004 · DeepConvNet 282,079 / 284,479 ·
+EEG Conformer 697,412 / 871,492. EEGNet's often-quoted 2,548 corresponds to a ~2.2 s window.
+The earlier 4,096 (EEG-TCNet) and 553,654 (DeepConvNet) match no input length and were replaced.
 
 Six encoder layers (CTNet's depth) would take the attention block to **51,264** — exceeding the
 whole 50,000 budget before the convolutional block is counted. That is the budgetary half of the
 argument in §11.6; the substantive half is that extra capacity fits subject-specific detail.
 
-**Published accuracies on BCI IV-2a** (different protocols — not directly comparable)
+**Published accuracies on BCI IV-2a**, split by protocol (document Tables 15.2 and 15.3, deck slide 10)
 
-| Model | Parameters | Reported |
+Cross-subject reference — CTNet paper, LOSO, train on 8 subjects, 600 epochs, 2–6 s window,
+no alignment, no fine-tuning; + = re-implemented by the CTNet authors:
+
+| Model | Unseen person | Kappa |
 |---|---|---|
-| EEGNet | 2,548 | 68.67% / 71.50% (two papers, same model) |
-| ShallowConvNet | 47,364 | 66.41% / 67.48% |
-| ATCNet | 113,732 | 81.10% |
-| EEG Conformer | not stated | 78.66% |
-| CTNet | not stated | 82.52% within / **58.64% cross** |
+| ShallowConvNet+ | 56.75 ± 13.77 | 0.4234 |
+| DeepConvNet+ | 60.15 ± 12.71 | 0.4686 |
+| EEGNet+ | 56.85 ± 15.82 | 0.4246 |
+| EEG Conformer+ | 53.41 ± 17.08 | 0.3789 |
+| CTNet | 58.64 ± 14.61 | 0.4486 |
+
+Within-subject — different protocols, not comparable with each other or with the table above:
+CTNet 82.52% (Zhao 2024) · EEG Conformer 78.66% (authors' repo, hold-out) · ATCNet 85.38% (paper)
+and 81.10% (ATCNet repo script) · EEGNet 68.67% (ATCNet repo script) · EEGNet+ 77.39% (Zhao 2024).
+ShallowConvNet 66.41% / 67.48% was in the earlier table and was not re-checked in the audit.
+The EEGNet 71.50% figure has been removed: no verifiable source.
 
 **Protocol:** LOSO, 9 folds — 7 train / 1 validation **subject** / 1 test subject.
 Validation is a held-out subject, not a trial split, so hyperparameters are never selected in a

@@ -145,7 +145,12 @@ def predict(model, X):
                       torch.arange(len(X), device=DEVICE).split(BATCH)]).cpu().numpy()
 
 
-def run_fold(fold, spec, seed=0):
+def train_fold(fold, spec, seed=0):
+    """Train one model on one fold; return it with the evaluation tensors.
+
+    Split out of run_fold so test-time adaptation (Step 8) can start several
+    adaptation variants from the same trained weights.
+    """
     train_subjects, val_subject, test_subject = fold
     train_on_val = spec.get("train_on_val", False)
     trainers = [*train_subjects, val_subject] if train_on_val else list(train_subjects)
@@ -213,18 +218,26 @@ def run_fold(fold, spec, seed=0):
                 break
     if best_state is not None:
         model.load_state_dict(best_state)
+    return {"model": model, "Xva": Xva, "yva": y[va] if va is not None else None,
+            "Xte": Xte, "yte": y[te], "best": best, "best_epoch": best_epoch,
+            "stopped_at": epoch, "n_fit": len(fit),
+            "n_stop": len(stop) if stop is not None else 0, "fixed": fixed}
 
-    pt = predict(model, Xte)
-    row = {"stop_set_acc": round(best, 4) if not fixed else "",
-           "best_epoch": best_epoch, "stopped_at": epoch,
-           "n_fit": len(fit), "n_stop": len(stop) if stop is not None else 0,
-           "test_acc": round(float((pt == y[te]).mean()), 4),
-           "test_kappa": round(float(cohen_kappa_score(y[te], pt)), 4),
+
+def run_fold(fold, spec, seed=0):
+    t = train_fold(fold, spec, seed)
+    model, yte, yva = t["model"], t["yte"], t["yva"]
+    pt = predict(model, t["Xte"])
+    row = {"stop_set_acc": round(t["best"], 4) if not t["fixed"] else "",
+           "best_epoch": t["best_epoch"], "stopped_at": t["stopped_at"],
+           "n_fit": t["n_fit"], "n_stop": t["n_stop"],
+           "test_acc": round(float((pt == yte).mean()), 4),
+           "test_kappa": round(float(cohen_kappa_score(yte, pt)), 4),
            "val_acc": "", "val_kappa": ""}
-    if Xva is not None:
-        pv = predict(model, Xva)
-        row["val_acc"] = round(float((pv == y[va]).mean()), 4)
-        row["val_kappa"] = round(float(cohen_kappa_score(y[va], pv)), 4)
+    if t["Xva"] is not None:
+        pv = predict(model, t["Xva"])
+        row["val_acc"] = round(float((pv == yva).mean()), 4)
+        row["val_kappa"] = round(float(cohen_kappa_score(yva, pv)), 4)
     return row
 
 

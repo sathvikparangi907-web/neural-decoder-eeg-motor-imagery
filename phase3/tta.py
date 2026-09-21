@@ -41,7 +41,10 @@ from preprocess import loso_folds  # noqa: E402
 from protocol import OUT, RUNS, commit, train_fold  # noqa: E402
 from train import BATCH, DEVICE, SMOOTHING  # noqa: E402
 
-MODELS = {"c2": RUNS["step0"], "eegnet": RUNS["step1_eegnet"]}
+MODELS = {"c2": RUNS["step0"], "eegnet": RUNS["step1_eegnet"],
+          # Step 9: the C1/C2 re-measurement and the encoder batch-norm change, all
+          # measured with bn adaptation on, which Step 8 accepted.
+          "base": RUNS["v2_base"], "c1": RUNS["v2_c1"], "bnorm": RUNS["step9_bnorm"]}
 VARIANTS = ("none", "bn", "tent", "pl80", "pl90")
 TENT_LR, TENT_PASSES = 1e-3, 1
 PL_EPOCHS, PL_LR, PL_MIN = 10, 1e-4, 16
@@ -143,19 +146,20 @@ def adapted_predictions(trained, variant, X, seed):
     return probabilities(model, X).argmax(1).cpu().numpy(), kept
 
 
-def run(name, seed):
+def run(name, seed, variants=VARIANTS):
     spec = MODELS[name]
     OUT.mkdir(parents=True, exist_ok=True)
-    path = OUT / f"step8_{name}_seed{seed}.csv"
+    step = "step8" if name in ("c2", "eegnet") else "step9"
+    path = OUT / f"{step}_{name}_seed{seed}.csv"
     done = set()
     if path.exists():
         done = {int(r["test_subject"]) for r in csv.DictReader(path.open(encoding="utf-8"))
-                if r["variant"] == VARIANTS[-1]}
+                if r["variant"] == variants[-1]}
     fields = ["model", "variant", "commit", "seed", "test_subject", "val_subject",
               "val_acc", "val_kappa", "test_acc", "test_kappa", "pl_kept_val",
               "pl_kept_test", "best_epoch", "train_seconds", "adapt_seconds"]
     new_file = not path.exists()
-    print(f"step 8 {name} seed {seed}: no labels of the adapted subject are used", flush=True)
+    print(f"{step} {name} seed {seed}: no labels of the adapted subject are used", flush=True)
     with path.open("a", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=fields)
         if new_file:
@@ -166,7 +170,7 @@ def run(name, seed):
             t0 = time.time()
             t = train_fold(fold, spec, seed)
             train_s = time.time() - t0
-            for v in VARIANTS:
+            for v in variants:
                 t1 = time.time()
                 pv, kv = adapted_predictions(t["model"], v, t["Xva"], seed)
                 pt, kt = adapted_predictions(t["model"], v, t["Xte"], seed)
@@ -186,5 +190,8 @@ def run(name, seed):
 if __name__ == "__main__":
     args = sys.argv[1:]
     seed = int(args[args.index("--seed") + 1]) if "--seed" in args else 0
+    variants = tuple(args[args.index("--variants") + 1].split(",")) \
+        if "--variants" in args else VARIANTS
+    assert set(variants) <= set(VARIANTS) and variants[0] == "none", variants
     for name in [a for a in args if a in MODELS] or ["c2"]:
-        run(name, seed)
+        run(name, seed, variants)

@@ -36,10 +36,24 @@ MAX_NORM = 1.0                 # on the depthwise spatial convolution, per Table
 BUDGET = 20_996                # Table 11.3
 
 
+class SeqBatchNorm(nn.BatchNorm1d):
+    """Batch normalisation over the feature dimension of a (B, steps, D) sequence.
+
+    A drop-in replacement for the LayerNorm inside a Transformer encoder layer.
+    LayerNorm standardises each trial against itself and holds no statistics, so
+    test-time adaptation cannot reach the attention path; batch normalisation
+    keeps running statistics that re-estimating on a new subject can correct.
+    Parameter count is unchanged - both carry one scale and one shift per feature.
+    """
+
+    def forward(self, x):
+        return super().forward(x.transpose(1, 2)).transpose(1, 2)
+
+
 class HCTNet(nn.Module):
     def __init__(self, n_chans=N_EEG, n_outputs=4, n_times=N_SAMP, layers=LAYERS,
                  use_encoder=True, global_attention=False, flatten_head=False,
-                 dropout=DROPOUT):
+                 dropout=DROPOUT, encoder_norm="layer"):
         super().__init__()
         # Block 1-8: EEGNet-style convolutional front end, no bias anywhere, since
         # every convolution is followed by batch normalisation.
@@ -75,6 +89,11 @@ class HCTNet(nn.Module):
         # removed, so the difference is attributable to the encoder alone rather
         # than to the many small ways EEGNet differs from this front end.
         self.encoder = nn.TransformerEncoder(layer, layers) if use_encoder else nn.Identity()
+        if encoder_norm == "batch" and use_encoder:
+            for enc in self.encoder.layers:
+                enc.norm1, enc.norm2 = SeqBatchNorm(D_MODEL), SeqBatchNorm(D_MODEL)
+        elif encoder_norm != "layer":
+            raise ValueError(f"encoder_norm must be 'layer' or 'batch', got {encoder_norm!r}")
 
         # C1. Global average pooling hands the classifier D_MODEL numbers and throws
         # the temporal profile away; EEGNet's final layer reads every time step. The
@@ -157,6 +176,17 @@ def _check():
     print(f"             6 layers would be {six:,}, "
           f"{'over' if six > 50_000 else 'inside'} the 50,000 budget of Table 11.1")
     print(f"parameters   OK  {total:,} exactly, {100 * total / 113732:.1f}% of ATCNet")
+
+    # Step 9: batch normalisation inside the encoder must cost nothing extra and must
+    # expose its layers to test-time adaptation, which looks for _BatchNorm modules.
+    bnorm = HCTNet(encoder_norm="batch")
+    assert bnorm(x).shape == (2, 4)
+    assert sum(p.numel() for p in bnorm.parameters()) == BUDGET
+    n_bn = sum(isinstance(m, nn.modules.batchnorm._BatchNorm) for m in bnorm.modules())
+    assert n_bn == 7, f"expected 3 convolutional + 4 encoder batch norms, got {n_bn}"
+    assert not any(isinstance(m, nn.LayerNorm) for m in bnorm.encoder.modules())
+    print(f"encoder BN   OK  {BUDGET:,} parameters unchanged, {n_bn} adaptable norm layers "
+          f"against {sum(isinstance(m, nn.modules.batchnorm._BatchNorm) for m in model.modules())}")
 
     # Max-norm: inflate the spatial filters and confirm the forward pass pulls them back.
     with torch.no_grad():

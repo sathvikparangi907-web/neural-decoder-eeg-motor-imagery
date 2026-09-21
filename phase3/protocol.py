@@ -55,6 +55,10 @@ RUNS = {
     # step0 itself; these supply the two configurations it is compared against.
     "v2_base": dict(model="HCT-Net", kwargs={}, align=True, mode="stop"),
     "v2_c1": dict(model="HCT-Net", kwargs={"flatten_head": True}, align=True, mode="stop"),
+    # Step 9: batch normalisation in place of the encoder's LayerNorm, so that
+    # test-time adaptation reaches the attention path as well as the convolutions.
+    "step9_bnorm": dict(model="HCT-Net", kwargs={**C2, "encoder_norm": "batch"},
+                        align=True, mode="stop"),
     "step1_eegnet": dict(model="EEGNet", align=True, mode="stop"),
     "step1_eegnet_noalign": dict(model="EEGNet", align=False, mode="stop"),
     "step1_eegnet_lw": dict(model="EEGNet", align="lw", mode="stop"),

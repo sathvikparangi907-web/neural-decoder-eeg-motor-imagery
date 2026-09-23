@@ -1,0 +1,3 @@
+model,variant,commit,seed,test_subject,val_subject,val_acc,val_kappa,test_acc,test_kappa,pl_kept_val,pl_kept_test,best_epoch,train_seconds,adapt_seconds
+base,none,6325455,0,1,2,0.2917,0.0556,0.7153,0.6204,,,243,621.4,0.1
+base,bn,6325455,0,1,2,0.3021,0.0694,0.7274,0.6366,,,243,621.4,0.3

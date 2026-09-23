@@ -1021,6 +1021,46 @@ comparisons above.
 
 ---
 
+## Step 9a — batch normalisation inside the encoder: rejected (2026-09-23)
+
+Motivation, taken from validation: Step 8's `bn` adaptation gained +3.5 for HCT-Net against
+EEGNet's +2.0, and EEGNet has no encoder to convert. The encoder's LayerNorm holds no running
+statistics, so adaptation could only reach the three convolutional norm layers. `SeqBatchNorm`
+(`phase3/hctnet.py`) replaces both LayerNorms in each encoder layer, taking the model from 3
+adaptable norm layers to 7. **The parameter count is unchanged: 20,996 exactly**, asserted in
+`_check()`, so this is a like-for-like comparison and Table 11.3 still holds.
+
+Run `step9_bnorm`, three seeds, protocol v2, `bn` adaptation on, results
+`results/v2/step9_bnorm_seed{0,1,2}.csv`.
+
+| Three-seed mean | val | test | val kappa | test kappa |
+|---|---|---|---|---|
+| C2, unadapted | 50.1 | 50.7 | 0.334 | 0.343 |
+| C2 + bn | **53.6** | **54.4** | 0.381 | 0.392 |
+| C2 + BN encoder, unadapted | 46.9 | 47.2 | 0.292 | 0.296 |
+| C2 + BN encoder + bn | 49.3 | 48.6 | 0.323 | 0.315 |
+
+**Decision: reject.** The change is 4.3 points *below* C2 on the validation mean after
+adaptation (worse in 9 of 9 subjects, p = 0.0039) and 3.2 below it before adaptation. It fails
+the 0.75 threshold in the wrong direction; nothing about the test numbers entered this.
+
+The mechanism it was meant to help did not appear either: the adaptation gain fell from +3.5 to
++2.4 on validation. Giving adaptation more layers to correct did not help, because batch
+normalisation made the trained model worse to begin with.
+
+**Observation, not a conclusion.** Early stopping fired much sooner with the BN encoder: mean
+best epoch 37 (seeds 37/35/38) against C2's 110 (107/122/101). The model reaches its best
+validation score early and then degrades, which is consistent with batch statistics over
+windows of 11 or 27 steps being a noisy normaliser on batches of this size. Not investigated
+further — the change is rejected.
+
+**How many subjects gained more than EEGNet's `bn` gain?** 4 of 9 on validation, against
+EEGNet's per-subject gains and also against EEGNet's +2.0 mean (6 of 9 and 5 of 9 on test).
+C2 without this change was ahead of EEGNet's per-subject gain in 4 of 9 on validation and 7 of 9
+on test. The change did not separate the two architectures.
+
+---
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

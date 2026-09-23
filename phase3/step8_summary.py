@@ -19,14 +19,17 @@ from tta import MODELS, VARIANTS  # noqa: E402
 
 SEEDS = (0, 1, 2)
 THRESHOLD = 0.75
-LABEL = {"c2": "HCT-Net (C2)  <- OUR MODEL", "eegnet": "EEGNet"}
+LABEL = {"c2": "HCT-Net (C2)  <- OUR MODEL", "eegnet": "EEGNet",
+         "base": "HCT-Net plain baseline", "c1": "HCT-Net + C1 (flatten head)",
+         "bnorm": "HCT-Net C2 + batch-norm encoder  <- OUR MODEL"}
 
 
 def load(name):
     """acc[variant][split] -> array (seed, subject) in %, kappa likewise, keyed by subject."""
     out = {}
     for seed in SEEDS:
-        for r in csv.DictReader((OUT / f"step8_{name}_seed{seed}.csv").open(encoding="utf-8")):
+        step = "step8" if name in ("c2", "eegnet") else "step9"
+        for r in csv.DictReader((OUT / f"{step}_{name}_seed{seed}.csv").open(encoding="utf-8")):
             v = out.setdefault(r["variant"], {})
             for split, subj in (("val", "val_subject"), ("test", "test_subject")):
                 d = v.setdefault(split, {})
@@ -51,7 +54,7 @@ def report(name):
     print(f"{'variant':8} {'val per seed':>20} {'val mean':>9} {'d val':>7} {'test per seed':>20} "
           f"{'test mean':>9} {'d test':>7} {'val k':>6} {'test k':>6} {'val up':>6} {'test up':>7} {'p test':>7}  decision")
     rows = {}
-    for v in VARIANTS:
+    for v in [v for v in VARIANTS if v in out]:
         va, te = arr(v, "val", "acc"), arr(v, "test", "acc")
         vs, ts = va.mean(1), te.mean(1)
         dv, dt = vs.mean() - base_val.mean(), ts.mean() - arr("none", "test", "acc").mean(1).mean()
@@ -67,11 +70,11 @@ def report(name):
 
     print(f"\nPer test subject, three-seed mean test accuracy (%), mean +- std over subjects")
     print(f"{'variant':8} " + " ".join(f"{'A%02d' % s:>6}" for s in subjects) + f" {'mean +- std':>14}")
-    for v in VARIANTS:
+    for v in [v for v in VARIANTS if v in out]:
         m = arr(v, "test", "acc").mean(0)
         print(f"{v:8} " + " ".join(f"{x:6.1f}" for x in m) + f" {m.mean():7.1f} +- {m.std(ddof=1):4.1f}")
 
-    for v in ("pl80", "pl90"):
+    for v in [v for v in ("pl80", "pl90") if v in out]:
         kept = out[v]["kept"]
         fb = sum(1 for kv, kt in kept for k in (kv, kt) if k in ("0", 0))
         n = [int(k) for kv, kt in kept for k in (kv, kt) if k not in ("0", 0, "")]
@@ -81,5 +84,6 @@ def report(name):
 
 
 if __name__ == "__main__":
-    for name in MODELS:
+    names = [a for a in sys.argv[1:] if a in MODELS] or list(MODELS)
+    for name in names:
         report(name)

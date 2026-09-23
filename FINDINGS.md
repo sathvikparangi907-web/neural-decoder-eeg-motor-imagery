@@ -1061,6 +1061,55 @@ on test. The change did not separate the two architectures.
 
 ---
 
+## Step 9b — C1 and C2 do not survive three seeds with adaptation on: both dropped (2026-09-23)
+
+Stage 2 accepted C1 (classifier reads every time step) and C2 (C1 plus one global attention
+window) on single-seed v1 measurements. Re-measured here under protocol v2, three seeds, with
+the accepted `bn` adaptation switched on, decided on the three-seed validation mean at the
+0.75-point threshold. Runs `step9_base`, `step9_c1`, and Step 8's `step8_c2`.
+
+Three-seed means, LOSO 9 folds, 875 samples:
+
+| Configuration | Params | Val, unadapted | Val + bn | Test + bn | bn gain (val) |
+|---|---|---|---|---|---|
+| **base (plain HCT-Net)** | **20,996** | 48.4 | **53.3** | 52.7 | +5.0 |
+| C1 (flatten head) | 22,276 | 48.5 | 53.2 | 52.5 | +4.7 |
+| C2 (C1 + global attention) | 24,836 | 50.1 | 53.6 | 54.4 | +3.5 |
+| C2 + BN encoder (Step 9a) | 24,836 | 46.9 | 49.3 | 48.6 | +2.4 |
+
+Pairwise, with `bn` on, on validation:
+
+| Comparison | d val | Better in | p | Decision |
+|---|---|---|---|---|
+| C1 vs base | -0.1 | 4/9 | 1.0000 | **reject C1** |
+| C2 vs C1 | +0.4 | 5/9 | 0.6641 | **reject C2** |
+| C2 vs base | +0.3 | 5/9 | 0.8203 | — |
+
+**Decision: drop C1 and C2. The accepted model reverts to the plain HCT-Net plus `bn`
+adaptation.** Neither clears 0.75 on the three-seed validation mean once adaptation is on.
+
+**Why they looked good before, and what changed.** Without adaptation C2 is +1.7 over base on
+validation, which is roughly what Stage 2 measured on one seed. Adaptation gives the plain model
+more than it gives C2 (+5.0 against +3.5) and the difference closes. The ordering of the
+adaptation gain across every configuration measured is monotone in model size:
+
+    base 20,996 +5.0 | C1 22,276 +4.7 | C2 24,836 +3.5 | BN encoder 24,836 +2.4 | EEGNet +2.0
+
+Two changes that each looked like an improvement on their own are not additive with a third.
+This is exactly what rule 6 (one change at a time, stacked on the last accepted change) exists
+to catch, and it was only caught because C1 and C2 were re-measured rather than assumed.
+
+**Side effect: the design document becomes correct again.** Table 11.3's 20,996 parameters is
+the plain model. C2 carried 24,836, which the document never stated. Reverting removes that
+discrepancy; no table needs changing.
+
+**Test numbers, reported and not used in the decision.** C2 + bn is the best test score of the
+four (54.4 against base's 52.7). The decision rule is the validation mean, where the gap is
++0.3 and not significant, so C2 is dropped. If this ordering were followed on test instead, C2
+would be kept - stated here because the two disagree.
+
+---
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

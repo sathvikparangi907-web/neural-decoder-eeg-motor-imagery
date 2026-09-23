@@ -98,19 +98,23 @@ def load_session(subject, session, window=WINDOW):
     return X, y, rejected
 
 
-def load_subject(subject, rebuild=False):
+def load_subject(subject, rebuild=False, window=WINDOW):
     """Both sessions of one subject, cached to cache/A0n.npz.
+
+    A non-default window (Step 7, each paper's own window) caches to its own
+    file, so the 875-sample results stay exactly as they were.
 
     Returns X, y, session (0 for T, 1 for E) and the artefact mask. Rejected
     trials are kept and flagged, not dropped, so the rejection rate stays
     reportable and every caller can decide for itself.
     """
-    path = CACHE / f"A{subject:02d}.npz"
+    tag = "" if tuple(window) == WINDOW else f"_{window[0]}to{window[1]}"
+    path = CACHE / f"A{subject:02d}{tag}.npz"
     if path.exists() and not rebuild:
         z = np.load(path)
         return z["X"], z["y"], z["session"], z["rejected"]
 
-    parts = [load_session(subject, s) for s in SESSIONS]
+    parts = [load_session(subject, s, window) for s in SESSIONS]
     X = np.concatenate([p[0] for p in parts])
     y = np.concatenate([p[1] for p in parts])
     rejected = np.concatenate([p[2] for p in parts])

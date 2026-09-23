@@ -33,7 +33,7 @@ from sklearn.metrics import cohen_kappa_score
 from sklearn.model_selection import train_test_split
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from data import load_subject  # noqa: E402
+from data import FS, WINDOW, load_subject  # noqa: E402
 from hctnet import HCTNet  # noqa: E402
 from models import build  # noqa: E402
 from preprocess import align_subject, augment, loso_folds, standardise  # noqa: E402
@@ -59,6 +59,16 @@ RUNS = {
     # test-time adaptation reaches the attention path as well as the convolutions.
     "step9_bnorm": dict(model="HCT-Net", kwargs={**C2, "encoder_norm": "batch"},
                         align=True, mode="stop"),
+    # Step 7, the window fix. WINDOW is relative to the cue; the cue sits 2.0 s into
+    # the trial, so a paper's absolute window w becomes (w0 - 2.0, w1 - 2.0).
+    #   ours    0.5-4.0 after cue   = 2.5-6.0 absolute  =  875 samples
+    #   CTNet   0.0-4.0 after cue   = 2.0-6.0 absolute  = 1000 samples (Zhao et al. 2024)
+    #   ATCNet -0.5-4.0 after cue   = 1.5-6.0 absolute  = 1125 samples (preprocess.py,
+    #           t1 = int(1.5*fs), t2 = int(6*fs); starts half a second before the cue)
+    "step7_ctnet_875": dict(model="CTNet", align=True, mode="stop"),
+    "step7_ctnet_1000": dict(model="CTNet", align=True, mode="stop", window=(0.0, 4.0)),
+    "step7_atcnet_875": dict(model="ATCNet", align=True, mode="stop"),
+    "step7_atcnet_1125": dict(model="ATCNet", align=True, mode="stop", window=(-0.5, 4.0)),
     "step1_eegnet": dict(model="EEGNet", align=True, mode="stop"),
     "step1_eegnet_noalign": dict(model="EEGNet", align=False, mode="stop"),
     "step1_eegnet_lw": dict(model="EEGNet", align="lw", mode="stop"),
@@ -97,23 +107,23 @@ def align_ledoit_wolf(X, session):
     return out
 
 
-def subject_data(s, align):
+def subject_data(s, align, window=WINDOW):
     """One subject, aligned per session from its own trials.
 
     align is False, True (plain mean covariance, He and Wu 2020), or "lw"
     (Ledoit-Wolf shrinkage estimate of R).
     """
-    if (s, align) not in _cache:
-        X, y, session, rejected = load_subject(s)
+    if (s, align, window) not in _cache:
+        X, y, session, rejected = load_subject(s, window=window)
         if align == "lw":
             X = align_ledoit_wolf(X, session)
         elif align:
             X = align_subject(X, session)
-        _cache[(s, align)] = (X, y, rejected)
-    return _cache[(s, align)]
+        _cache[(s, align, window)] = (X, y, rejected)
+    return _cache[(s, align, window)]
 
 
-def assemble(train_subjects, eval_subjects, align):
+def assemble(train_subjects, eval_subjects, align, window=WINDOW):
     """Stack subjects in order. Artefact rejection applies to training subjects only.
 
     Returns X, y, the subject of every row, and a mask of rows usable for
@@ -122,7 +132,7 @@ def assemble(train_subjects, eval_subjects, align):
     """
     X, y, subject, keep = [], [], [], []
     for s in [*train_subjects, *eval_subjects]:
-        Xs, ys, rej = subject_data(s, align)
+        Xs, ys, rej = subject_data(s, align, window)
         X.append(Xs); y.append(ys); subject.append(np.full(len(ys), s))
         keep.append(~rej if s in train_subjects else np.ones(len(ys), bool))
     return (np.concatenate(X), np.concatenate(y), np.concatenate(subject),
@@ -137,9 +147,11 @@ def split_for_stopping(tr, y, subject, seed):
 
 
 def make_model(spec):
+    window = tuple(spec.get("window", WINDOW))
+    n_times = int((window[1] - window[0]) * FS)
     if spec["model"] == "HCT-Net":
-        return HCTNet(**spec.get("kwargs", {}))
-    return build(spec["model"])
+        return HCTNet(n_times=n_times, **spec.get("kwargs", {}))
+    return build(spec["model"], n_times=n_times)
 
 
 @torch.no_grad()
@@ -159,7 +171,8 @@ def train_fold(fold, spec, seed=0):
     train_on_val = spec.get("train_on_val", False)
     trainers = [*train_subjects, val_subject] if train_on_val else list(train_subjects)
     evals = [test_subject] if train_on_val else [val_subject, test_subject]
-    X, y, subject, keep = assemble(trainers, evals, spec["align"])
+    X, y, subject, keep = assemble(trainers, evals, spec["align"],
+                                   tuple(spec.get("window", WINDOW)))
 
     tr = np.flatnonzero(np.isin(subject, trainers) & keep)
     va = np.flatnonzero(subject == val_subject) if not train_on_val else None

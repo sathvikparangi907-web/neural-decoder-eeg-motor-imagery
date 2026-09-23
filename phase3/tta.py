@@ -44,7 +44,10 @@ from train import BATCH, DEVICE, SMOOTHING  # noqa: E402
 MODELS = {"c2": RUNS["step0"], "eegnet": RUNS["step1_eegnet"],
           # Step 9: the C1/C2 re-measurement and the encoder batch-norm change, all
           # measured with bn adaptation on, which Step 8 accepted.
-          "base": RUNS["v2_base"], "c1": RUNS["v2_c1"], "bnorm": RUNS["step9_bnorm"]}
+          "base": RUNS["v2_base"], "c1": RUNS["v2_c1"], "bnorm": RUNS["step9_bnorm"],
+          # Step 7 gate: each paper's own window against ours, same protocol.
+          "ctnet875": RUNS["step7_ctnet_875"], "ctnet1000": RUNS["step7_ctnet_1000"],
+          "atcnet875": RUNS["step7_atcnet_875"], "atcnet1125": RUNS["step7_atcnet_1125"]}
 VARIANTS = ("none", "bn", "tent", "pl80", "pl90")
 TENT_LR, TENT_PASSES = 1e-3, 1
 PL_EPOCHS, PL_LR, PL_MIN = 10, 1e-4, 16
@@ -149,7 +152,8 @@ def adapted_predictions(trained, variant, X, seed):
 def run(name, seed, variants=VARIANTS):
     spec = MODELS[name]
     OUT.mkdir(parents=True, exist_ok=True)
-    step = "step8" if name in ("c2", "eegnet") else "step9"
+    step = "step8" if name in ("c2", "eegnet") else (
+        "step7" if name[-3:].isdigit() else "step9")
     path = OUT / f"{step}_{name}_seed{seed}.csv"
     done = set()
     if path.exists():

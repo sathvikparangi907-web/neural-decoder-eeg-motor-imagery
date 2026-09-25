@@ -53,19 +53,28 @@ class SeqBatchNorm(nn.BatchNorm1d):
 class HCTNet(nn.Module):
     def __init__(self, n_chans=N_EEG, n_outputs=4, n_times=N_SAMP, layers=LAYERS,
                  use_encoder=True, global_attention=False, flatten_head=False,
-                 dropout=DROPOUT, encoder_norm="layer"):
+                 dropout=DROPOUT, encoder_norm="layer",
+                 f1=F1, f2=F2, d_model=None, ff=None):
         super().__init__()
+        # Step 10, the size sweep. The convolutional front end hands its F2 feature
+        # maps straight to the encoder as the model dimension, so the two are one
+        # number; the feed-forward width follows the default's 2x ratio.
+        d_model = f2 if d_model is None else d_model
+        if d_model != f2:
+            raise ValueError(f"d_model must equal f2 ({f2}), got {d_model}")
+        ff = 2 * d_model if ff is None else ff
+        self.d_model = d_model
         # Block 1-8: EEGNet-style convolutional front end, no bias anywhere, since
         # every convolution is followed by batch normalisation.
-        self.temporal = nn.Conv2d(1, F1, (1, 64), padding="same", bias=False)
-        self.bn1 = nn.BatchNorm2d(F1)
-        self.spatial = nn.Conv2d(F1, F1 * D, (n_chans, 1), groups=F1, bias=False)
-        self.bn2 = nn.BatchNorm2d(F1 * D)
+        self.temporal = nn.Conv2d(1, f1, (1, 64), padding="same", bias=False)
+        self.bn1 = nn.BatchNorm2d(f1)
+        self.spatial = nn.Conv2d(f1, f1 * D, (n_chans, 1), groups=f1, bias=False)
+        self.bn2 = nn.BatchNorm2d(f1 * D)
         self.pool1 = nn.AvgPool2d((1, 4))
-        self.separable_depth = nn.Conv2d(F1 * D, F1 * D, (1, 16), padding="same",
-                                         groups=F1 * D, bias=False)
-        self.separable_point = nn.Conv2d(F1 * D, F2, (1, 1), bias=False)
-        self.bn3 = nn.BatchNorm2d(F2)
+        self.separable_depth = nn.Conv2d(f1 * D, f1 * D, (1, 16), padding="same",
+                                         groups=f1 * D, bias=False)
+        self.separable_point = nn.Conv2d(f1 * D, f2, (1, 1), bias=False)
+        self.bn3 = nn.BatchNorm2d(f2)
         self.pool2 = nn.AvgPool2d((1, 8))
         self.drop = nn.Dropout(dropout)
         self.act = nn.ELU()
@@ -80,9 +89,9 @@ class HCTNet(nn.Module):
         self.window = n_steps if global_attention else WINDOW
         self.stride = 1 if global_attention else STRIDE
         self.n_windows = (n_steps - self.window) // self.stride + 1
-        self.positional = nn.Parameter(torch.zeros(self.window, D_MODEL))
+        self.positional = nn.Parameter(torch.zeros(self.window, d_model))
         layer = nn.TransformerEncoderLayer(
-            D_MODEL, HEADS, dim_feedforward=FF, dropout=dropout,
+            d_model, HEADS, dim_feedforward=ff, dropout=dropout,
             activation="gelu", batch_first=True)
         # use_encoder=False is variant V0 of the component study: the convolutional
         # front end, windowing and fusion are untouched and only the attention is
@@ -91,7 +100,7 @@ class HCTNet(nn.Module):
         self.encoder = nn.TransformerEncoder(layer, layers) if use_encoder else nn.Identity()
         if encoder_norm == "batch" and use_encoder:
             for enc in self.encoder.layers:
-                enc.norm1, enc.norm2 = SeqBatchNorm(D_MODEL), SeqBatchNorm(D_MODEL)
+                enc.norm1, enc.norm2 = SeqBatchNorm(d_model), SeqBatchNorm(d_model)
         elif encoder_norm != "layer":
             raise ValueError(f"encoder_norm must be 'layer' or 'batch', got {encoder_norm!r}")
 
@@ -99,7 +108,7 @@ class HCTNet(nn.Module):
         # the temporal profile away; EEGNet's final layer reads every time step. The
         # Stage 1 diagnostic measured that difference as 32 numbers against 432.
         self.flatten_head = flatten_head
-        head_in = D_MODEL * self.window if flatten_head else D_MODEL
+        head_in = d_model * self.window if flatten_head else d_model
         self.classifier = nn.Linear(head_in, n_outputs)
         nn.init.trunc_normal_(self.positional, std=0.02)
 
@@ -132,10 +141,10 @@ class HCTNet(nn.Module):
         x = x.squeeze(2)                                     # (B, F2, steps)
         x = x.unfold(2, self.window, self.stride)            # (B, F2, windows, window)
         b, _, w, _ = x.shape
-        x = x.permute(0, 2, 3, 1).reshape(b * w, self.window, D_MODEL)
+        x = x.permute(0, 2, 3, 1).reshape(b * w, self.window, self.d_model)
         x = self.encoder(x + self.positional)
 
-        x = x.reshape(b, w, self.window, D_MODEL).mean(dim=1)      # fuse the windows
+        x = x.reshape(b, w, self.window, self.d_model).mean(dim=1)      # fuse the windows
         if self.flatten_head:
             return x.flatten(1)                                    # keep the time steps
         return x.mean(dim=1)                                       # or average them away

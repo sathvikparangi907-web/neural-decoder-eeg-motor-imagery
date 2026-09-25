@@ -69,6 +69,11 @@ RUNS = {
     "step7_ctnet_1000": dict(model="CTNet", align=True, mode="stop", window=(0.0, 4.0)),
     "step7_atcnet_875": dict(model="ATCNet", align=True, mode="stop"),
     "step7_atcnet_1125": dict(model="ATCNet", align=True, mode="stop", window=(-0.5, 4.0)),
+    # Step 10, the size sweep. f2 is the model dimension, so one number sets both.
+    # D is v2_base (20,996) and is not repeated here.
+    "step10_a": dict(model="HCT-Net", kwargs=dict(f1=8, f2=16, layers=1), align=True, mode="stop"),
+    "step10_b": dict(model="HCT-Net", kwargs=dict(f1=8, f2=16, layers=2), align=True, mode="stop"),
+    "step10_c": dict(model="HCT-Net", kwargs=dict(f1=16, f2=32, layers=1), align=True, mode="stop"),
     "step1_eegnet": dict(model="EEGNet", align=True, mode="stop"),
     "step1_eegnet_noalign": dict(model="EEGNet", align=False, mode="stop"),
     "step1_eegnet_lw": dict(model="EEGNet", align="lw", mode="stop"),

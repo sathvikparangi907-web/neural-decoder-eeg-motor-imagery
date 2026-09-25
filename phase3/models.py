@@ -44,6 +44,11 @@ VARIANTS = {f"HCT-Net-L{n}": partial(HCTNet, layers=n) for n in (1, 6)}
 VARIANTS["HCT-Net-V1"] = partial(HCTNet, use_encoder=False)          # no attention
 VARIANTS["HCT-Net-V2"] = partial(HCTNet, global_attention=True)      # global attention
 VARIANTS["HCT-Net-V5"] = partial(HCTNet, use_encoder=False)          # convolution only
+# Step 10, the size sweep. D is the current model, listed so the four are built
+# the same way; f2 doubles as the model dimension (see HCTNet.__init__).
+SWEEP = {"A": dict(f1=8, f2=16, layers=1), "B": dict(f1=8, f2=16, layers=2),
+         "C": dict(f1=16, f2=32, layers=1), "D": dict(f1=16, f2=32, layers=2)}
+VARIANTS.update({f"HCT-Net-{k}": partial(HCTNet, **kw) for k, kw in SWEEP.items()})
 
 # Table 15.1 quotes these for the *papers'* own input configurations, not for 875
 # samples, so they are a reference to print against and not something to assert.

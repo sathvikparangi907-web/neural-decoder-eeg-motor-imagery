@@ -1110,6 +1110,77 @@ would be kept - stated here because the two disagree.
 
 ---
 
+## Step 10 — size sweep: the model shrinks to 3,924 parameters (2026-10-04)
+
+Motivation, all from measurements already in this file: 81% of the model sat in the encoder
+(17,088 of 20,996); the component study found attention hurting; EEGNet beat us with 3,188
+parameters; and the Step 8/9 adaptation gain shrank monotonically as models grew. Four widths,
+three seeds each, protocol v2, 875 samples, `bn` adaptation on. Config D is Step 9's `base` and
+was not re-run. Code `phase3/tta.py` (sizea/sizeb/sizec), `phase3/within.py`,
+`phase3/figure_size.py`.
+
+Derived parameter counts, all matching the expected 3,924 / 6,148 / 12,452 / 20,996:
+
+| Config | F1 | F2 = d_model | Layers | Conv | Encoder | Positional | Head | Total |
+|---|---|---|---|---|---|---|---|---|
+| A | 8 | 16 | 1 | 1,456 | 2,224 | 176 | 68 | 3,924 |
+| B | 8 | 16 | 2 | 1,456 | 4,448 | 176 | 68 | 6,148 |
+| C | 16 | 32 | 1 | 3,424 | 8,544 | 352 | 132 | 12,452 |
+| D | 16 | 32 | 2 | 3,424 | 17,088 | 352 | 132 | 20,996 |
+
+F2 doubles as the model dimension - the convolutional block hands its feature maps straight to
+the encoder - and the feed-forward width keeps the default's 2x ratio. That is what reproduces
+the expected counts exactly.
+
+Three-seed means, LOSO 9 folds:
+
+| Config | Params | Val, unadapted | Val + bn | Test + bn | Test kappa | Within | Drop | Drop + bn |
+|---|---|---|---|---|---|---|---|---|
+| **A** | **3,924** | 49.9 | **54.3** | 53.6 | 0.381 | 72.1 | **22.8** | **18.5** |
+| B | 6,148 | 48.4 | 53.2 | 53.5 | 0.380 | 71.9 | 22.7 | 18.4 |
+| C | 12,452 | 49.4 | 53.1 | 52.5 | 0.367 | 73.4 | 24.3 | 20.9 |
+| D | 20,996 | 48.4 | 53.3 | 52.7 | 0.369 | 73.2 | 24.7 | 20.6 |
+
+Pairwise on the validation mean:
+
+| Comparison | d val | Better in | p |
+|---|---|---|---|
+| A vs D | +1.00 | 7/9 | 0.1641 |
+| A vs B | +1.14 | 8/9 | 0.0977 |
+| A vs C | +1.18 | 7/9 | 0.0742 |
+| B vs D | -0.14 | 4/9 | 0.9102 |
+| C vs D | -0.18 | 2/9 | 0.4961 |
+
+**Decision: config A, 3,924 parameters.** It clears the 0.75 threshold against all three others,
+so the "prefer the smaller when within threshold" rule was not needed - A wins outright and is
+also the smallest. B, C and D sit within 0.2 points of each other: **above 3,924 parameters,
+size buys nothing on this dataset.** A second encoder layer adds nothing (B vs A), and doubling
+the width adds nothing (C vs A, D vs B).
+
+**The overfitting gap narrows, but only a little.** Within-subject accuracy is flat across the
+four (71.9 to 73.4), so the whole change in the drop comes from the cross-subject side: 24.7
+points at 20,996 parameters against 22.8 at 3,924, or 20.6 against 18.5 with adaptation. Size is
+therefore a small part of the gap. The larger part - about 18 points that survive at every size
+tested - is not a capacity problem and will not be fixed by shrinking further.
+
+Config D's within-subject mean of 73.2 reproduces the E1 run's HCT-Net figure of 73.2 exactly,
+which is a useful check that `within.py` implements the same protocol. The 26.3-point drop
+quoted before came from the v1 cross-subject number (46.9); under v2 the same configuration
+drops 24.7.
+
+**Figure delivered.** `phase3/results_fig/accuracy_vs_parameters.png` plots cross-subject
+accuracy against parameter count for the four configurations, with EEGNet (3,188, same protocol)
+and ATCNet (113,732, v1 protocol, one seed, no adaptation) marked as references and the two
+protocols distinguished in the legend. The line is flat to slightly downward. This is one of the
+four contributions section 17 of the Phase 2 document promises, and it is now produced.
+
+**Current accepted model: HCT-Net config A** - 3,924 parameters, Euclidean alignment, `bn`
+test-time adaptation. Validation 54.3, test 53.6, test kappa 0.381. EEGNet under the same
+protocol with the same adaptation is 55.0 validation / 54.3 test, so EEGNet is still ahead on
+validation by 0.7, within the threshold but not behind us.
+
+---
+
 ## Finding 11 — alignment helps cross-subject by 5.5 points, and nine subjects cannot prove it
 
 The project's central mechanism, measured cross-subject for the first time. FBCSP under LOSO

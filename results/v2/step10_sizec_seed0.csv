@@ -1,0 +1,9 @@
+model,variant,commit,seed,test_subject,val_subject,val_acc,val_kappa,test_acc,test_kappa,pl_kept_val,pl_kept_test,best_epoch,train_seconds,adapt_seconds
+sizec,none,8ba13bf,0,1,2,0.3003,0.0671,0.6597,0.5463,,,160,349.4,0.2
+sizec,bn,8ba13bf,0,1,2,0.3212,0.0949,0.6997,0.5995,,,160,349.4,0.2
+sizec,none,8ba13bf,0,2,3,0.7743,0.6991,0.3698,0.1597,,,190,395.4,0.1
+sizec,bn,8ba13bf,0,2,3,0.7691,0.6921,0.3559,0.1412,,,190,395.4,0.2
+sizec,none,8ba13bf,0,3,4,0.3698,0.1597,0.7431,0.6574,,,173,366.4,0.2
+sizec,bn,8ba13bf,0,3,4,0.4062,0.2083,0.7448,0.6597,,,173,366.4,0.2
+sizec,none,8ba13bf,0,4,5,0.3264,0.1019,0.342,0.1227,,,151,361.7,0.3
+sizec,bn,8ba13bf,0,4,5,0.3594,0.1458,0.4149,0.2199,,,151,361.7,0.6

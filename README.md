@@ -16,6 +16,10 @@ badly on anyone new — CTNet reports 82.52% within-subject and 58.64% cross-sub
 
 Results and negative results as they are found: **`FINDINGS.md`**.
 
+The dataset — what it is, where it comes from, its licence, and how to verify a download
+against the exact bytes these results came from: **`DATA.md`**. Every paper the models and
+methods come from, with DOIs and which file uses each one: **`references/REFERENCES.md`**.
+
 ## Seeing the results
 
 Everything already measured, in one command — no GPU, no dataset needed, a second to run:
@@ -98,7 +102,11 @@ phase3/
   eda/            exploratory figures
   results_fig/    result figures
 results/          per-fold metrics as CSV, one row per fold per seed
+references/
+  REFERENCES.md   every paper used, with DOI and the file that uses it
+  papers/         the open-access PDFs that may be redistributed
 FINDINGS.md       every result, including the negative ones
+DATA.md           the dataset: source, licence, download, checksums
 "Neural Decoder using EEG & Motor Imagery/"   the Phase 2 deliverables
 ```
 

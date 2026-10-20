@@ -2,7 +2,9 @@
 review2/_qa-renders/
 
 # raw dataset and cached tensors — large, downloaded by phase3/data.py
-data/
+data/*
+# except the checksum manifest, which is tiny and is what makes a download verifiable
+!data/SHA256SUMS
 cache/
 
 node_modules/

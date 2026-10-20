@@ -9,6 +9,7 @@ data/*
 !data/SHA256SUMS
 !data/*.mat
 !data/trials.csv
+!data/README.md
 cache/
 
 node_modules/

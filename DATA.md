@@ -3,15 +3,25 @@
 **BCI Competition IV Dataset 2a** (BNCI Horizon 2020 entry `001-2014`), Institute for
 Knowledge Discovery, Graz University of Technology.
 
-The dataset is **not stored in this repository**. It is 744 MB of raw recordings, and one
-command downloads it from the original source:
+The 18 raw `.mat` files are **in this repository**, under `data/`, 744 MB in total and
+byte-identical to what the Graz mirror serves. Cloning gets you the data; nothing has to be
+downloaded to reproduce a result.
+
+To see what is actually inside them:
 
 ```bash
-py phase3/data.py        # downloads 18 files, preprocesses, caches, verifies  (~15 min)
+py phase3/peek.py            # one trial as numbers: raw, then band-passed
+py phase3/peek.py 5 100      # subject 5, trial 100
 ```
 
-`data/SHA256SUMS` is tracked, so the files you download can be checked against the exact
-bytes this project's results were produced from:
+To rebuild the preprocessing cache, or to fetch the files again from the original source:
+
+```bash
+py phase3/data.py        # downloads what is missing, preprocesses, caches, verifies
+```
+
+`data/SHA256SUMS` records all 18 checksums, so a copy from anywhere can be checked against
+the exact bytes this project's results were produced from:
 
 ```bash
 cd data && sha256sum -c SHA256SUMS                       # Git Bash / Linux / macOS
@@ -43,7 +53,7 @@ served from `https://lampx.tugraz.at/~bci/database/001-2014/`.
 
 | Path | Size | In git? | What it is |
 |---|---|---|---|
-| `data/` | 744 MB | no | the 18 raw `.mat` files, exactly as downloaded |
+| `data/` | 744 MB | **yes** | the 18 raw `.mat` files, exactly as the mirror serves them |
 | `data/SHA256SUMS` | 2 KB | **yes** | checksums of those 18 files |
 | `cache/` | 443 MB | no | preprocessed tensors — 4–38 Hz band-pass, epoched to the analysis window, artefact-marked, saved per subject as `.npz` |
 
@@ -54,8 +64,8 @@ plus `phase3/data.py` do not determine, so it is not worth versioning.
 
 The BNCI Horizon 2020 database lists this dataset under **CC BY-ND 4.0**, licensor the
 Institute for Knowledge Discovery, Graz University of Technology. The no-derivatives clause
-is the reason only the raw files would ever be redistributed from here and never the
-contents of `cache/`, which are a processed version of them. The BNCI site was unreachable
+is why only the raw files are redistributed from here and never the contents of `cache/`,
+which are a processed version of them. The BNCI site was unreachable
 on 20 October 2026, so confirm the licence at
 <https://www.bnci-horizon-2020.eu/database/data-sets> before redistributing anything.
 

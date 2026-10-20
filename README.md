@@ -77,7 +77,8 @@ Model names accepted anywhere: `FBCSP`, `EEGNet`, `ATCNet`, `EEGConformer`,
 `data.py` downloads the dataset on first run, from the Graz mirror at
 `lampx.tugraz.at/~bci/database/001-2014/`. It fetches the `.mat` release rather than the
 competition `.gdf`, because the `.mat` files carry the evaluation-session labels inline —
-no separate true-labels archive and no GDF parser. `data/` and `cache/` are not tracked.
+no separate true-labels archive and no GDF parser. `data/` is tracked, so a clone already
+has the recordings; `cache/` is not, because `data.py` rebuilds it. See `DATA.md`.
 
 Every script is runnable on its own and ends in a self-check that fails loudly rather than
 printing a number nobody verified.
@@ -87,6 +88,7 @@ printing a number nobody verified.
 ```
 phase3/
   data.py         loading, band-pass, epoching, artefact marking, caching     (M1)
+  peek.py         print the actual numbers: one trial, raw and band-passed
   preprocess.py   Euclidean alignment, standardisation, augmentation, folds   (M2)
   explore.py      the seven Table 10.1 analyses, each with a verdict          (M1)
   fbcsp.py        FBCSP + LDA, the classical baseline                         (M3)

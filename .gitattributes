@@ -1,0 +1,5 @@
+# core.autocrlf is on; keep git from rewriting line endings inside binaries
+*.pdf binary
+*.png binary
+*.npz binary
+*.mat binary

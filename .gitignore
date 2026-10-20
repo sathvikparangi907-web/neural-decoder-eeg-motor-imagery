@@ -8,6 +8,7 @@ data/*
 # under that licence, and rebuilt from data/ by phase3/data.py in one command.
 !data/SHA256SUMS
 !data/*.mat
+!data/trials.csv
 cache/
 
 node_modules/

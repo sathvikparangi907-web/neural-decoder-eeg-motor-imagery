@@ -25,7 +25,7 @@ methods come from, with DOIs and which file uses each one: **`references/REFEREN
 Everything already measured, in one command — no GPU, no dataset needed, a second to run:
 
 ```bash
-py phase3/report.py
+py phase3/7_performance_evaluation_and_analysis/report.py
 ```
 
 It prints every experiment's per-subject accuracy, the means, and the Wilcoxon
@@ -43,7 +43,7 @@ Four classes, so **25% is chance**. The two protocols answer different questions
 For one experiment on its own, with a chosen reference model for the statistics:
 
 ```bash
-py phase3/report.py results/e2_loso.csv HCT-Net
+py phase3/7_performance_evaluation_and_analysis/report.py results/e2_loso.csv HCT-Net
 ```
 
 ## Running the experiments yourself
@@ -55,16 +55,16 @@ Only needed to reproduce the numbers from scratch. The first command downloads
 744 MB and the training commands need a GPU; each takes minutes to hours.
 
 ```bash
-py phase3/data.py        # download, preprocess, cache, verify against Table 8.2   (~15 min)
-py phase3/preprocess.py  # M2 alignment check: mean covariance must equal identity  (~1 min)
-py phase3/explore.py     # the seven Table 10.1 analyses -> phase3/eda/            (~10 min)
+py phase3/1_environment_setup_and_data_collection/data.py        # download, preprocess, cache, verify against Table 8.2   (~15 min)
+py phase3/2_data_preprocessing_and_eda/preprocess.py  # M2 alignment check: mean covariance must equal identity  (~1 min)
+py phase3/2_data_preprocessing_and_eda/explore.py     # the seven Table 10.1 analyses -> phase3/eda/            (~10 min)
 
-py phase3/fbcsp.py                    # classical baseline, within subject          (~2 min)
-py phase3/train.py HCT-Net 1 2 3      # any model, any subjects, within subject
-py phase3/loso.py EEGNet --seeds 1    # one model, cross subject, nine folds        (~30 min)
-py phase3/components.py               # component study V0-V5                        (~3 h)
-py phase3/adversarial.py              # adversarial variant, section 13.2            (~2 h)
-py phase3/improve.py                  # Stage 2, each change chosen on validation     (~2 h)
+py phase3/3_baseline_model_implementation/fbcsp.py                    # classical baseline, within subject          (~2 min)
+py phase3/5_training_tuning_and_optimisation/train.py HCT-Net 1 2 3      # any model, any subjects, within subject
+py phase3/6_experiments_and_result_generation/loso.py EEGNet --seeds 1    # one model, cross subject, nine folds        (~30 min)
+py phase3/6_experiments_and_result_generation/components.py               # component study V0-V5                        (~3 h)
+py phase3/6_experiments_and_result_generation/adversarial.py              # adversarial variant, section 13.2            (~2 h)
+py phase3/5_training_tuning_and_optimisation/improve.py                  # Stage 2, each change chosen on validation     (~2 h)
 ```
 
 Long runs write after every fold and skip work already recorded, so if one is
@@ -86,23 +86,38 @@ printing a number nobody verified.
 ## Layout
 
 ```
-phase3/
-  data.py         loading, band-pass, epoching, artefact marking, caching     (M1)
-  peek.py         print the actual numbers: one trial, raw and band-passed
-  preprocess.py   Euclidean alignment, standardisation, augmentation, folds   (M2)
-  explore.py      the seven Table 10.1 analyses, each with a verdict          (M1)
-  fbcsp.py        FBCSP + LDA, the classical baseline                         (M3)
-  models.py       the four braindecode baselines, plus the variant registry   (M3)
-  hctnet.py       HCT-Net, the proposed model - 20,996 parameters             (M4)
-  train.py        training loop and the within-subject experiment E1          (M5)
-  loso.py         leave-one-subject-out, experiments E2 and E3                (M6)
-  components.py   component study V0-V5, experiment E4                        (M7)
-  adversarial.py  subject-invariant variant, section 13.2
-  improve.py      Stage 2: one change at a time, chosen on validation      (E9)
-  stats.py        Wilcoxon signed-rank with Holm-Bonferroni correction        (M7)
-  report.py       every result table, the significance tests, the figures     (M8)
-  eda/            exploratory figures
-  results_fig/    result figures
+phase3/                                     one directory per Phase 3 activity
+  1_environment_setup_and_data_collection/
+    data.py         download, band-pass, epoching, artefact marking, caching   (M1)
+    peek.py         print the actual numbers: one trial, raw and band-passed
+  2_data_preprocessing_and_eda/
+    preprocess.py   Euclidean alignment, standardisation, augmentation, folds  (M2)
+    explore.py      the seven Table 10.1 analyses, each with a verdict         (M1)
+    trials_table.py builds data/trials.csv, one row per trial
+    check_*.py      the two self-checks on alignment and augmentation
+  3_baseline_model_implementation/
+    fbcsp.py        FBCSP + LDA, the classical baseline                        (M3)
+    models.py       the four braindecode baselines, plus the variant registry  (M3)
+  4_proposed_model_implementation/
+    hctnet.py       HCT-Net, the proposed model - 3,924 parameters, config A   (M4)
+  5_training_tuning_and_optimisation/
+    train.py        training loop and the within-subject experiment E1         (M5)
+    protocol.py     protocol v2: separate validation subject, test touched once
+    tta.py          test-time adaptation on the new subject, no labels used
+    improve.py      Stage 2: one change at a time, chosen on validation    (E9)
+  6_experiments_and_result_generation/
+    loso.py         leave-one-subject-out, experiments E2 and E3               (M6)
+    within.py       within-subject runs for the size sweep
+    components.py   component study V0-V5, experiment E4                       (M7)
+    adversarial.py  subject-invariant variant, section 13.2
+  7_performance_evaluation_and_analysis/
+    report.py       every result table, the significance tests, the figures    (M8)
+    stats.py        Wilcoxon signed-rank with Holm-Bonferroni correction       (M7)
+    step8_summary.py  the test-time adaptation table
+    figure_size.py  accuracy against parameter count
+  _paths.py         one definition of the repository root and the import path
+  eda/              exploratory figures
+  results_fig/      result figures
 results/          per-fold metrics as CSV, one row per fold per seed
 references/
   REFERENCES.md   every paper used, with DOI and the file that uses it
@@ -118,7 +133,7 @@ protocol was corrected. What it found first is in `FINDINGS.md`: **HCT-Net as su
 best within subject and worst at transferring to an unseen subject, and the component study
 attributes that to the attention block rather than to size or depth.
 
-Stage 2 (`phase3/improve.py`) then improved it one change at a time, keeping a change
+Stage 2 (`phase3/5_training_tuning_and_optimisation/improve.py`) then improved it one change at a time, keeping a change
 only if it helped on each fold's separate validation person. The final model reads the
 whole time series instead of an average, attends over the whole trial instead of in
 windows, and averages three trained copies. It reaches **51.9% cross-subject, 3rd of six

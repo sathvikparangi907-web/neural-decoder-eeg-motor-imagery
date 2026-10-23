@@ -7,8 +7,8 @@ fold already holds out a separate validation subject, so there is a clean signal
 available that does not touch the test fold; choosing by test accuracy would make
 the final number a selection artefact rather than an estimate.
 
-    py phase3/improve.py            # every step in order, resumes if interrupted
-    py phase3/improve.py C1 C2      # named steps only
+    py phase3/5_training_tuning_and_optimisation/improve.py            # every step in order, resumes if interrupted
+    py phase3/5_training_tuning_and_optimisation/improve.py C1 C2      # named steps only
 
 Results go to results/e9_improve.csv, one row per step per fold.
 """
@@ -19,7 +19,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from hctnet import HCTNet  # noqa: E402
 from loso import done_already, fold_data, metrics, write  # noqa: E402
 from preprocess import augment, loso_folds, standardise  # noqa: E402
@@ -167,13 +168,13 @@ def run(names=None):
             print(f"  {step:<5} {description}")
             print(f"        validation mean {np.mean(vals):.1%}"
                   f"   over {len(vals)} fold(s)\n")
-    print("Done. Compare steps on VALIDATION with:  py phase3/improve.py --table")
+    print("Done. Compare steps on VALIDATION with:  py phase3/5_training_tuning_and_optimisation/improve.py --table")
 
 
 def table():
     """Validation first, because that is what the decisions were made on."""
     import csv
-    path = Path(__file__).resolve().parent.parent / "results" / OUT
+    path = ROOT / "results" / OUT
     if not path.exists():
         sys.exit("nothing run yet")
     rows = list(csv.DictReader(path.open(encoding="utf-8")))

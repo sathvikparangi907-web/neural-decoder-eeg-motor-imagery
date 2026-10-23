@@ -7,7 +7,7 @@ augmentation (7) are fold-dependent and belong to M2.
 
 Run directly to download, build the cache and check it against Table 8.2:
 
-    py phase3/data.py
+    py phase3/1_environment_setup_and_data_collection/data.py
 """
 import subprocess
 import sys
@@ -17,7 +17,9 @@ import numpy as np
 import scipy.io as sio
 from scipy.signal import butter, filtfilt
 
-ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
+
 DATA = ROOT / "data"
 CACHE = ROOT / "cache"
 MIRROR = "https://lampx.tugraz.at/~bci/database/001-2014/{}.mat"

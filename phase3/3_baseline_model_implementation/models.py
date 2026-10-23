@@ -6,7 +6,7 @@ attributable to the architecture and not to something tuned here.
 
 Run directly to check every model's forward pass and parameter count:
 
-    py phase3/models.py
+    py phase3/3_baseline_model_implementation/models.py
 """
 import sys
 import warnings
@@ -23,7 +23,8 @@ warnings.filterwarnings("ignore", "Montage name", FutureWarning)
 warnings.filterwarnings("ignore", "Using padding='same'", UserWarning)
 from braindecode.models import ATCNet, CTNet, EEGConformer, EEGNet  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import N_EEG, N_SAMP  # noqa: E402
 from hctnet import HCTNet  # noqa: E402
 

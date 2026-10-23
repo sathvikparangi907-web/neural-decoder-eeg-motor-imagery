@@ -6,7 +6,7 @@ so nothing here is allowed to be cleverer than the 2008 paper.
 
 Run directly for the E1 within-subject check - fit on session T, test on E:
 
-    py phase3/fbcsp.py
+    py phase3/3_baseline_model_implementation/fbcsp.py
 """
 import sys
 from pathlib import Path
@@ -17,7 +17,8 @@ from scipy.signal import butter, filtfilt
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.feature_selection import mutual_info_classif
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import DATA, FS, SUBJECTS, load_subject  # noqa: E402
 from preprocess import covariances  # noqa: E402
 

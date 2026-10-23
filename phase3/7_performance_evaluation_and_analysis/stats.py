@@ -10,8 +10,8 @@ Where one model is compared against all five baselines, the five p-values are
 corrected by Holm-Bonferroni and both the corrected and uncorrected values are
 reported (section 17, rule 3).
 
-    py phase3/stats.py                  # self-check on synthetic data
-    py phase3/stats.py results/e2_loso.csv HCT-Net
+    py phase3/7_performance_evaluation_and_analysis/stats.py                  # self-check on synthetic data
+    py phase3/7_performance_evaluation_and_analysis/stats.py results/e2_loso.csv HCT-Net
 """
 import sys
 from pathlib import Path

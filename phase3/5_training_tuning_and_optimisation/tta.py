@@ -22,8 +22,8 @@ Settings are fixed before running and not tuned: TENT one shuffled pass, Adam
 lr 1e-3; pseudo-labelling 10 epochs, Adam lr 1e-4, needs at least 16 confident
 trials or it falls back to the unadapted prediction.
 
-    py phase3/tta.py c2 --seed 0
-    py phase3/tta.py eegnet --seed 1
+    py phase3/5_training_tuning_and_optimisation/tta.py c2 --seed 0
+    py phase3/5_training_tuning_and_optimisation/tta.py eegnet --seed 1
 """
 import copy
 import csv
@@ -36,7 +36,8 @@ import torch
 from torch import nn
 from sklearn.metrics import cohen_kappa_score
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from preprocess import loso_folds  # noqa: E402
 from protocol import OUT, RUNS, commit, train_fold  # noqa: E402
 from train import BATCH, DEVICE, SMOOTHING  # noqa: E402

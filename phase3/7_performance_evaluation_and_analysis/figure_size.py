@@ -5,7 +5,7 @@ Our four size configurations, measured identically (protocol v2, LOSO, three see
 v1 run marked as references. Protocols are distinguished in the legend rather than
 mixed silently.
 
-    py phase3/figure_size.py
+    py phase3/7_performance_evaluation_and_analysis/figure_size.py
 """
 import csv
 import sys
@@ -17,10 +17,11 @@ import numpy as np
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from protocol import OUT  # noqa: E402
 
-FIGURES = Path(__file__).resolve().parent / "results_fig"
+FIGURES = ROOT / "phase3" / "results_fig"
 SEEDS = (0, 1, 2)
 # config -> (run name, file prefix, parameters)
 CFG = {"A": ("sizea", "step10", 3_924), "B": ("sizeb", "step10", 6_148),

@@ -9,8 +9,8 @@ Its only purpose is the within-subject minus cross-subject drop, which says how
 much of each model's accuracy is subject-specific fit. Resumable, one row per
 (config, subject, seed).
 
-    py phase3/within.py            # seeds 0 1 2, configs A B C D
-    py phase3/within.py --seeds 0
+    py phase3/6_experiments_and_result_generation/within.py            # seeds 0 1 2, configs A B C D
+    py phase3/6_experiments_and_result_generation/within.py --seeds 0
 """
 import csv
 import sys
@@ -19,7 +19,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import SUBJECTS, load_subject  # noqa: E402
 from models import SWEEP, build  # noqa: E402
 from protocol import OUT, commit  # noqa: E402

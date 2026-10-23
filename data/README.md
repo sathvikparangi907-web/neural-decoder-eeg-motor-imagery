@@ -30,7 +30,7 @@ each run:
 
 ## The actual numbers
 
-`py phase3/peek.py` prints this for any participant and any trial:
+`py phase3/1_environment_setup_and_data_collection/peek.py` prints this for any participant and any trial:
 
 ```
 A01T.mat: 9 runs, 6 of them motor imagery
@@ -49,7 +49,7 @@ TRIAL 0  (run 0, trial 0 within it)  class 4 = tongue
  [22.46 16.21 13.48  9.13 10.99 12.21 13.18 10.01 15.67 14.16]]
   over the whole trial: min   -32.3  max   40.7  sd 10.42
 
-what phase3/data.py caches: X(576, 22, 875) float32, y(576,), session(576,), rejected(576,)
+what phase3/1_environment_setup_and_data_collection/data.py caches: X(576, 22, 875) float32, y(576,), session(576,), rejected(576,)
   the same trial after the 4-38 Hz band-pass, channels 0-5, samples 0-9:
 [[ 8.67  6.08  2.69 -0.21 -1.66 -1.38  0.19  2.13  3.45  3.53]
  [ 4.55  1.9  -0.87 -2.58 -2.87 -2.19 -1.33 -0.76 -0.46 -0.06]
@@ -106,7 +106,7 @@ channel variances: **46.8% against 11.1% chance**, falling to 22.9% once Euclide
 alignment is applied. Strong subject structure, and a decoder trained on eight people
 carries it into the ninth.
 
-All seven analyses: [`../phase3/eda/`](../phase3/eda), produced by `py phase3/explore.py`.
+All seven analyses: [`../phase3/eda/`](../phase3/eda), produced by `py phase3/2_data_preprocessing_and_eda/explore.py`.
 
 ## Opening a file yourself
 

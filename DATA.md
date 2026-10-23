@@ -10,14 +10,14 @@ downloaded to reproduce a result.
 To see what is actually inside them:
 
 ```bash
-py phase3/peek.py            # one trial as numbers: raw, then band-passed
-py phase3/peek.py 5 100      # subject 5, trial 100
+py phase3/1_environment_setup_and_data_collection/peek.py            # one trial as numbers: raw, then band-passed
+py phase3/1_environment_setup_and_data_collection/peek.py 5 100      # subject 5, trial 100
 ```
 
 To rebuild the preprocessing cache, or to fetch the files again from the original source:
 
 ```bash
-py phase3/data.py        # downloads what is missing, preprocesses, caches, verifies
+py phase3/1_environment_setup_and_data_collection/data.py        # downloads what is missing, preprocesses, caches, verifies
 ```
 
 `data/SHA256SUMS` records all 18 checksums, so a copy from anywhere can be checked against
@@ -58,7 +58,7 @@ served from `https://lampx.tugraz.at/~bci/database/001-2014/`.
 | `cache/` | 443 MB | no | preprocessed tensors — 4–38 Hz band-pass, epoched to the analysis window, artefact-marked, saved per subject as `.npz` |
 
 `cache/` is rebuilt from `data/` by the same command and holds nothing that the raw files
-plus `phase3/data.py` do not determine, so it is not worth versioning.
+plus `phase3/1_environment_setup_and_data_collection/data.py` do not determine, so it is not worth versioning.
 
 ## Licence and citation
 

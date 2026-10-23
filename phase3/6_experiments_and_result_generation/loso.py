@@ -9,9 +9,9 @@ validation subject, and the remaining seven are training subjects. Seeds are res
 and a fresh model is built per fold, because carrying weights across folds would
 mean the model had already seen the subject it is about to be tested on.
 
-    py phase3/loso.py                     # every model, 3 seeds
-    py phase3/loso.py EEGNet FBCSP        # named models
-    py phase3/loso.py EEGNet --seeds 1    # quicker pass
+    py phase3/6_experiments_and_result_generation/loso.py                     # every model, 3 seeds
+    py phase3/6_experiments_and_result_generation/loso.py EEGNet FBCSP        # named models
+    py phase3/6_experiments_and_result_generation/loso.py EEGNet --seeds 1    # quicker pass
 
 Results are written to results/e2_loso.csv, one row per fold per seed.
 """
@@ -22,14 +22,15 @@ from pathlib import Path
 import numpy as np
 from sklearn.metrics import cohen_kappa_score, confusion_matrix, precision_recall_fscore_support
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import load_subject  # noqa: E402
 from fbcsp import FBCSP  # noqa: E402
 from models import MODELS  # noqa: E402
 from preprocess import align_subject, loso_folds  # noqa: E402
 from train import train  # noqa: E402
 
-RESULTS = Path(__file__).resolve().parent.parent / "results"
+RESULTS = ROOT / "results"
 SEEDS = 3
 
 

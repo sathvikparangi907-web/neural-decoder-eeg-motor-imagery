@@ -4,7 +4,7 @@ Selection uses the validation subjects only: a variant is kept if its three-seed
 validation mean beats 'none' by at least 0.75 points. Test numbers are reported
 alongside and do not enter the decision.
 
-    py phase3/step8_summary.py
+    py phase3/7_performance_evaluation_and_analysis/step8_summary.py
 """
 import csv
 import sys
@@ -13,7 +13,8 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import wilcoxon
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from protocol import OUT  # noqa: E402
 from tta import MODELS, VARIANTS  # noqa: E402
 

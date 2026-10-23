@@ -17,7 +17,7 @@ The design is deliberately constrained (Table 11.1):
 No component here is novel. The contribution is the specific combination, its
 size, and that it is measured against the baselines under one identical protocol.
 
-    py phase3/hctnet.py
+    py phase3/4_proposed_model_implementation/hctnet.py
 """
 import sys
 from pathlib import Path
@@ -25,7 +25,8 @@ from pathlib import Path
 import torch
 from torch import nn
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import N_EEG, N_SAMP  # noqa: E402
 
 F1, D, F2 = 16, 2, 32          # temporal filters, depth multiplier, separable filters

@@ -4,8 +4,8 @@ Nothing here is part of an experiment. It exists so that "what does the data
 actually look like" can be answered by running something rather than by
 describing it.
 
-    py phase3/peek.py            # subject 1, first trial
-    py phase3/peek.py 5 100      # subject 5, trial 100
+    py phase3/1_environment_setup_and_data_collection/peek.py            # subject 1, first trial
+    py phase3/1_environment_setup_and_data_collection/peek.py 5 100      # subject 5, trial 100
 """
 import sys
 from pathlib import Path
@@ -13,7 +13,8 @@ from pathlib import Path
 import numpy as np
 import scipy.io as sio
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import CACHE, CLASSES, CUE, DATA, FS, N_EEG, N_SAMP, START, STOP, WINDOW  # noqa: E402
 
 
@@ -47,10 +48,10 @@ def main(subject=1, trial=0):
 
     cache = CACHE / f"A{subject:02d}.npz"
     if not cache.exists():
-        return print(f"\n{cache.name} not built yet - run py phase3/data.py")
+        return print(f"\n{cache.name} not built yet - run py phase3/1_environment_setup_and_data_collection/data.py")
     z = np.load(cache)
     X, y = z["X"], z["y"]
-    print(f"\nwhat phase3/data.py caches: X{X.shape} {X.dtype}, y{y.shape}, "
+    print(f"\nwhat phase3/1_environment_setup_and_data_collection/data.py caches: X{X.shape} {X.dtype}, y{y.shape}, "
           f"session{z['session'].shape}, rejected{z['rejected'].shape}")
     print(f"  the same trial after the 4-38 Hz band-pass, channels 0-5, samples 0-9:"
           f"\n{X[trial, :6, :10]}")

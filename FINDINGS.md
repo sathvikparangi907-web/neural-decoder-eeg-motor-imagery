@@ -4,6 +4,12 @@ Running record of what the implementation actually showed, including results tha
 contradicted the plan. M8 requires findings written up including negative results, and
 they are easier to write down when they happen than to reconstruct in October.
 
+**File paths in this log (2026-10-23).** On 23 October 2026 `phase3/` was reorganised into
+one directory per Phase 3 activity, for Review 3. Entries below name files by their old flat
+paths, for example `phase3/tta.py`; that file is now
+`phase3/5_training_tuning_and_optimisation/tta.py`. The map is in `phase3/README.md`. Nothing
+was renamed and no result changed — only the directory each file sits in.
+
 Milestone definitions are in §19.3 of `Neural Decoder using EEG & Motor Imagery/Phase2_Solution_Design.docx`.
 
 ---

@@ -8,7 +8,7 @@ description of the data, not a substitute for it.
 Everything is computed from the band-passed cache, so the numbers match what
 the models are fed.
 
-    py phase3/trials_table.py        ->  data/trials.csv
+    py phase3/2_data_preprocessing_and_eda/trials_table.py        ->  data/trials.csv
 """
 import csv
 import sys
@@ -17,7 +17,8 @@ from pathlib import Path
 import numpy as np
 from scipy.signal import welch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import CACHE, CLASSES, DATA, FS, SUBJECTS, TRIALS_PER_SESSION  # noqa: E402
 from explore import C3, C4, CHANNELS  # noqa: E402
 

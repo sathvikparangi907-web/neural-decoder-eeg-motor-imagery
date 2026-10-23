@@ -12,7 +12,7 @@ self-test:
 Full 22x22 matrices go to results/v2/step1_alignment_R.txt; the console gets a
 summary per subject and session.
 
-    py phase3/check_alignment.py
+    py phase3/2_data_preprocessing_and_eda/check_alignment.py
 """
 import inspect
 import sys
@@ -20,7 +20,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import load_subject  # noqa: E402
 from preprocess import align_subject, covariances, euclidean_align, inv_sqrt, loso_folds  # noqa: E402
 from protocol import OUT, assemble  # noqa: E402

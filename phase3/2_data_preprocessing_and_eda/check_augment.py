@@ -4,7 +4,7 @@ Runs augment() on one fold's real training split, then traces every segment of
 every synthetic trial back to the real trial it was copied from, to establish:
 same class, which subject, and that nothing reaches validation or test.
 
-    py phase3/check_augment.py
+    py phase3/2_data_preprocessing_and_eda/check_augment.py
 """
 import inspect
 import sys
@@ -12,7 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from preprocess import N_SEGMENTS, augment, loso_folds, standardise  # noqa: E402
 from protocol import assemble, split_for_stopping  # noqa: E402
 

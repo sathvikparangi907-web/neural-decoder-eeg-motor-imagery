@@ -3,8 +3,8 @@
 Reads what the experiments recorded and produces what the review needs, so that
 what is presented is exactly what was measured and never a separate calculation.
 
-    py phase3/report.py                      # every experiment, in plain English
-    py phase3/report.py results/e2_loso.csv HCT-Net    # one file, one reference
+    py phase3/7_performance_evaluation_and_analysis/report.py                      # every experiment, in plain English
+    py phase3/7_performance_evaluation_and_analysis/report.py results/e2_loso.csv HCT-Net    # one file, one reference
 
 Naming a reference model adds the Wilcoxon comparison of every other model
 against it, Holm-corrected across the family.
@@ -20,11 +20,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from stats import report as significance  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-FIGURES = Path(__file__).resolve().parent / "results_fig"
+ROOT = ROOT
+FIGURES = ROOT / "phase3" / "results_fig"
 CLASSES = ("left", "right", "feet", "tongue")
 
 # Measured at 22 channels x 875 samples by models.py, plus the design's own figure
@@ -608,5 +609,5 @@ if __name__ == "__main__":
         sys.exit()
     path = Path(sys.argv[1])
     if not path.exists():
-        sys.exit(f"no results at {path} -- run phase3/loso.py first")
+        sys.exit(f"no results at {path} -- run phase3/6_experiments_and_result_generation/loso.py first")
     main(path, sys.argv[2] if len(sys.argv) > 2 else None)

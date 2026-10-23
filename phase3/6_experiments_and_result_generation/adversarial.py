@@ -12,8 +12,8 @@ VALIDATION SUBJECT of each fold and never on the test subject: picking lambda by
 LOSO accuracy would be selecting on the test set and the result would mean
 nothing.
 
-    py phase3/adversarial.py            # all nine folds, lambda chosen per fold
-    py phase3/adversarial.py --folds 1  # one fold, for a quick look
+    py phase3/6_experiments_and_result_generation/adversarial.py            # all nine folds, lambda chosen per fold
+    py phase3/6_experiments_and_result_generation/adversarial.py --folds 1  # one fold, for a quick look
 """
 import sys
 import time
@@ -23,7 +23,8 @@ import numpy as np
 import torch
 from torch import nn
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from hctnet import D_MODEL, HCTNet  # noqa: E402
 from loso import done_already, fold_data, metrics, write  # noqa: E402
 from preprocess import augment, loso_folds, standardise  # noqa: E402

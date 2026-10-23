@@ -16,9 +16,9 @@ budget instead of early stopping, and eight training subjects with no
 validation subject. Every run is one entry in RUNS and writes its own CSV in
 results/v2/, so v1 results stay untouched.
 
-    py phase3/protocol.py step0
-    py phase3/protocol.py step1_eegnet step1_eegnet_noalign
-    py phase3/protocol.py step1_eegnet_fixed7 step1_eegnet_fixed8
+    py phase3/5_training_tuning_and_optimisation/protocol.py step0
+    py phase3/5_training_tuning_and_optimisation/protocol.py step1_eegnet step1_eegnet_noalign
+    py phase3/5_training_tuning_and_optimisation/protocol.py step1_eegnet_fixed7 step1_eegnet_fixed8
 """
 import csv
 import json
@@ -32,14 +32,15 @@ import torch
 from sklearn.metrics import cohen_kappa_score
 from sklearn.model_selection import train_test_split
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import FS, WINDOW, load_subject  # noqa: E402
 from hctnet import HCTNet  # noqa: E402
 from models import build  # noqa: E402
 from preprocess import align_subject, augment, loso_folds, standardise  # noqa: E402
 from train import BATCH, DEVICE, LR, MAX_EPOCHS, PATIENCE, SMOOTHING, WEIGHT_DECAY  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = ROOT
 OUT = ROOT / "results" / "v2"
 STOP_FRACTION = 0.10
 

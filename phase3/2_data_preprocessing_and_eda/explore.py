@@ -1,11 +1,11 @@
 """BCI Competition IV-2a — exploratory data analysis (Table 10.1, milestone M1).
 
-Runs the seven planned analyses against the cache built by phase3/data.py, saves
+Runs the seven planned analyses against the cache built by phase3/1_environment_setup_and_data_collection/data.py, saves
 one PNG per analysis into phase3/eda/ at 150 dpi, and prints a PASS/CHECK verdict
 for each against its stated expectation. A CHECK is a mismatch to investigate, not
 a result to accept.
 
-    py phase3/explore.py
+    py phase3/2_data_preprocessing_and_eda/explore.py
 
 Analysis 4 is the exception to the cache: event-related desynchronisation needs a
 pre-cue baseline, and the cached analysis window deliberately starts 0.5 s after
@@ -26,8 +26,9 @@ from scipy.signal import find_peaks, spectrogram, welch
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 
-HERE = Path(__file__).resolve().parent
+HERE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
+from _paths import ROOT  # noqa: E402
 from data import CACHE, CLASSES, DATA, FS, SESSIONS, SUBJECTS, load_session, load_subject  # noqa: E402
 from preprocess import covariances, euclidean_align  # noqa: E402
 
@@ -399,7 +400,7 @@ def main():
     print(f"Table 10.1 exploratory analyses -> {EDA}\n")
     D = available()
     if not D:
-        print("\nno subjects available - run py phase3/data.py once the download finishes")
+        print("\nno subjects available - run py phase3/1_environment_setup_and_data_collection/data.py once the download finishes")
         return 1
     print(f"\nloaded {len(D)} subject(s): {', '.join(f'A{s:02d}' for s in D)}, "
           f"{sum(len(d[1]) for d in D.values())} trials "

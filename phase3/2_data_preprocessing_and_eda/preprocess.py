@@ -10,7 +10,7 @@ augment() is never applied to validation or test data.
 
 Run directly for the M2 alignment check:
 
-    py phase3/preprocess.py
+    py phase3/2_data_preprocessing_and_eda/preprocess.py
 """
 import sys
 from pathlib import Path
@@ -18,7 +18,8 @@ from pathlib import Path
 import numpy as np
 from scipy.linalg import eigh
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import SUBJECTS, load_subject  # noqa: E402
 
 N_SEGMENTS = 8          # segmentation and reconstruction, section 9.3

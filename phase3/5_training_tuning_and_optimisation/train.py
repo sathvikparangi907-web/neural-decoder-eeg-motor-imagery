@@ -7,9 +7,9 @@ validation accuracy with patience 50, best checkpoint restored.
 
 Run directly for experiment E1, within-subject - fit on session T, test on E:
 
-    py phase3/train.py              # the smoke-test subjects
-    py phase3/train.py 1 2 3        # any subject list
-    py phase3/train.py 1 --no-align # same, with Euclidean alignment off
+    py phase3/5_training_tuning_and_optimisation/train.py              # the smoke-test subjects
+    py phase3/5_training_tuning_and_optimisation/train.py 1 2 3        # any subject list
+    py phase3/5_training_tuning_and_optimisation/train.py 1 --no-align # same, with Euclidean alignment off
 """
 import sys
 import time
@@ -18,7 +18,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from data import load_subject  # noqa: E402
 from models import MODELS, build  # noqa: E402
 from preprocess import align_subject, augment, standardise  # noqa: E402
@@ -129,7 +130,7 @@ def _write_e1(per_subject, subjects, name="e1_within_subject.csv"):
     run (one model, three subjects) merges rather than truncating the file.
     """
     import csv
-    path = Path(__file__).resolve().parent.parent / "results" / name
+    path = ROOT / "results" / name
     path.parent.mkdir(exist_ok=True)
     kept = []
     if path.exists():

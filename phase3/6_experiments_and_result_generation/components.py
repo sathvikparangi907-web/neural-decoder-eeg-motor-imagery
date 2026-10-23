@@ -16,8 +16,8 @@ rather than to the combination.
 V0 against V1 isolates attention, V0 against V3 isolates alignment, V0 against V5
 gives the total contribution of everything added to the convolutional core.
 
-    py phase3/components.py            # every variant, resumes if interrupted
-    py phase3/components.py V2 V3      # named variants
+    py phase3/6_experiments_and_result_generation/components.py            # every variant, resumes if interrupted
+    py phase3/6_experiments_and_result_generation/components.py V2 V3      # named variants
 """
 import sys
 import time
@@ -25,7 +25,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _paths import ROOT  # noqa: E402
 from loso import RESULTS, done_already, fold_data, metrics, write  # noqa: E402
 from preprocess import loso_folds  # noqa: E402
 from train import train  # noqa: E402

@@ -94,9 +94,21 @@
     <p><strong>The short version.</strong> Every decoder we tested works reasonably well on a
     person it was trained on, and roughly <strong>20&ndash;26 points worse</strong> on a
     stranger. The model we first designed to close that gap had the largest gap of all.
-    Improved one measured change at a time, it now reaches <strong>51.9%</strong> on a
-    stranger &mdash; third of six, and statistically level with the two models above it.</p>
+    Improved one measured change at a time, it now reaches <strong>53.6%</strong> on a
+    stranger at <strong>3,924 parameters</strong> &mdash; smaller than EEGNet, and level
+    with it rather than ahead of it.</p>
+    <p>The finding the project turns on: <strong>above 3,924 parameters, accuracy stops
+    improving.</strong> A second encoder layer adds nothing and doubling the width adds
+    nothing, so the gap that remains is not a capacity problem.</p>
   </div>
+  <p class="note" style="margin-top:18px">This page was written on 18 September 2026 and the
+  numbered tables below it are from the <strong>first protocol</strong>, one seed, with no
+  test-time adaptation. They are kept exactly as they were measured. Three things changed
+  afterwards and are marked where they apply: re-estimating batch-norm statistics on the new
+  person was accepted (19 September, worth +3.5 points on validation), two architectural
+  variants were rejected on three seeds (23 September), and the size sweep replaced the model
+  with a 3,924-parameter configuration (4 October). The full record, dated, is in
+  <code>FINDINGS.md</code>.</p>
 </header>
 
 <section>
@@ -146,6 +158,10 @@
   <h2>The drop is universal</h2>
   <p>Six decoders, identical data, identical protocol. The dark bar is how well each does on a
   familiar person; the light bar is a stranger.</p>
+  <p class="note"><strong>Protocol v1</strong>, one seed, no test-time adaptation. Our row is
+  the model as submitted in Phase 2, at 20,996 parameters. Under the current protocol the
+  same configuration drops 24.7 points rather than 26.3, and the 3,924-parameter model that
+  replaced it drops 18.5 with adaptation on.</p>
   <div class="scroll"><table>
     <tr><th>Decoder</th><th>Knows you</th><th>Stranger</th><th style="width:38%">&nbsp;</th><th>Drop</th></tr>
     <tr><td>EEG Conformer</td><td class="n">77.3%</td><td class="n">52.1%</td>
@@ -314,10 +330,18 @@
   </table></div>
   <p class="note" style="margin-top:14px">The rejected row scores <strong>53.2%</strong> on
   strangers &mdash; higher than the final model and higher than every published decoder. It
-  was left out anyway, because the person used to judge it said no. Picking it now, knowing
-  its test score, would turn the result into a choice made by looking at the answers.</p>
+  was left out anyway, because the person used to judge it said no. Picking it then, knowing
+  its test score, would have turned the result into a choice made by looking at the answers.</p>
+  <p class="note"><strong>It was re-measured properly on 19 September and kept.</strong>
+  Re-estimating batch-norm statistics on the new person, three seeds, decided on validation,
+  improves validation by <strong>+3.5 points</strong> and is part of the current model. No
+  labels of that person are used at any point. The full method it comes from &mdash; TENT,
+  which also updates parameters by gradient &mdash; scored 0.3 above it, below the
+  0.75-point threshold, and was not kept.</p>
 
-  <h3 style="margin-top:28px">Where the final model lands</h3>
+  <h3 style="margin-top:28px">Where it landed under the first protocol</h3>
+  <p class="note">One seed, no test-time adaptation. Superseded by the table below, and kept
+  because no result in this project is overwritten.</p>
   <div class="scroll"><table>
     <tr><th>#</th><th>Decoder</th><th>Stranger</th><th>Size</th><th>Gap to ours</th></tr>
     <tr><td class="n">1</td><td>ATCNet</td><td class="n">52.4%</td><td class="n">113,732</td><td class="n">+0.5, could be luck</td></tr>
@@ -333,6 +357,31 @@
   at 74,508 parameters &mdash; two thirds of ATCNet's &mdash; but that is three copies of a
   24,836-parameter network, so the "small model" promise of the original design is only
   partly kept.</p>
+
+  <h3 style="margin-top:32px">Where it stands now</h3>
+  <p>The size sweep on 4 October tested four widths on three seeds each and the
+  <strong>smallest won</strong>. The ensemble of three copies is gone; so is the extra width.
+  Current protocol: a separate validation person decides every change, the test person is
+  read once, three seeds, batch-norm statistics re-estimated on the new person.</p>
+  <div class="scroll"><table>
+    <tr><th>Decoder</th><th>Validation</th><th>Stranger</th><th style="width:26%">&nbsp;</th><th>Size</th><th>&kappa;</th></tr>
+    <tr><td><strong>HCT-Net, config A</strong> <span class="tag">ours</span></td>
+      <td class="n">54.3%</td><td class="n"><strong>53.6%</strong></td>
+      <td><div class="bar"><i style="width:53.6%;background:var(--violet)"></i></div></td>
+      <td class="n"><strong>3,924</strong></td><td class="n">0.381</td></tr>
+    <tr><td>EEGNet</td><td class="n">55.0%</td><td class="n">54.3%</td>
+      <td><div class="bar"><i style="width:54.3%;background:var(--navy)"></i></div></td>
+      <td class="n">3,188</td><td class="n">0.391</td></tr>
+    <tr><td>HCT-Net, config D <span class="tag">as submitted</span></td>
+      <td class="n">53.3%</td><td class="n">52.7%</td>
+      <td><div class="bar"><i style="width:52.7%;background:var(--muted)"></i></div></td>
+      <td class="n">20,996</td><td class="n">0.369</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">EEGNet is <strong>0.7 points ahead on
+  validation</strong>, inside our own 0.75-point decision threshold, so this is a tie and is
+  reported as one. The four baselines in the table above have not been re-run under this
+  protocol, so they are not in it. What the sweep settled is that a second encoder layer and
+  double the width each buy nothing: above 3,924 parameters the line is flat.</p>
 </section>
 
 <section>
@@ -341,7 +390,12 @@
   <ul>
     <li><strong>Our model ties, it does not win.</strong> As first designed it was significantly
     worse than ATCNet. After the improvements it sits within half a point of the leader, and no
-    difference among the top five is statistically reliable.</li>
+    difference among the top five is statistically reliable. Under the current protocol EEGNet
+    is still 0.7 points ahead of us on validation.</li>
+    <li><strong>Size turned out not to be the lever.</strong> Shrinking the model from 20,996
+    parameters to 3,924 narrowed the familiar-to-stranger gap from 24.7 points to 22.8, or
+    20.6 to 18.5 with adaptation. The ~18 points that survive at every size tested are not a
+    capacity problem and will not be fixed by shrinking further.</li>
     <li><strong>One improvement was not chosen blind.</strong> Attending over the whole trial
     was tried because an earlier experiment had already shown it winning on the test people.
     It was then confirmed on the separate validation people, but its test result had been

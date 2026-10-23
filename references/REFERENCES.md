@@ -15,8 +15,8 @@ agree with the design document in every field.
 |---|---|---|---|---|---|
 | [1] | V. J. Lawhern, A. J. Solon, N. R. Waytowich, S. M. Gordon, C. P. Hung, B. J. Lance — *EEGNet: A Compact Convolutional Neural Network for EEG-based Brain–Computer Interfaces* | J. Neural Engineering 15(5), 056013, 2018 | [10.1088/1741-2552/aace8c](https://doi.org/10.1088/1741-2552/aace8c) | paywalled · preprint [arXiv:1611.08024](https://arxiv.org/abs/1611.08024) | `phase3/3_baseline_model_implementation/models.py` (baseline); its depthwise–separable block is the front end of `phase3/4_proposed_model_implementation/hctnet.py` |
 | [2] | H. Altaheri, G. Muhammad, M. Alsulaiman — *Physics-Informed Attention Temporal Convolutional Network for EEG-Based Motor Imagery Classification* | IEEE Trans. Industrial Informatics 19(2), 2249–2258, 2023 | [10.1109/TII.2022.3197419](https://doi.org/10.1109/TII.2022.3197419) | paywalled (IEEE) | `phase3/3_baseline_model_implementation/models.py` (baseline); its sliding-window attention is the arrangement `hctnet.py` adopts |
-| [3] | W. Zhao, X. Jiang, B. Zhang, S. Xiao, S. Weng — *CTNet: A Convolutional Transformer Network for EEG-Based Motor Imagery Classification* | Scientific Reports 14, 20237, 2024 | [10.1038/s41598-024-71118-7](https://doi.org/10.1038/s41598-024-71118-7) | **open access, CC BY 4.0** | `phase3/3_baseline_model_implementation/models.py` (baseline); `phase3/5_training_tuning_and_optimisation/protocol.py` takes its training budget; its 2–6 s window is the subject of the Step 7 check |
-| [4] | Y. Song, Q. Zheng, B. Liu, X. Gao — *EEG Conformer: Convolutional Transformer for EEG Decoding and Visualization* | IEEE Trans. Neural Systems and Rehabilitation Engineering 31, 710–719, 2023 | [10.1109/TNSRE.2022.3230250](https://doi.org/10.1109/TNSRE.2022.3230250) | open access on IEEE Xplore (CC BY 4.0 per Crossref) | `phase3/3_baseline_model_implementation/models.py` (baseline); the convolution-then-Transformer arrangement, and with [3] the source of the augmentation scheme |
+| [3] | W. Zhao, X. Jiang, B. Zhang, S. Xiao, S. Weng — *CTNet: A Convolutional Transformer Network for EEG-Based Motor Imagery Classification* | Scientific Reports 14, 20237, 2024 | [10.1038/s41598-024-71118-7](https://doi.org/10.1038/s41598-024-71118-7) | **open access, CC BY 4.0** · `papers/zhao_2024_ctnet.pdf` | `phase3/3_baseline_model_implementation/models.py` (baseline); `phase3/5_training_tuning_and_optimisation/protocol.py` takes its training budget; its 2–6 s window is the subject of the Step 7 check |
+| [4] | Y. Song, Q. Zheng, B. Liu, X. Gao — *EEG Conformer: Convolutional Transformer for EEG Decoding and Visualization* | IEEE Trans. Neural Systems and Rehabilitation Engineering 31, 710–719, 2023 | [10.1109/TNSRE.2022.3230250](https://doi.org/10.1109/TNSRE.2022.3230250) | **open access, CC BY 4.0** · `papers/song_2023_eeg-conformer.pdf` | `phase3/3_baseline_model_implementation/models.py` (baseline); the convolution-then-Transformer arrangement, and with [3] the source of the augmentation scheme |
 | [8] | R. T. Schirrmeister, J. T. Springenberg, L. D. J. Fiederer et al. — *Deep Learning with Convolutional Neural Networks for EEG Decoding and Visualization* | Human Brain Mapping 38(11), 5391–5420, 2017 | [10.1002/hbm.23730](https://doi.org/10.1002/hbm.23730) | **open access, CC BY 4.0** | the reference paper for **braindecode 1.8.1**, which supplies all four baselines |
 | [9] | K. K. Ang, Z. Y. Chin, H. Zhang, C. Guan — *Filter Bank Common Spatial Pattern (FBCSP) in Brain–Computer Interface* | Proc. IEEE IJCNN 2008, 2390–2397 | [10.1109/IJCNN.2008.4634130](https://doi.org/10.1109/IJCNN.2008.4634130) | paywalled (IEEE) | `phase3/3_baseline_model_implementation/fbcsp.py` — the classical baseline, reimplemented |
 | [10] | A. Vaswani, N. Shazeer, N. Parmar et al. — *Attention Is All You Need* | Advances in Neural Information Processing Systems 30, 2017 | no publisher DOI | [arXiv:1706.03762](https://arxiv.org/abs/1706.03762) | the Transformer encoder layer in `phase3/4_proposed_model_implementation/hctnet.py` |
@@ -59,18 +59,24 @@ full environment. braindecode's own reference paper is [8].
 
 ## The PDFs
 
-`papers/` holds the two papers whose licences allow them to be redistributed from a public
+`papers/` holds the four papers whose licences allow them to be redistributed from a public
 repository and whose publishers allowed an automated download:
 
 ```
-papers/tangermann_2012_bci-comp-iv.pdf    Frontiers, CC BY
-papers/gramfort_2013_mne-python.pdf       Frontiers, CC BY
+papers/zhao_2024_ctnet.pdf                Scientific Reports, CC BY 4.0      [3]
+papers/song_2023_eeg-conformer.pdf        IEEE TNSRE, CC BY 4.0              [4]
+papers/tangermann_2012_bci-comp-iv.pdf    Frontiers, CC BY                   [5]
+papers/gramfort_2013_mne-python.pdf       Frontiers, CC BY                  [11]
 ```
 
-[3] and [8] are also open access under CC BY 4.0 and may be added the same way; the Nature
-and Wiley sites refused the automated download, so fetch them from the DOI links above.
+[8] is open access under CC BY 4.0 as well and may be added the same way, but Wiley and PMC
+both refuse an automated download, so it has to be fetched by hand from the DOI above.
 
 The rest — [1], [2], [7], [9], [13], [14] — are **paywalled**, and redistributing them from
-a public repository would infringe the publishers' copyright. Read them through your
-institution's library. If you keep local copies, put them in `papers/private/`, which is
-git-ignored for exactly that purpose.
+a public repository would infringe the publishers' copyright. [10], [15] and [16] are on
+arXiv under its *non-exclusive distribution* licence, which grants arXiv the right to
+distribute them and does not extend that right to anyone else, so those are linked too.
+Read them through your institution's library. If you keep local copies, put them in
+`papers/private/`, which is git-ignored for exactly that purpose.
+
+The full list, with the reason for each: **[`papers/README.md`](papers/README.md)**.

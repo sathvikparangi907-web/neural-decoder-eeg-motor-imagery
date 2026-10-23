@@ -68,9 +68,7 @@ what phase3/1_environment_setup_and_data_collection/data.py caches: X(576, 22, 8
 ```
 
 The first block is raw microvolts. The second is the same trial after the 4–38 Hz band-pass,
-which is what every model in this repository is fed. Brain signals are **tens of microvolts**
-— a single number carries almost nothing. The class lives in how 22 channels move together
-over three and a half seconds, which is why this task is hard.
+which is what every model in this repository is fed.
 
 ## All 5,184 trials, as a table
 
@@ -78,38 +76,16 @@ over three and a half seconds, which is why this task is hard.
 participant, session, class, the artefact flag, three amplitude measures, mu and beta power
 at C3 and C4, and the C4/C3 mu ratio in dB. GitHub renders it with sorting and search.
 
-`laterality_db` is the one to look at. Right-hand imagery averages **+1.65 dB** against
-left-hand's **+1.04** — the contralateral desynchronisation this whole field rests on,
-visible in these recordings (Mann-Whitney p = 9.3 × 10⁻¹³ over 2,592 trials). The spread is
-1.9 dB, far wider than that 0.6 dB separation, which is the honest reason four-class
-cross-subject accuracy sits near 54% and not near 90%.
+`laterality_db` is the C4/C3 mu-power ratio, the column where the physiology shows:
+right-hand imagery averages **+1.65 dB** against left-hand's **+1.04** (Mann-Whitney
+p = 9.3 × 10⁻¹³ over 2,592 trials), with a spread of 1.9 dB.
 
-## What it looks like
+## The figures made from these recordings
 
-![Welch PSD at C3, Cz and C4](../phase3/eda/03_psd.png)
-
-Power spectrum at the three sensorimotor electrodes, averaged over every trial and every
-participant.
-
-![Event-related desynchronisation by class](../phase3/eda/04_timefreq.png)
-
-The effect being decoded: mu-band power drops in the hemisphere opposite the imagined hand,
-after the cue at t = 0.
-
-![Mu-band power by class across the scalp](../phase3/eda/05_topography.png)
-
-The same effect as scalp maps, one per imagined movement.
-
-![PCA of per-channel log-variance, coloured by subject](../phase3/eda/07_projection.png)
-
-The problem this project exists for. The clusters overlap, so the silhouette score is
-negative and the picture alone looks like no subject structure at all. The measure that
-answers the question is how often a trial's own participant can be recovered from its
-channel variances: **46.8% against 11.1% chance**, falling to 22.9% once Euclidean
-alignment is applied. Strong subject structure, and a decoder trained on eight people
-carries it into the ninth.
-
-All seven analyses: [`../phase3/eda/`](../phase3/eda), produced by `py phase3/2_data_preprocessing_and_eda/explore.py`.
+Seven exploratory analyses — counts, artefact rates, spectra, time–frequency, scalp maps,
+covariance and a subject projection — are in [`../phase3/eda/`](../phase3/eda), produced by
+`py phase3/2_data_preprocessing_and_eda/explore.py`. What each one showed is recorded in
+[`../FINDINGS.md`](../FINDINGS.md).
 
 ## Opening a file yourself
 

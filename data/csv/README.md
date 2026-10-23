@@ -32,12 +32,9 @@ microvolts. Row 0 is 0.5 s after the cue, row 874 is 3.5 s later. The first few 
 | 0.004 | -16.65 | -14.99 | -18.31 | -15.04 | -17.48 | -18.21 | … |
 | 0.008 | -10.79 | -16.11 | -14.94 | -14.75 | -11.91 | -15.48 | … |
 
-That is the whole dataset in miniature: a few tens of microvolts, wobbling, with the difference
-between *left hand* and *right hand* buried somewhere in it. Nothing in those numbers looks
-like an intention, which is the reason the project needs a decoder at all.
-
 These are the **raw** values, straight out of the `.mat` file with no filtering — a change of
-format, not a change of content.
+format, not a change of content. The band-passed version the models are fed is rebuilt from
+the `.mat` files by `data.py` and is not kept in the repository.
 
 Each participant's first left-hand trial sits at a different place in their recording (A02's
 was the very first trial, A01's the fourth), because the cue order was randomised so nobody

@@ -1,7 +1,7 @@
 # Phase 3 · Activity 1 — Environment setup & data collection
 
-**Status: complete.** The recordings are in this repository and every number in the
-project traces back to bytes with a published checksum.
+**Status: complete.** The recordings are in this repository, with checksums, so the
+pipeline can be re-run from the exact bytes the results came from.
 
 | File | What it does |
 |---|---|

@@ -7,7 +7,7 @@ measured changes.
 | File | What it does |
 |---|---|
 | [`train.py`](train.py) | The training loop: Adam, label smoothing, annealed schedule, early stopping |
-| [`protocol.py`](protocol.py) | Protocol v2 — the rule that makes the numbers trustworthy |
+| [`protocol.py`](protocol.py) | Protocol v2: the fold structure, the early-stopping split and the selection rule |
 | [`tta.py`](tta.py) | Test-time adaptation on the new subject's **unlabelled** trials |
 | [`improve.py`](improve.py) | Stage 2: one change at a time, each kept only if validation improves |
 
@@ -28,4 +28,5 @@ py phase3/5_training_tuning_and_optimisation/improve.py   # Stage 2    (~2 h)
 
 **Rejected and recorded** — TENT (+0.3, below threshold, and it needs gradient updates on the
 new subject); batch norm inside the encoder; two architectural variants C1 and C2;
-pseudo-labelling at both confidence levels. A clean negative result is still a result.
+pseudo-labelling at both confidence levels. Each is recorded in `FINDINGS.md` with its
+numbers and the date it was measured.

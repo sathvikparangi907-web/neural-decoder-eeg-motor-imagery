@@ -1,7 +1,7 @@
 # Phase 3 · Activity 7 — Performance evaluation & analysis
 
-**Status: complete.** Nothing in the report is a number anyone typed — every table
-regenerates from the CSVs in one command, in about a second, with no GPU and no dataset.
+**Status: complete.** Every table regenerates from the per-fold CSVs in one command, in
+about a second, with no GPU and no dataset.
 
 | File | What it does |
 |---|---|

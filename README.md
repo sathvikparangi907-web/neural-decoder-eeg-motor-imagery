@@ -20,6 +20,9 @@ The dataset — what it is, where it comes from, its licence, and how to verify 
 against the exact bytes these results came from: **`DATA.md`**. Every paper the models and
 methods come from, with DOIs and which file uses each one: **`references/REFERENCES.md`**.
 
+Which part of HCT-Net came from which published model, with the code of each borrowed part
+and whether measurement kept it: **`model_provenance/`**.
+
 ## Seeing the results
 
 Everything already measured, in one command — no GPU, no dataset needed, a second to run:

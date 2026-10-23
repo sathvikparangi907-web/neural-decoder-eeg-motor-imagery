@@ -48,3 +48,4 @@ py phase3/<activity directory>/<script>.py
 
 Full write-up of every result, including the negative ones: [`../FINDINGS.md`](../FINDINGS.md).
 The dataset: [`../DATA.md`](../DATA.md). The papers: [`../references/REFERENCES.md`](../references/REFERENCES.md).
+Which part of the model came from which paper: [`../model_provenance/`](../model_provenance/).

@@ -44,6 +44,9 @@ separate method, and is reported as such.
 
 Licence, download and checksums: **[`../DATA.md`](../DATA.md)**.
 
+Which part of HCT-Net each of [1]–[16] contributed, with the code:
+**[`../model_provenance/`](../model_provenance/)**.
+
 ## Software cited in the design document
 
 | # | Reference | DOI | Note |

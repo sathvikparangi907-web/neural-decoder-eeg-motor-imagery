@@ -8,6 +8,9 @@ as the model dimension.
 |---|---|
 | [`hctnet.py`](hctnet.py) | The model, its four size configurations, and the variant registry |
 
+Every block of this model came from a published one. Which part came from which paper, the
+code of each, and whether measurement kept it: [`../../model_provenance/`](../../model_provenance/).
+
 The size sweep in Activity 5 tested four widths on three seeds each and the **smallest won**,
 so the model that ships is **config A at 3,924 parameters** — smaller than EEGNet, and a fifth
 of what the Phase 2 document proposed:

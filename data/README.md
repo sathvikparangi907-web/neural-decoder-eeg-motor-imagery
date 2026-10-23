@@ -4,7 +4,7 @@ The nine participants of **BCI Competition IV Dataset 2a**, 744 MB, exactly as t
 mirror serves them. GitHub shows *"we can't show files that are this big"* when you click
 one — they are 40 MB binary MATLAB files, not text, so there is nothing for it to render.
 This page is what they contain, and [`csv/`](csv/) has the recordings themselves in a format
-the viewer will show: each participant's first left-hand trial as 875 rows of microvolts, and
+the viewer will show: one trial per participant as 875 rows of microvolts, and
 every trial of each participant as a table.
 
 | File | What |

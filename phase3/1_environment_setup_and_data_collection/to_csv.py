@@ -4,7 +4,7 @@ GitHub will not preview a 42 MB .mat file, so the recordings are invisible on th
 repository page. This writes two small CSVs per subject into data/csv/:
 
     A0n_all-trials.csv              one row per trial, all 576
-    A0n_one-trial-left-hand.csv     one trial's raw microvolts, 875 x 22
+    A0n_trial-waveform.csv          one trial's raw microvolts, 875 x 22
 
 Both stay under GitHub's ~512 KB rendering limit. The waveform CSV carries the
 RAW values straight out of the .mat file - a format change, not a modification,
@@ -52,7 +52,7 @@ def first_trial_of_class(subject, want=SHOWN_CLASS):
 def write_waveform(subject):
     x = first_trial_of_class(subject)
     assert x.shape == (STOP - START, N_EEG), x.shape
-    path = OUT / f"A{subject:02d}_one-trial-{CLASSES[SHOWN_CLASS].replace(' ', '-')}.csv"
+    path = OUT / f"A{subject:02d}_trial-waveform.csv"
     with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["second"] + CHANNELS)

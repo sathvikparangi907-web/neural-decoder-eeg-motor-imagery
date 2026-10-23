@@ -7,17 +7,17 @@ data can be read on this page without downloading anything.
 
 Two files per subject, eighteen in all.
 
-## The waveforms — what the EEG actually looks like
+## The trial waveforms — what the EEG actually looks like
 
-[`A01_one-trial-left-hand.csv`](A01_one-trial-left-hand.csv) ·
-[`A02_one-trial-left-hand.csv`](A02_one-trial-left-hand.csv) ·
-[`A03_one-trial-left-hand.csv`](A03_one-trial-left-hand.csv) ·
-[`A04_one-trial-left-hand.csv`](A04_one-trial-left-hand.csv) ·
-[`A05_one-trial-left-hand.csv`](A05_one-trial-left-hand.csv) ·
-[`A06_one-trial-left-hand.csv`](A06_one-trial-left-hand.csv) ·
-[`A07_one-trial-left-hand.csv`](A07_one-trial-left-hand.csv) ·
-[`A08_one-trial-left-hand.csv`](A08_one-trial-left-hand.csv) ·
-[`A09_one-trial-left-hand.csv`](A09_one-trial-left-hand.csv)
+[`A01_trial-waveform.csv`](A01_trial-waveform.csv) ·
+[`A02_trial-waveform.csv`](A02_trial-waveform.csv) ·
+[`A03_trial-waveform.csv`](A03_trial-waveform.csv) ·
+[`A04_trial-waveform.csv`](A04_trial-waveform.csv) ·
+[`A05_trial-waveform.csv`](A05_trial-waveform.csv) ·
+[`A06_trial-waveform.csv`](A06_trial-waveform.csv) ·
+[`A07_trial-waveform.csv`](A07_trial-waveform.csv) ·
+[`A08_trial-waveform.csv`](A08_trial-waveform.csv) ·
+[`A09_trial-waveform.csv`](A09_trial-waveform.csv)
 
 One trial per participant, **the same imagined movement in every file** — each person's first
 left-hand trial of session T. That is what makes the nine comparable: open two of them side by

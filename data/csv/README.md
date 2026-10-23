@@ -9,40 +9,44 @@ Two files per subject, eighteen in all.
 
 ## The waveforms — what the EEG actually looks like
 
-[`A01_trial000_tongue.csv`](A01_trial000_tongue.csv) ·
-[`A02_trial000_left-hand.csv`](A02_trial000_left-hand.csv) ·
-[`A03_trial000_left-hand.csv`](A03_trial000_left-hand.csv) ·
-[`A04_trial000_tongue.csv`](A04_trial000_tongue.csv) ·
-[`A05_trial000_left-hand.csv`](A05_trial000_left-hand.csv) ·
-[`A06_trial000_tongue.csv`](A06_trial000_tongue.csv) ·
-[`A07_trial000_left-hand.csv`](A07_trial000_left-hand.csv) ·
-[`A08_trial000_left-hand.csv`](A08_trial000_left-hand.csv) ·
-[`A09_trial000_tongue.csv`](A09_trial000_tongue.csv)
+[`A01_one-trial-left-hand.csv`](A01_one-trial-left-hand.csv) ·
+[`A02_one-trial-left-hand.csv`](A02_one-trial-left-hand.csv) ·
+[`A03_one-trial-left-hand.csv`](A03_one-trial-left-hand.csv) ·
+[`A04_one-trial-left-hand.csv`](A04_one-trial-left-hand.csv) ·
+[`A05_one-trial-left-hand.csv`](A05_one-trial-left-hand.csv) ·
+[`A06_one-trial-left-hand.csv`](A06_one-trial-left-hand.csv) ·
+[`A07_one-trial-left-hand.csv`](A07_one-trial-left-hand.csv) ·
+[`A08_one-trial-left-hand.csv`](A08_one-trial-left-hand.csv) ·
+[`A09_one-trial-left-hand.csv`](A09_one-trial-left-hand.csv)
 
-One trial per subject — the first motor-imagery trial of session T, with the imagined
-movement in the filename. **875 rows × 22 columns**: one row per sample at 250 Hz, one column
-per electrode, values in microvolts. The first few cells of A01:
+One trial per participant, **the same imagined movement in every file** — each person's first
+left-hand trial of session T. That is what makes the nine comparable: open two of them side by
+side and you are looking at the same instruction in two different brains.
+
+**875 rows × 22 columns.** One row per sample at 250 Hz, one column per electrode, values in
+microvolts. Row 0 is 0.5 s after the cue, row 874 is 3.5 s later. The first few cells of A01:
 
 | second | Fz | FC3 | FC1 | FCz | FC2 | FC4 | … |
 |---|---|---|---|---|---|---|---|
-| 0.000 | 20.51 | 15.28 | 18.36 | 25.20 | 22.07 | 22.46 | … |
-| 0.004 | 12.35 | 9.13 | 11.08 | 17.24 | 14.60 | 16.21 | … |
-| 0.008 | 10.11 | 7.76 | 8.94 | 13.13 | 11.52 | 13.48 | … |
+| 0.000 | -19.48 | -16.60 | -21.53 | -18.70 | -21.34 | -20.36 | … |
+| 0.004 | -16.65 | -14.99 | -18.31 | -15.04 | -17.48 | -18.21 | … |
+| 0.008 | -10.79 | -16.11 | -14.94 | -14.75 | -11.91 | -15.48 | … |
 
-That is the whole dataset in miniature: a few tens of microvolts, wobbling, with the
-difference between *left hand* and *right hand* buried somewhere in it. Nothing in those
-numbers looks like an intention, which is the reason the project needs a decoder at all.
+That is the whole dataset in miniature: a few tens of microvolts, wobbling, with the difference
+between *left hand* and *right hand* buried somewhere in it. Nothing in those numbers looks
+like an intention, which is the reason the project needs a decoder at all.
 
 These are the **raw** values, straight out of the `.mat` file with no filtering — a change of
-format, not a change of content. Row 0 is 0.5 s after the cue, row 874 is 4.0 s after it.
+format, not a change of content.
+
+Each participant's first left-hand trial sits at a different place in their recording (A02's
+was the very first trial, A01's the fourth), because the cue order was randomised so nobody
+could anticipate the next instruction. Every participant performed all four movements 144
+times.
 
 ## The trial tables — all 576 trials of one subject
 
-[`A01_trials.csv`](A01_trials.csv) · [`A02_trials.csv`](A02_trials.csv) ·
-[`A03_trials.csv`](A03_trials.csv) · [`A04_trials.csv`](A04_trials.csv) ·
-[`A05_trials.csv`](A05_trials.csv) · [`A06_trials.csv`](A06_trials.csv) ·
-[`A07_trials.csv`](A07_trials.csv) · [`A08_trials.csv`](A08_trials.csv) ·
-[`A09_trials.csv`](A09_trials.csv)
+[`A01_all-trials.csv`](A01_all-trials.csv) · [`A02_all-trials.csv`](A02_all-trials.csv) · [`A03_all-trials.csv`](A03_all-trials.csv) · [`A04_all-trials.csv`](A04_all-trials.csv) · [`A05_all-trials.csv`](A05_all-trials.csv) · [`A06_all-trials.csv`](A06_all-trials.csv) · [`A07_all-trials.csv`](A07_all-trials.csv) · [`A08_all-trials.csv`](A08_all-trials.csv) · [`A09_all-trials.csv`](A09_all-trials.csv)
 
 576 rows each — every trial that subject contributed, 288 per session. Fifteen columns:
 

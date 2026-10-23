@@ -3,8 +3,8 @@
 GitHub will not preview a 42 MB .mat file, so the recordings are invisible on the
 repository page. This writes two small CSVs per subject into data/csv/:
 
-    A0n_trials.csv                  one row per trial, all 576
-    A0n_trial000_<class>.csv        one trial's raw microvolts, 875 x 22
+    A0n_all-trials.csv              one row per trial, all 576
+    A0n_one-trial-left-hand.csv     one trial's raw microvolts, 875 x 22
 
 Both stay under GitHub's ~512 KB rendering limit. The waveform CSV carries the
 RAW values straight out of the .mat file - a format change, not a modification,
@@ -25,27 +25,34 @@ from _paths import ROOT  # noqa: E402
 from data import CLASSES, DATA, FS, N_EEG, START, STOP, SUBJECTS, fetch  # noqa: E402
 
 OUT = DATA / "csv"
+SHOWN_CLASS = 0         # left hand - the same class for every subject, so they compare
 CHANNELS = ["Fz", "FC3", "FC1", "FCz", "FC2", "FC4", "C5", "C3", "C1", "Cz", "C2",
             "C4", "C6", "CP3", "CP1", "CPz", "CP2", "CP4", "P1", "Pz", "P2", "POz"]
 
 
-def first_trial_raw(subject):
-    """The first motor-imagery trial of session T, unfiltered, in microvolts."""
+def first_trial_of_class(subject, want=SHOWN_CLASS):
+    """That subject's first trial of one class in session T, unfiltered, in microvolts.
+
+    The same class for every subject, so the nine files can be compared with each
+    other. Picking trial 0 instead would give whatever the randomised cue order
+    happened to start with, which differs from subject to subject and compares
+    nothing.
+    """
     mat = sio.loadmat(fetch(f"A{subject:02d}T"), struct_as_record=False, squeeze_me=True)
     for run in mat["data"]:
         if np.size(run.trial) == 0:
             continue
-        onset = int(np.atleast_1d(run.trial)[0])
-        label = int(np.atleast_1d(run.y)[0]) - 1
-        x = np.asarray(run.X, dtype=float)[onset + START:onset + STOP, :N_EEG]
-        return x, label
-    raise RuntimeError(f"A{subject:02d}T has no motor-imagery run")
+        for onset, label in zip(np.atleast_1d(run.trial).astype(int),
+                                np.atleast_1d(run.y).astype(int)):
+            if label - 1 == want:
+                return np.asarray(run.X, dtype=float)[onset + START:onset + STOP, :N_EEG]
+    raise RuntimeError(f"A{subject:02d}T has no {CLASSES[want]} trial")
 
 
 def write_waveform(subject):
-    x, label = first_trial_raw(subject)
+    x = first_trial_of_class(subject)
     assert x.shape == (STOP - START, N_EEG), x.shape
-    path = OUT / f"A{subject:02d}_trial000_{CLASSES[label].replace(' ', '-')}.csv"
+    path = OUT / f"A{subject:02d}_one-trial-{CLASSES[SHOWN_CLASS].replace(' ', '-')}.csv"
     with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["second"] + CHANNELS)
@@ -55,7 +62,7 @@ def write_waveform(subject):
 
 
 def write_trials(subject, rows, header):
-    path = OUT / f"A{subject:02d}_trials.csv"
+    path = OUT / f"A{subject:02d}_all-trials.csv"
     mine = [r for r in rows if int(r["subject"]) == subject]
     assert len(mine) == 576, f"A{subject:02d}: {len(mine)} rows"
     with path.open("w", newline="", encoding="utf-8") as f:

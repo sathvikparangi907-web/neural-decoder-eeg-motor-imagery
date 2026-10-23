@@ -10,6 +10,10 @@ data/*
 !data/*.mat
 !data/trials.csv
 !data/README.md
+# the CSV views of the recordings: GitHub renders these as tables, the .mat files
+# it refuses to preview at all. Rebuilt by phase3/.../to_csv.py.
+!data/csv/
+!data/csv/*
 cache/
 
 node_modules/

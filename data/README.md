@@ -3,12 +3,15 @@
 The nine participants of **BCI Competition IV Dataset 2a**, 744 MB, exactly as the Graz
 mirror serves them. GitHub shows *"we can't show files that are this big"* when you click
 one — they are 40 MB binary MATLAB files, not text, so there is nothing for it to render.
-This page is what they contain.
+This page is what they contain, and [`csv/`](csv/) has the recordings themselves in a format
+the viewer will show: one trial per participant as 875 rows of microvolts, and every trial of
+each participant as a table.
 
 | File | What |
 |---|---|
 | `A01T.mat` … `A09T.mat` | participant 1–9, **session 1**, 288 trials each |
 | `A01E.mat` … `A09E.mat` | participant 1–9, **session 2**, 288 trials each |
+| [`csv/`](csv/) | **the recordings as tables GitHub renders** — the real microvolts, two files per participant |
 | [`trials.csv`](trials.csv) | **all 5,184 trials as a table** — GitHub renders this one |
 | `SHA256SUMS` | checksums, so a copy can be proved identical |
 

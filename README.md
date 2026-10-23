@@ -70,14 +70,14 @@ phase3/
 Every number, in one command. No GPU, no dataset, about a second:
 
 ```bash
-py results.py        # the current result, the size sweep, then the full history
-py results.py now    # only the current result and the size sweep
+py results.py        # the summary, about 25 lines
+py results.py full   # every table from every run
 ```
 
-It prints each run's per-subject accuracy, the per-seed means, the Wilcoxon significance
-tests and the keep-or-reject decisions, and regenerates the figures into
-`phase3/results_fig/`. Each section says which protocol its numbers come from, because the
-first-protocol tables at the end are not comparable with the current ones.
+The summary gives the three models side by side, the nine people one by one, the size
+sweep, and what adaptation is worth. `full` adds the per-seed tables, the rejected
+variants, the Wilcoxon significance tests and the first-protocol history, and regenerates
+the figures into `phase3/results_fig/`.
 
 ## Reproducing them
 

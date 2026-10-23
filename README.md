@@ -70,11 +70,14 @@ phase3/
 Every number, in one command. No GPU, no dataset, about a second:
 
 ```bash
-py phase3/7_performance_evaluation_and_analysis/report.py
+py results.py        # the current result, the size sweep, then the full history
+py results.py now    # only the current result and the size sweep
 ```
 
-It prints each experiment's per-subject accuracy, the means and the Wilcoxon significance
-tests, and regenerates the figures into `phase3/results_fig/`.
+It prints each run's per-subject accuracy, the per-seed means, the Wilcoxon significance
+tests and the keep-or-reject decisions, and regenerates the figures into
+`phase3/results_fig/`. Each section says which protocol its numbers come from, because the
+first-protocol tables at the end are not comparable with the current ones.
 
 ## Reproducing them
 

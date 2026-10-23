@@ -22,15 +22,28 @@ SEEDS = (0, 1, 2)
 THRESHOLD = 0.75
 LABEL = {"c2": "HCT-Net (C2)  <- OUR MODEL", "eegnet": "EEGNet",
          "base": "HCT-Net plain baseline", "c1": "HCT-Net + C1 (flatten head)",
-         "bnorm": "HCT-Net C2 + batch-norm encoder  <- OUR MODEL"}
+         "bnorm": "HCT-Net C2 + batch-norm encoder  <- OUR MODEL",
+         "sizea": "HCT-Net config A, 3,924 parameters  <- OUR MODEL",
+         "sizeb": "HCT-Net config B, 6,148 parameters",
+         "sizec": "HCT-Net config C, 12,452 parameters"}
+
+
+# Which step each run was written under: Step 8 was the adaptation comparison, Step 10
+# the size sweep, and everything else came from Step 9.
+STEP = {"c2": "step8", "eegnet": "step8", "sizea": "step10", "sizeb": "step10",
+        "sizec": "step10"}
+
+
+def paths(name):
+    """The three seed CSVs a run needs, whether or not they exist yet."""
+    return [OUT / f"{STEP.get(name, 'step9')}_{name}_seed{seed}.csv" for seed in SEEDS]
 
 
 def load(name):
     """acc[variant][split] -> array (seed, subject) in %, kappa likewise, keyed by subject."""
     out = {}
-    for seed in SEEDS:
-        step = "step8" if name in ("c2", "eegnet") else "step9"
-        for r in csv.DictReader((OUT / f"{step}_{name}_seed{seed}.csv").open(encoding="utf-8")):
+    for seed, path in zip(SEEDS, paths(name)):
+        for r in csv.DictReader(path.open(encoding="utf-8")):
             v = out.setdefault(r["variant"], {})
             for split, subj in (("val", "val_subject"), ("test", "test_subject")):
                 d = v.setdefault(split, {})
@@ -46,7 +59,8 @@ def load(name):
 
 def report(name):
     out, subjects, arr = load(name)
-    print(f"\n{'=' * 100}\nSTEP 8 - {LABEL[name]}   protocol v2, LOSO 9 folds, 875 samples, seeds 0/1/2")
+    step = STEP.get(name, "step9").replace("step", "STEP ")
+    print(f"\n{'=' * 100}\n{step} - {LABEL[name]}   protocol v2, LOSO 9 folds, 875 samples, seeds 0/1/2")
     print("No labels of the adapted subject are used at any point.\n")
 
     base_val = arr("none", "val", "acc").mean(1)
@@ -86,5 +100,12 @@ def report(name):
 
 if __name__ == "__main__":
     names = [a for a in sys.argv[1:] if a in MODELS] or list(MODELS)
-    for name in names:
+    # A run whose three seeds are not all on disk has nothing to summarise. Queued runs
+    # and the one stopped part-way sit in MODELS, so skip them by name instead of
+    # crashing on the first missing file.
+    missing = [n for n in names if not all(f.is_file() for f in paths(n))]
+    for name in [n for n in names if n not in missing]:
         report(name)
+    if missing:
+        print()
+        print(f"Not run yet, so not summarised: {', '.join(missing)}")

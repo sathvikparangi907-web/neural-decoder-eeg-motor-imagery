@@ -20,3 +20,12 @@ node_modules/
 __pycache__/
 *.pyc
 desktop.ini
+
+# the stale nested copy of this repository: it was tracked as a submodule link
+# with no .gitmodules, so GitHub showed a folder that clicked through to nothing
+phase2-eeg-project/
+
+# Phase 2 scratch: page renders of Phase2_Solution_Design.pdf used for proofreading
+# (regenerate with pdftoppm) and the generator scripts their own folder calls superseded
+Neural Decoder using EEG & Motor Imagery/_qa-renders/
+Neural Decoder using EEG & Motor Imagery/_superseded/

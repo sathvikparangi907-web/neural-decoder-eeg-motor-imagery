@@ -1,158 +1,118 @@
 # Neural Decoder using EEG & Motor Imagery
 
-Cross-subject motor imagery classification with deep learning.
+A deep-learning decoder that reads four imagined movements — left hand, right hand, feet,
+tongue — from scalp EEG, and is tested on **people it was never trained on**.
 
-Deep learning decoder for four-class motor imagery EEG, evaluated on subjects it was never
-trained on. BCI Competition IV Dataset 2a, nine subjects, leave-one-subject-out.
+## The problem
 
-The problem in one line: motor imagery decoders work on the people they were trained on and
-badly on anyone new — CTNet reports 82.52% within-subject and 58.64% cross-subject, a
-23.88-point drop. Full argument in `Neural Decoder using EEG & Motor Imagery/HANDOFF.md` §5.
+Motor imagery decoders work well on the person they were calibrated for and badly on
+anyone new. CTNet, one of the models compared here, reports 82.52% on a user it has seen
+and 58.64% on one it has not: a **23.88-point drop**. That gap is why a brain-computer
+interface needs a calibration session before it is useful to a new user, and closing it is
+what this project is about.
 
-| Phase | What | Where |
-|---|---|---|
-| 2 — Solution design | Submitted 15 Sep 2026 | `Neural Decoder using EEG & Motor Imagery/` |
-| 3 — Implementation | 16 Sep – 3 Oct 2026 | `phase3/` |
+The measurement protocol follows from that. Nine participants, **leave one out**: train on
+seven, select on an eighth, and test on the ninth, whose data the model has never seen.
+Four classes, so **25% is chance**.
 
-Results and negative results as they are found: **`FINDINGS.md`**.
+## The result
 
-The dataset — what it is, where it comes from, its licence, and how to verify a download
-against the exact bytes these results came from: **`DATA.md`**. Every paper the models and
-methods come from, with DOIs and which file uses each one: **`references/REFERENCES.md`**.
+Cross subject, 875-sample window. Full tables and every negative result in
+[`FINDINGS.md`](FINDINGS.md).
 
-Which part of HCT-Net came from which published model, with the code of each borrowed part
-and whether measurement kept it: **`model_provenance/`**.
+| Model | Parameters | Validation | Test | κ | Protocol |
+|---|---|---|---|---|---|
+| **HCT-Net config A — proposed** | **3,924** | **54.3%** | **53.6%** | **0.381** | v2, 3 seeds, adaptation on |
+| EEGNet | 3,188 | 55.0% | 54.3% | 0.391 | v2, 3 seeds, adaptation on |
+| ATCNet | 113,732 | — | 52.4% | 0.365 | v1, 1 seed, no adaptation |
+| FBCSP (classical) | — | — | 44.2% | 0.256 | v1, 1 seed, no adaptation |
+
+The last two rows are from the earlier protocol and have not been re-run under v2, so they
+are not directly comparable with the first two. They are here for scale, not for ranking.
+
+EEGNet is 0.7 points ahead on validation, inside this project's own 0.75-point decision
+threshold, so it is reported as a tie and not as a win.
+
+The finding the project turns on: **above 3,924 parameters, accuracy stops improving.** A
+second encoder layer adds nothing, doubling the width adds nothing, and ATCNet buys 1.2
+points over EEGNet with 36 times the parameters. The ~18-point gap that survives at every
+size tested is not a capacity problem, so a bigger model was never going to close it.
+
+## Where everything is
+
+| What you want | Where |
+|---|---|
+| Every result, including the ones that failed | [`FINDINGS.md`](FINDINGS.md) |
+| The code, one directory per Phase 3 activity | [`phase3/`](phase3/) |
+| The recordings, and CSV views that GitHub renders | [`data/`](data/) · [`data/csv/`](data/csv/) |
+| The dataset: source, licence, checksums | [`DATA.md`](DATA.md) |
+| Which part of the model came from which paper | [`model_provenance/`](model_provenance/) |
+| Every paper, with DOIs and the PDFs we may republish | [`references/`](references/) |
+| Per-fold metrics, one row per fold per seed | [`results/`](results/) |
+| Phase 2 solution design and presentation | [`Neural Decoder using EEG & Motor Imagery/`](Neural%20Decoder%20using%20EEG%20&%20Motor%20Imagery/) |
+
+`phase3/` is split by the seven Phase 3 activities, and each directory has its own page
+explaining what was done, which file does it, and the result:
+
+```
+phase3/
+  1_environment_setup_and_data_collection/     download, filter, epoch, cache
+  2_data_preprocessing_and_eda/                alignment, augmentation, the seven analyses
+  3_baseline_model_implementation/             FBCSP, EEGNet, ATCNet, EEG Conformer, CTNet
+  4_proposed_model_implementation/             HCT-Net
+  5_training_tuning_and_optimisation/          training loop, protocol v2, adaptation
+  6_experiments_and_result_generation/         leave-one-subject-out, component study
+  7_performance_evaluation_and_analysis/       tables, significance tests, figures
+```
 
 ## Seeing the results
 
-Everything already measured, in one command — no GPU, no dataset needed, a second to run:
+Every number, in one command. No GPU, no dataset, about a second:
 
 ```bash
 py phase3/7_performance_evaluation_and_analysis/report.py
 ```
 
-It prints every experiment's per-subject accuracy, the means, and the Wilcoxon
-significance tests, and regenerates the figures into `phase3/results_fig/`.
+It prints each experiment's per-subject accuracy, the means and the Wilcoxon significance
+tests, and regenerates the figures into `phase3/results_fig/`.
 
-Accuracy is the share of trials whose imagined movement was identified correctly.
-Four classes, so **25% is chance**. The two protocols answer different questions:
+## Reproducing them
 
-- **within subject** — trained on your session 1, tested on your session 2. What a
-  decoder does for a user it was calibrated on.
-- **cross subject** — trained on seven other people, tested on someone it has never
-  seen. What a new user gets when they put the cap on. This is the number the
-  project is about, and it is far lower.
-
-For one experiment on its own, with a chosen reference model for the statistics:
+Python 3.14 with `numpy scipy scikit-learn matplotlib torch braindecode`. A CUDA GPU is
+used if present. Everything runs from the repository root.
 
 ```bash
-py phase3/7_performance_evaluation_and_analysis/report.py results/e2_loso.csv HCT-Net
+py phase3/1_environment_setup_and_data_collection/data.py     # preprocess and cache   (~15 min)
+py phase3/6_experiments_and_result_generation/loso.py EEGNet  # one model, nine folds  (~30 min)
 ```
 
-## Running the experiments yourself
+The recordings are already in `data/`, so `data.py` only has to preprocess them; it
+verifies the cache against the solution design's Table 8.2 before finishing. Long runs
+write after every fold and skip work already recorded, so an interrupted run continues
+where it stopped. Every script ends in a self-check that fails loudly rather than printing
+a number nobody verified.
 
-Python 3.14, with `numpy scipy scikit-learn matplotlib torch braindecode`. A CUDA GPU is
-used if present. Everything is run from the repository root.
+The commands for each stage are on that stage's own page under `phase3/`.
 
-Only needed to reproduce the numbers from scratch. The first command downloads
-744 MB and the training commands need a GPU; each takes minutes to hours.
+## Status
 
-```bash
-py phase3/1_environment_setup_and_data_collection/data.py        # download, preprocess, cache, verify against Table 8.2   (~15 min)
-py phase3/2_data_preprocessing_and_eda/preprocess.py  # M2 alignment check: mean covariance must equal identity  (~1 min)
-py phase3/2_data_preprocessing_and_eda/explore.py     # the seven Table 10.1 analyses -> phase3/eda/            (~10 min)
+| Phase | What | When |
+|---|---|---|
+| 2 — Solution design | Submitted | 15 September 2026 |
+| 3 — Implementation and experimentation | All seven activities built and producing results | from 16 September 2026 |
 
-py phase3/3_baseline_model_implementation/fbcsp.py                    # classical baseline, within subject          (~2 min)
-py phase3/5_training_tuning_and_optimisation/train.py HCT-Net 1 2 3      # any model, any subjects, within subject
-py phase3/6_experiments_and_result_generation/loso.py EEGNet --seeds 1    # one model, cross subject, nine folds        (~30 min)
-py phase3/6_experiments_and_result_generation/components.py               # component study V0-V5                        (~3 h)
-py phase3/6_experiments_and_result_generation/adversarial.py              # adversarial variant, section 13.2            (~2 h)
-py phase3/5_training_tuning_and_optimisation/improve.py                  # Stage 2, each change chosen on validation     (~2 h)
-```
+The optimisation queue is the one thing still running: window length and cropped training
+are next, and each step adds a row rather than changing what is already measured.
 
-Long runs write after every fold and skip work already recorded, so if one is
-interrupted, re-running the same command continues from where it stopped.
+## How results are decided
 
-Model names accepted anywhere: `FBCSP`, `EEGNet`, `ATCNet`, `EEGConformer`,
-`CTNet`, `HCT-Net`, and the variants `HCT-Net-L1`, `HCT-Net-L6`, `HCT-Net-V1`,
-`HCT-Net-V2`, `HCT-Net-V5`.
+Four rules the project holds to, which is why the table above reports a tie rather than a
+win:
 
-`data.py` downloads the dataset on first run, from the Graz mirror at
-`lampx.tugraz.at/~bci/database/001-2014/`. It fetches the `.mat` release rather than the
-competition `.gdf`, because the `.mat` files carry the evaluation-session labels inline —
-no separate true-labels archive and no GDF parser. `data/` is tracked, so a clone already
-has the recordings; `cache/` is not, because `data.py` rebuilds it. See `DATA.md`.
-
-Every script is runnable on its own and ends in a self-check that fails loudly rather than
-printing a number nobody verified.
-
-## Layout
-
-```
-phase3/                                     one directory per Phase 3 activity
-  1_environment_setup_and_data_collection/
-    data.py         download, band-pass, epoching, artefact marking, caching   (M1)
-    peek.py         print the actual numbers: one trial, raw and band-passed
-  2_data_preprocessing_and_eda/
-    preprocess.py   Euclidean alignment, standardisation, augmentation, folds  (M2)
-    explore.py      the seven Table 10.1 analyses, each with a verdict         (M1)
-    trials_table.py builds data/trials.csv, one row per trial
-    check_*.py      the two self-checks on alignment and augmentation
-  3_baseline_model_implementation/
-    fbcsp.py        FBCSP + LDA, the classical baseline                        (M3)
-    models.py       the four braindecode baselines, plus the variant registry  (M3)
-  4_proposed_model_implementation/
-    hctnet.py       HCT-Net, the proposed model - 3,924 parameters, config A   (M4)
-  5_training_tuning_and_optimisation/
-    train.py        training loop and the within-subject experiment E1         (M5)
-    protocol.py     protocol v2: separate validation subject, test touched once
-    tta.py          test-time adaptation on the new subject, no labels used
-    improve.py      Stage 2: one change at a time, chosen on validation    (E9)
-  6_experiments_and_result_generation/
-    loso.py         leave-one-subject-out, experiments E2 and E3               (M6)
-    within.py       within-subject runs for the size sweep
-    components.py   component study V0-V5, experiment E4                       (M7)
-    adversarial.py  subject-invariant variant, section 13.2
-  7_performance_evaluation_and_analysis/
-    report.py       every result table, the significance tests, the figures    (M8)
-    stats.py        Wilcoxon signed-rank with Holm-Bonferroni correction       (M7)
-    step8_summary.py  the test-time adaptation table
-    figure_size.py  accuracy against parameter count
-  _paths.py         one definition of the repository root and the import path
-  eda/              exploratory figures
-  results_fig/      result figures
-results/          per-fold metrics as CSV, one row per fold per seed
-references/
-  REFERENCES.md   every paper used, with DOI and the file that uses it
-  papers/         the open-access PDFs that may be redistributed
-FINDINGS.md       every result, including the negative ones
-DATA.md           the dataset: source, licence, download, checksums
-"Neural Decoder using EEG & Motor Imagery/"   the Phase 2 deliverables
-```
-
-The proposed model was written only after §19.1's second ordering rule was satisfied — two
-baselines reproducing their published within-subject accuracy — which happened once the E1
-protocol was corrected. What it found first is in `FINDINGS.md`: **HCT-Net as submitted loses.** It is second
-best within subject and worst at transferring to an unseen subject, and the component study
-attributes that to the attention block rather than to size or depth.
-
-Stage 2 (`phase3/5_training_tuning_and_optimisation/improve.py`) then improved it one change at a time, keeping a change
-only if it helped on each fold's separate validation person. The final model reads the
-whole time series instead of an average, attends over the whole trial instead of in
-windows, and averages three trained copies. It reaches **51.9% cross-subject, 3rd of six
-and statistically level with ATCNet (52.4%) and EEG Conformer (52.1%)**, at 74,508
-parameters.
-
-Two deliberate departures from §18 of the solution design, both open to reversal:
-
-**Flat `phase3/` instead of the seven directories of §18.3.** The layout in the document
-allocates `data/`, `preprocessing/`, `models/`, `training/`, `evaluation/`, `analysis/` and
-`tests/` across roughly 25 files. The same content fits in six here, each independently
-runnable. `git mv` restores the specified tree if the code is going to be read against the
-document.
-
-**No MNE, MOABB or PyYAML.** §18.1 lists them; scipy reads the `.mat` files directly, so
-MOABB's download layer and MNE's epoching are not needed, and there is nothing yet whose
-configuration justifies a YAML file. braindecode *is* used, and for the reason §18.1 gives:
-the baselines are reference implementations, so a shortfall is a real difference rather than
-an implementation bug of ours.
+1. Every keep-or-reject decision is made on the **validation** subject. Test folds are run
+   once, at the end, and reported without being allowed to change the decision.
+2. A change is accepted only if it improves the three-seed validation mean by at least
+   **0.75 points**.
+3. One change at a time, each stacked on the last accepted one.
+4. Negative results are kept and written down. Several of the ideas in the Phase 2 design
+   were measured and rejected; they are in `FINDINGS.md` with the date and the numbers.

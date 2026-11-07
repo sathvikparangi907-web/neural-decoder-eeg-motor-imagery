@@ -4,6 +4,14 @@ Running record of what the implementation actually showed, including results tha
 contradicted the plan. M8 requires findings written up including negative results, and
 they are easier to write down when they happen than to reconstruct in October.
 
+**Correction to Finding 13's correlation (2026-11-07).** Entries below quote
+r = -0.86 between within-subject accuracy and the familiar-to-stranger drop, and call it
+the project's strongest result. **It is an artefact.** The drop is computed from
+within-subject accuracy, so the two share a term and are correlated by construction.
+Related directly, within-subject and cross-subject accuracy across the six models give
+r = 0.08 (95% CI -0.78 to 0.84, p = 0.88): no evidence either way at six models.
+Reproduce both with `py paper/extra_analyses.py`. The entries below are left as written.
+
 **File paths in this log (2026-10-23).** On 23 October 2026 `phase3/` was reorganised into
 one directory per Phase 3 activity, for Review 3. Entries below name files by their old flat
 paths, for example `phase3/tta.py`; that file is now

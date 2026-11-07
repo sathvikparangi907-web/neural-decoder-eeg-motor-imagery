@@ -205,21 +205,25 @@
 <section>
   <div class="eyebrow">The finding</div>
   <h2>Learning a person is not the same as learning the task</h2>
-  <p>Ranking the six decoders by how well they know a familiar person, then by how much they
-  lose on a stranger, gives almost exactly the reverse order. Measured properly, the
-  relationship is strong and statistically significant.</p>
+  <p class="note" style="border-left:3px solid var(--poor);padding-left:14px"><strong>Corrected
+  7 November 2026.</strong> This section used to report r = &minus;0.86 between familiar-person
+  skill and the transfer loss, and called it the project's strongest result. That correlation
+  is an <strong>artefact</strong>: the loss is computed from the familiar-person score, so the
+  two share a term and must correlate. The honest test relates the two accuracies directly,
+  and at six models it settles nothing either way.</p>
   <div class="panel" style="margin-top:18px">
-    <p style="margin:0"><span class="num" style="font-size:22px;color:var(--violet)">r = &minus;0.86</span>
-    &nbsp; <span class="note">correlation between familiar-person skill and transfer loss
-    (p&nbsp;=&nbsp;0.026, six models)</span></p>
+    <p style="margin:0"><span class="num" style="font-size:22px;color:var(--violet)">r = 0.08</span>
+    &nbsp; <span class="note">familiar-person against stranger accuracy, six models
+    (95% CI &minus;0.78 to 0.84, p&nbsp;=&nbsp;0.88) &mdash; no evidence either way</span></p>
   </div>
   <p style="margin-top:18px">The explanation is that a powerful decoder spends its capacity
   learning things that are true of <em>the individuals it trained on</em> &mdash; skull
   thickness, exactly where the cap sat, that person's particular way of imagining a movement
   &mdash; rather than things true of imagined movement in general. The better it gets at that,
   the less of it survives the move to a new head.</p>
-  <p>This was predicted and recorded <em>before</em> the last two models were run, then held
-  when they were. It is the project's strongest result.</p>
+  <p>That story may still be true &mdash; the size sweep and the component study both point
+  at it &mdash; but this correlation is not evidence for it, and six models cannot settle it.
+  Reproduce both figures with <code>py paper/extra_analyses.py</code>.</p>
 </section>
 
 <section>

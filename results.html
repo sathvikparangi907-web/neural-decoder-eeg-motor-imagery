@@ -42,6 +42,11 @@
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
 
   header{border-bottom:1px solid var(--line);padding-block:44px 30px;margin-bottom:4px}
+  .warn{margin:18px 0;padding:12px 16px;border-left:3px solid #B8860B;
+        background:rgba(184,134,11,.10);border-radius:0 6px 6px 0;font-size:13.5px}
+  .warn strong{color:#9A5238}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .warn strong{color:#E0A95C}}
+  :root[data-theme="dark"] .warn strong{color:#E0A95C}
   .verdict{margin-top:26px;padding:18px 20px;border-left:3px solid var(--violet);
            background:var(--surface);border-radius:0 8px 8px 0}
   .verdict p{margin:0;font-size:15.5px}
@@ -127,6 +132,14 @@
   random would be right <span class="num">25%</span> of the time. Every number on this page
   should be read against that floor: 30% is barely better than a coin toss with four sides,
   and 75% is a genuinely useful device.</p>
+  <p class="note">For scale, the best published results for a stranger on this dataset sit in
+  the low-to-high fifties &mdash; CTNet reports 58.6%, and re-implementations of EEGNet and
+  EEG Conformer 56.9% and 53.4%. So the numbers here are ordinary for the task, and a long
+  way from a usable device.</p>
+  <p class="warn"><strong>Small gaps are not results.</strong> With nine volunteers, a
+  difference has to reach about <span class="num">5.4 points</span> before this test could
+  reliably detect it. The one-to-four point gaps between the models below are therefore
+  differences we cannot prove, and this page never claims otherwise.</p>
 </section>
 
 <section>
@@ -343,6 +356,10 @@
   which also updates parameters by gradient &mdash; scored 0.3 above it, below the
   0.75-point threshold, and was not kept.</p>
 
+  <p class="warn"><strong>Two protocols below, and they do not mix.</strong> The first table
+  is protocol v1: one seed, no adaptation. The second is v2: three seeds, adaptation, and a
+  separate validation person for every decision. A number from one table cannot be compared
+  with a number from the other. Only rows inside the same table are like for like.</p>
   <h3 style="margin-top:28px">Where it landed under the first protocol</h3>
   <p class="note">One seed, no test-time adaptation. Superseded by the table below, and kept
   because no result in this project is overwritten.</p>
@@ -380,12 +397,34 @@
       <td class="n">53.3%</td><td class="n">52.7%</td>
       <td><div class="bar"><i style="width:52.7%;background:var(--muted)"></i></div></td>
       <td class="n">20,996</td><td class="n">0.369</td></tr>
+    <tr><td colspan="6" class="note" style="padding-top:14px">Classical references, run on the
+      same folds. They are deterministic: no seeds, and nothing chosen on a validation person.</td></tr>
+    <tr><td>Tangent space + logistic regression</td><td class="n">&mdash;</td><td class="n">50.5%</td>
+      <td><div class="bar"><i style="width:50.5%;background:var(--chance)"></i></div></td>
+      <td class="n">&mdash;</td><td class="n">0.340</td></tr>
+    <tr><td>Minimum distance to mean</td><td class="n">&mdash;</td><td class="n">47.1%</td>
+      <td><div class="bar"><i style="width:47.1%;background:var(--chance)"></i></div></td>
+      <td class="n">&mdash;</td><td class="n">0.295</td></tr>
+    <tr><td>Minimum distance to mean, <em>no re-centring</em></td><td class="n">&mdash;</td><td class="n">30.2%</td>
+      <td><div class="bar"><i style="width:30.2%;background:var(--poor)"></i></div></td>
+      <td class="n">&mdash;</td><td class="n">0.070</td></tr>
   </table></div>
+  <p class="note" style="margin-top:12px">The configurations are named A to D by size.
+  <strong>A</strong> is the final model and the smallest of the four; <strong>D</strong> is the
+  size written into the design document before any experiment, five times larger. Only the
+  width and the number of encoder layers differ between them.</p>
+  <p class="note">That last row is the clearest single demonstration on this page: the same
+  classical method, with and without re-centring each session, goes from <span class="num">30.2%</span>
+  to <span class="num">47.1%</span>. Nothing about the classifier changed &mdash; only the
+  alignment of the input.</p>
   <p class="note" style="margin-top:14px">EEGNet is <strong>0.7 points ahead on
   validation</strong>, inside our own 0.75-point decision threshold, so this is a tie and is
-  reported as one. The four baselines in the table above have not been re-run under this
-  protocol, so they are not in it. What the sweep settled is that a second encoder layer and
-  double the width each buy nothing: above 3,924 parameters the line is flat.</p>
+  reported as one. Measured on the test people, the gap is &minus;0.7 points with a 95%
+  confidence interval from &minus;4.3 to +2.9 &mdash; an interval that comfortably contains
+  zero, which is the statistical way of saying the same thing. The four deep baselines in the
+  table above have not been re-run under this protocol, so they are not in it. What the sweep
+  settled is that a second encoder layer and double the width each buy nothing: above 3,924
+  parameters the line is flat.</p>
 </section>
 
 <section>
@@ -433,8 +472,9 @@
 <footer>
   <p>Nine volunteers &middot; 5,184 recorded trials &middot; 22 electrodes &middot; four
   imagined movements &middot; BCI Competition IV Dataset 2a (Graz University of Technology).
-  Every number here is produced by <code>py phase3/7_performance_evaluation_and_analysis/report.py</code> from the recorded
-  per-fold results, and the full write-up including every negative result is in
-  <code>FINDINGS.md</code>.</p>
+  Every number here is produced from the recorded per-fold results by
+  <code>py results.py</code>, with the confidence intervals, the power analysis and the
+  Riemannian references in <code>paper/</code>. The full write-up, including every negative
+  result and the date each was found, is in <code>FINDINGS.md</code>.</p>
 </footer>
 </div>

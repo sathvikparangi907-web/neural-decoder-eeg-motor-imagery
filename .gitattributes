@@ -3,3 +3,6 @@
 *.png binary
 *.npz binary
 *.mat binary
+
+# vendored third-party library: keep it byte-identical to the upstream file
+three.module.min.js -text

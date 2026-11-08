@@ -1,0 +1,1462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neural Decoder using EEG &amp; Motor Imagery</title>
+<meta name="description" content="Interactive 3D presentation of a final-year project: HCT-Net, a compact convolution–Transformer decoder for four-class motor-imagery EEG, tested leave-one-subject-out on BCI Competition IV Dataset 2a.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<!--
+  Neural Decoder using EEG & Motor Imagery — single-file 3D presentation.
+  Three.js r168 is the only dependency, kept beside this file as three.module.min.js (MIT) and
+  resolved through the import map below, so the page works with no internet connection.
+  Everything else is in this file.
+
+  Where the numbers come from
+  - The project brief: dataset, headline table, the five interventions, the architecture table,
+    the C4/C3 mu ratio, CTNet's published figures, A03 and A02.
+  - The project repository (results/ logs and the paper built from them), used to fill gaps in the
+    brief: size-sweep configs B and C, the other seven participants, the names of the eight
+    preprocessing steps, the context tags on slide 7, and the trial on slide 3 (A01's first
+    left-hand trial of session T, band-passed 4–38 Hz, stored below as 0.1 µV integers).
+-->
+<style>
+:root {
+  --bg: #131C2E;
+  --ink: #E8ECF4;
+  --muted: #9AA4B8;
+  --violet: #5B3E96;
+  --violet-lift: #8A6CCB;
+  --teal: #1B7F79;
+  --teal-lift: #2BB3AA;
+  --warm: #9B9289;
+  --grey: #6E7787;
+  --dark: #2B3550;
+  --line: rgba(232, 236, 244, 0.12);
+  --panel: rgba(19, 28, 46, 0.86);
+  --panel-w: 420px;
+  --serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--teal-lift); outline-offset: 2px; }
+
+#gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; outline: none; cursor: grab; }
+#gl.dragging { cursor: grabbing; }
+#gl.pointing { cursor: pointer; }
+#labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
+#labels .set { position: absolute; inset: 0; }
+.lbl { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 12px; line-height: 1.25; color: var(--ink); text-shadow: 0 1px 3px rgba(5, 9, 18, 0.95), 0 0 1px rgba(5, 9, 18, 0.95); will-change: transform; text-align: center; }
+.lbl.small { font-size: 11.5px; color: #C3CAD6; }
+.lbl.big { font-family: var(--serif); font-size: 18px; font-weight: 600; }
+.lbl.value { font-weight: 600; font-variant-numeric: tabular-nums; }
+.lbl.tag { font-size: 11px; color: var(--muted); letter-spacing: .02em; }
+.lbl.warm { color: #D8CFC4; }
+.lbl.teal { color: #7FD8D1; }
+.lbl .sub { display: block; font-size: 10.5px; font-weight: 400; color: var(--muted); }
+.lbl.ann { font-size: 11.5px; color: #D5DAE5; background: rgba(19, 28, 46, .82); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; text-shadow: none; }
+.lbl.sel { font-size: 13px; font-weight: 600; background: rgba(19, 28, 46, .86); border: 1px solid rgba(232,236,244,.3); border-radius: 4px; padding: 2px 8px; text-shadow: none; }
+
+#tip { position: fixed; z-index: 6; pointer-events: none; background: rgba(19, 28, 46, .95); border: 1px solid var(--line); border-radius: 4px; padding: 5px 9px; font-size: 12.5px; max-width: 280px; display: none; }
+#tip b { font-weight: 600; }
+
+#hero { position: fixed; z-index: 3; top: 22px; left: calc(var(--panel-w) + 28px); right: 66px; display: flex; justify-content: center; gap: 40px; pointer-events: none; text-shadow: 0 1px 3px rgba(5, 9, 18, .9); }
+#hero[hidden] { display: none; }
+#hero div { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 200px; }
+#hero .n { font-family: var(--serif); font-size: 30px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+#hero .t { font-size: 12px; color: var(--muted); line-height: 1.3; margin-top: 3px; }
+
+#panel { position: fixed; left: 0; top: 0; bottom: 0; width: var(--panel-w); background: var(--panel); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-right: 1px solid var(--line); display: flex; flex-direction: column; z-index: 5; }
+#panelContent { flex: 1; overflow-y: auto; padding: 34px 34px 18px; scrollbar-width: thin; scrollbar-color: rgba(232,236,244,.25) transparent; }
+#panel footer { padding: 12px 34px 18px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+.navbtn { background: transparent; border: 1px solid var(--line); border-radius: 4px; width: 32px; height: 28px; cursor: pointer; color: var(--muted); }
+.navbtn:hover { color: var(--ink); border-color: rgba(232,236,244,.3); }
+#dots { display: flex; gap: 7px; align-items: center; flex: 1; justify-content: center; }
+#dots button { width: 10px; height: 10px; padding: 0; border-radius: 50%; border: 1px solid rgba(232,236,244,.45); background: transparent; cursor: pointer; }
+#dots button[aria-current="step"] { background: var(--ink); border-color: var(--ink); }
+#dots button:hover { border-color: var(--ink); }
+#counter { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
+
+.eyebrow { margin: 0 0 10px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.18; margin: 0; }
+h1 { font-size: 34px; margin-bottom: 16px; }
+h2 { font-size: 27px; margin-bottom: 14px; }
+h3 { font-size: 16.5px; margin: 20px 0 8px; }
+p { margin: 0 0 12px; }
+.lead { font-size: 16px; color: #D5DAE5; }
+.note { color: var(--muted); font-size: 13px; }
+.hint { font-size: 12.5px; color: var(--muted); margin-top: 16px; }
+strong { font-weight: 600; }
+ul, ol { margin: 0 0 12px; padding-left: 20px; }
+li { margin: 3px 0; }
+.facts li { margin: 2px 0; }
+kbd { font-family: var(--sans); font-size: 12px; border: 1px solid rgba(232,236,244,.3); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 6px 0 14px; font-variant-numeric: tabular-nums; }
+caption { text-align: left; color: var(--muted); font-size: 12px; padding-bottom: 6px; caption-side: top; }
+th, td { padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--muted); font-size: 12px; }
+tr.ours td { font-weight: 600; }
+.callout { border-left: 3px solid var(--teal-lift); padding: 8px 12px; background: rgba(27, 127, 121, .12); border-radius: 0 4px 4px 0; }
+.claim { font-family: var(--serif); font-size: 18px; line-height: 1.35; margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+.bigclaim { font-family: var(--serif); font-size: 27px; line-height: 1.28; font-weight: 600; margin: 4px 0 18px; }
+.warmtxt { color: #D8CFC4; }
+.tealtxt { color: #7FD8D1; }
+.ctx { display: inline-block; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; margin-left: 4px; white-space: nowrap; }
+.iv li { margin: 6px 0; }
+
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 8px; border: 1px solid rgba(232,236,244,.35); flex: none; }
+.sw.outline { background: transparent !important; border-color: #E8ECF4; }
+.key { list-style: none; padding: 0; margin: 4px 0 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 13px; }
+.key li { display: flex; align-items: center; margin: 0; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid rgba(232,236,244,.3); border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 13.5px; }
+.toggle[aria-pressed="true"] { background: rgba(91, 62, 150, .45); border-color: var(--violet-lift); }
+.toggle .box { width: 14px; height: 14px; border: 1px solid rgba(232,236,244,.6); border-radius: 3px; display: inline-grid; place-items: center; font-size: 11px; }
+.toggle:disabled { opacity: .5; cursor: default; }
+.budget { font-size: 12.5px; color: var(--muted); margin: 8px 0 12px; }
+.detail { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; margin: 12px 0; background: rgba(232,236,244,.03); min-height: 64px; }
+.detail h3 { margin: 0 0 8px; font-size: 18px; }
+.detail dl { margin: 0; display: grid; grid-template-columns: 112px 1fr; gap: 4px 10px; font-size: 13.5px; }
+.detail dt { color: var(--muted); }
+.detail dd { margin: 0; }
+.detail .empty { color: var(--muted); font-size: 13.5px; margin: 0; }
+.layers { list-style: none; padding: 0; margin: 6px 0 0; }
+.layers li { margin: 0; }
+.layer { width: 100%; display: flex; align-items: center; text-align: left; background: transparent; border: 0; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-size: 13.5px; color: #D5DAE5; }
+.layer:hover { background: rgba(232,236,244,.06); }
+.layer[aria-pressed="true"] { background: rgba(232,236,244,.12); color: var(--ink); }
+.layer .nm { flex: 1; }
+.layer .pc { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+
+.hud { position: fixed; right: 20px; bottom: 20px; z-index: 4; width: 330px; background: rgba(19, 28, 46, .84); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.hud[hidden] { display: none; }
+.hud .seg { display: flex; gap: 4px; margin-bottom: 8px; }
+.hud .seg button { flex: 1; border: 1px solid rgba(232,236,244,.25); background: transparent; border-radius: 4px; padding: 4px 0; font-size: 12.5px; cursor: pointer; }
+.hud .seg button[aria-pressed="true"] { background: var(--teal); border-color: var(--teal-lift); }
+.hud .state { font-size: 13px; font-weight: 500; margin: 0 0 6px; }
+.hud .cap { font-size: 12px; color: var(--muted); margin: 0; }
+
+#helpBtn { position: fixed; top: 16px; right: 16px; z-index: 6; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(232,236,244,.3); background: rgba(19, 28, 46, .8); cursor: pointer; font-weight: 600; }
+#help { position: fixed; inset: 0; z-index: 10; background: rgba(8, 12, 22, .72); display: grid; place-items: center; padding: 16px; }
+#help[hidden] { display: none; }
+#help .card { background: #18223A; border: 1px solid var(--line); border-radius: 10px; padding: 22px 26px; width: min(560px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
+#help h2 { font-size: 22px; margin-bottom: 12px; }
+#help dl { display: grid; grid-template-columns: minmax(150px, auto) 1fr; gap: 6px 14px; margin: 0 0 14px; font-size: 13.5px; }
+#help dt { color: var(--ink); }
+#help dd { margin: 0; color: #C9CFDB; }
+#help .close { float: right; background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 3px 10px; cursor: pointer; }
+#nogl { position: fixed; z-index: 3; left: calc(var(--panel-w) + 32px); right: 32px; top: 40%; color: var(--muted); font-size: 14px; max-width: 520px; }
+#nogl[hidden] { display: none; }
+
+@media (max-width: 860px) {
+  #panel { top: auto; width: 100vw; height: 46vh; border-right: 0; border-top: 1px solid var(--line); }
+  #panelContent { padding: 18px 16px 10px; }
+  #panel footer { padding: 8px 16px 12px; }
+  h1 { font-size: 26px; } h2 { font-size: 22px; } .bigclaim { font-size: 21px; }
+  .hud { left: 16px; right: 16px; width: auto; bottom: calc(46vh + 12px); padding: 8px 10px; }
+  .hud .cap { display: none; }
+  #hero { left: 16px; right: 58px; top: 14px; gap: 14px; }
+  #hero .n { font-size: 20px; }
+  #hero .t { font-size: 10.5px; }
+  #nogl { left: 16px; right: 16px; top: 16%; }
+  /* small screens: keep only the main 3D labels; the panel carries every number */
+  .lbl.small, .lbl.tag, .lbl .sub { display: none !important; }
+  #labels .set.dense { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./three.module.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="gl" role="img" aria-label="3D view"></canvas>
+<div id="labels" aria-hidden="true"></div>
+<div id="tip" role="presentation"></div>
+
+<div id="hero" hidden>
+  <div><span class="n">53.6%</span><span class="t">test accuracy on people never trained on</span></div>
+  <div><span class="n">3,924</span><span class="t">parameters</span></div>
+  <div><span class="n">Tie</span><span class="t">with EEGNet (54.3% test, κ 0.391)</span></div>
+</div>
+
+<aside id="panel" aria-label="Slide text">
+  <div id="panelContent" aria-live="polite"></div>
+  <footer>
+    <button class="navbtn" id="prevBtn" aria-label="Previous slide">&#8592;</button>
+    <nav id="dots" aria-label="Slides"></nav>
+    <button class="navbtn" id="nextBtn" aria-label="Next slide">&#8594;</button>
+    <span id="counter" aria-hidden="true"></span>
+  </footer>
+</aside>
+
+<div class="hud" id="hud" hidden>
+  <div class="seg" role="group" aria-label="Imagined movement">
+    <button type="button" data-mode="auto" aria-pressed="true">Auto</button>
+    <button type="button" data-mode="rest" aria-pressed="false">Rest</button>
+    <button type="button" data-mode="left" aria-pressed="false">Left hand</button>
+    <button type="button" data-mode="right" aria-pressed="false">Right hand</button>
+  </div>
+  <p class="state" id="hudState" aria-live="polite">Rest: both sides glow alike</p>
+  <p class="cap">Right-hand imagery raises the C4/C3 mu-power ratio: 1.649 dB, against 1.043 dB for left hand (Mann-Whitney p = 9.27e-13). The glow is a synthetic band-limited signal, slowed down for display.</p>
+</div>
+
+<button id="helpBtn" aria-haspopup="dialog" aria-controls="help" aria-label="Show controls">?</button>
+<div id="help" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+  <div class="card">
+    <button class="close" id="helpClose">Close <kbd>Esc</kbd></button>
+    <h2 id="helpTitle">Controls</h2>
+    <dl>
+      <dt><kbd>&#8594;</kbd> <kbd>&#8595;</kbd> <kbd>PgDn</kbd> <kbd>Space</kbd></dt><dd>Next slide</dd>
+      <dt><kbd>&#8592;</kbd> <kbd>&#8593;</kbd> <kbd>PgUp</kbd></dt><dd>Previous slide</dd>
+      <dt><kbd>Home</kbd> <kbd>End</kbd></dt><dd>First / last slide</dd>
+      <dt><kbd>1</kbd>–<kbd>9</kbd>, <kbd>0</kbd></dt><dd>Jump to slide 1–9, or 10</dd>
+      <dt>Dots, arrow buttons</dt><dd>Change slide (bottom of the text panel)</dd>
+      <dt>Scroll over the text panel</dt><dd>Change slide once the panel is scrolled to its end</dd>
+      <dt>Drag</dt><dd>Orbit the 3D view</dd>
+      <dt>Right-drag or <kbd>Shift</kbd>-drag</dt><dd>Pan</dd>
+      <dt>Scroll or pinch over the 3D view</dt><dd>Zoom</dd>
+      <dt>Hover a block or bar</dt><dd>Show its values</dd>
+      <dt>Click a block (slide 5)</dt><dd>Isolate it and show its row of the table</dd>
+      <dt><kbd>Tab</kbd></dt><dd>Reach the layer list and buttons; <kbd>Enter</kbd> selects</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Deselect the layer (or close this panel)</dd>
+      <dt><kbd>B</kbd></dt><dd>Toggle the parameter budget (slide 5)</dd>
+      <dt><kbd>?</kbd></dt><dd>Show or hide this panel</dd>
+    </dl>
+    <p class="note">Particle flow and auto-rotation stop when your system asks for reduced motion.</p>
+  </div>
+</div>
+<p id="nogl" hidden>The 3D view could not start. It needs three.module.min.js beside this file and a browser with WebGL 2. The slides and every number still work in this panel.</p>
+
+<script type="module">
+/* ======================================================================================
+   Facts. Every number shown on screen is written here once.
+   ====================================================================================== */
+const HEADLINE = [
+  { name: 'HCT-Net config A (ours)', params: '3,924', val: '54.3%', test: '53.6%', kappa: '0.381', ours: true },
+  { name: 'EEGNet', params: '3,188', val: '55.0%', test: '54.3%', kappa: '0.391' },
+  { name: 'HCT-Net config D', params: '20,996', val: '53.3%', test: '52.7%', kappa: '0.369' },
+];
+
+// HCT-Net config A, 3,924 parameters. Geometry: c = feature maps (along the flow), h = electrodes or windows (height),
+// w = time steps (depth). flowH: the height the data stream keeps while passing a block that is added, not reshaped.
+const STAGES = [
+  { id: 'input', name: 'input', shape: '(22, 875)', c: 1, h: 22, w: 875, params: 0, origin: 'input',
+    does: 'One trial as the model receives it: 22 electrodes x 3.5 s.' },
+  { id: 'tconv', name: 'temporal conv', shape: '(8, 22, 875)', c: 8, h: 22, w: 875, params: 512, origin: 'eegnet',
+    does: 'Conv2d(1→8, kernel 1x64, same): 8 temporal filters slid along time on every electrode.' },
+  { id: 'bn1', name: 'batch norm 1', shape: '(8, 22, 875)', c: 8, h: 22, w: 875, params: 16, origin: 'eegnet',
+    does: 'Batch normalisation of the 8 temporal feature maps.' },
+  { id: 'sconv', name: 'spatial conv', shape: '(16, 1, 875)', c: 16, h: 1, w: 875, params: 352, origin: 'eegnet',
+    does: 'Conv2d(8→16, kernel 22x1, groups=8). Depthwise: each temporal filter gets its own spatial filters (groups = 8, so 8 → 16 is two per filter), each spanning all 22 electrodes. It collapses 22 electrodes to 1.' },
+  { id: 'bn2', name: 'batch norm 2', shape: '(16, 1, 875)', c: 16, h: 1, w: 875, params: 32, origin: 'eegnet',
+    does: 'Batch normalisation of the 16 spatial feature maps.' },
+  { id: 'pool4', name: 'avg pool /4', shape: '(16, 1, 218)', c: 16, h: 1, w: 218, params: 0, origin: 'pool',
+    does: 'Average pooling along time by 4: 875 → 218 steps.' },
+  { id: 'sepd', name: 'separable depth', shape: '(16, 1, 218)', c: 16, h: 1, w: 218, params: 256, origin: 'eegnet',
+    does: 'Conv2d(16→16, 1x16, groups=16): one temporal filter per feature map.' },
+  { id: 'sepp', name: 'separable point', shape: '(16, 1, 218)', c: 16, h: 1, w: 218, params: 256, origin: 'eegnet',
+    does: 'Conv2d(16→16, 1x1): mixes the 16 feature maps at each time step.' },
+  { id: 'bn3', name: 'batch norm 3', shape: '(16, 1, 218)', c: 16, h: 1, w: 218, params: 32, origin: 'eegnet',
+    does: 'Batch normalisation of the 16 mixed feature maps.' },
+  { id: 'pool8', name: 'avg pool /8', shape: '(16, 1, 27)', c: 16, h: 1, w: 27, params: 0, origin: 'pool',
+    does: 'Average pooling along time by 8: 218 → 27. 27 time steps survive.' },
+  { id: 'window', name: 'window + unfold', shape: '(5, 11, 16)', c: 16, h: 5, w: 11, params: 0, origin: 'pool',
+    does: '5 overlapping windows of 11 steps, stride 4.' },
+  { id: 'pos', name: 'positional', shape: '(11, 16)', c: 16, h: 1, w: 11, flowH: 5, params: 176, origin: 'transformer',
+    does: 'A learned positional code, shared across windows: the same (11, 16) table is added to each of the 5 windows.' },
+  { id: 'enc', name: 'encoder x1', shape: '(5, 11, 16)', c: 16, h: 5, w: 11, params: 2224, origin: 'transformer',
+    does: 'One Transformer encoder layer: 2 heads, feed-forward 32. d_model = 16 = the conv output width, so there is no projection layer.' },
+  { id: 'fuse', name: 'fuse windows', shape: '(11, 16)', c: 16, h: 1, w: 11, params: 0, origin: 'pool',
+    does: 'Mean over the 5 windows.' },
+  { id: 'avgt', name: 'average time', shape: '(16)', c: 16, h: 1, w: 1, params: 0, origin: 'pool',
+    does: 'Mean over the 11 time steps, leaving 16 features.' },
+  { id: 'cls', name: 'classifier', shape: '(4)', c: 4, h: 1, w: 1, params: 68, origin: 'head',
+    does: 'Linear(16 → 4): one score each for left hand, right hand, feet and tongue.' },
+];
+const ORIGINS = {
+  eegnet: { label: 'Taken from EEGNet', css: '#1B7F79', hex: 0x1B7F79, edge: 0x7FD8D1 },
+  transformer: { label: 'Transformer (Vaswani 2017)', css: '#5B3E96', hex: 0x5B3E96, edge: 0xB9A3EC },
+  pool: { label: 'Pooling and reshaping', css: '#6E7787', hex: 0x6E7787, edge: 0xC3CAD6 },
+  head: { label: 'Our classifier head', css: '#2B3550', hex: 0x2B3550, edge: 0xE8ECF4 },
+  input: { label: 'Input data (outline)', css: '#E8ECF4', hex: 0x9AA4B8, edge: 0xE8ECF4, outline: true },
+};
+const fmt = (n) => n.toLocaleString('en-US');
+
+// Size sweep, protocol v2, three seeds, adaptation on. A and D from the brief; B and C from the repository.
+const SWEEP = [
+  { cfg: 'A', params: 3924, conv: 1456, enc: 2224, pos: 176, head: 68, val: '54.3', test: '53.6' },
+  { cfg: 'B', params: 6148, conv: 1456, enc: 4448, pos: 176, head: 68, val: '53.2', test: '53.5' },
+  { cfg: 'C', params: 12452, conv: 3424, enc: 8544, pos: 352, head: 132, val: '53.1', test: '52.5' },
+  { cfg: 'D', params: 20996, conv: 3424, enc: 17088, pos: 352, head: 132, val: '53.3', test: '52.7' },
+];
+// Configuration A per participant, protocol v2, three seeds, adaptation on (test %). A03 and A02 from the brief.
+const PARTICIPANTS = [['A03', '76.7'], ['A01', '72.2'], ['A08', '65.0'], ['A09', '58.5'], ['A07', '51.6'],
+  ['A06', '45.0'], ['A04', '44.6'], ['A05', '37.6'], ['A02', '31.4']];
+// 22 electrodes, approximate 10-20 grid: [name, lateral degrees (left < 0), anterior degrees]
+const MONTAGE = [['Fz', 0, 36], ['FC3', -36, 18], ['FC1', -18, 18], ['FCz', 0, 18], ['FC2', 18, 18], ['FC4', 36, 18],
+  ['C5', -54, 0], ['C3', -36, 0], ['C1', -18, 0], ['Cz', 0, 0], ['C2', 18, 0], ['C4', 36, 0], ['C6', 54, 0],
+  ['CP3', -36, -18], ['CP1', -18, -18], ['CPz', 0, -18], ['CP2', 18, -18], ['CP4', 36, -18],
+  ['P1', -18, -36], ['Pz', 0, -36], ['P2', 18, -36], ['POz', 0, -54]];
+// One real trial: participant A01, first left-hand trial of session T, band-passed 4–38 Hz,
+// 0.5–4.0 s after the cue, 22 x 875 little-endian int16 in units of 0.1 µV, electrode-major in MONTAGE order.
+const TRIAL_B64 = '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z//E/7v/sv+s/7D/wv/e//j/AwD8/+n/2//b/+v/BgAjAD4AVQBoAHUAeQB0AGUAUAA4AB0AAADl/87/vf+z/6v/pP+c/5f/l/+h/7T/0P/u/wgAGgAkACwANAA8AEAAPgA6AD0ATgBrAIoAngCbAIAAUwAeAOn/u/+X/3//d/9+/5D/ov+t/67/qf+n/6//w//c//H//P/7//X/8v/3/wIACwALAAIA9f/w//n/DgAoADsAQgBBAEEARwBTAFsAWABKADcAJwAcABMACQD///z/BAAYAC4AOQAwABMA6v/F/7D/sf/E/9z/7f/w/+f/2v/Q/8z/yv/F/73/s/+v/7P/wP/P/9//7/8EAB4AOgBQAFoAVABCACwAGAALAAYACAAPABUAGQAZABQADgAJAAgACgAOABIAFQAVABIACgD///P/6v/p//D//P8GAAkAAwD2/+n/4f/j/+////8IAAUA9//k/9X/zv/S/97/8f8EABMAFwAPAAEA8//u//X/BAATABwAHQAYABQAEwAVABkAHgAjACYAJAAcAA8A/P/n/9T/xf+//8P/0f/m//r/CQAPABEAEAAOAAcA+//r/9//3v/r////FQAmADIAOwBAAEEAOwAvAB4ADQD+//H/5f/a/9L/0f/Z/+X/7//w/+r/4f/c/97/6P/1/wEACQAMAAkAAQD4/+z/4v/f/+f//f8gAEUAYwBtAF8APAANAOH/wf+3/9f/t/+P/2f/R/86/0b/bf+l/+T/HwBQAHgAmgC3AMsA0QDGAKsAhwBfADcACgDW/5n/Xf8v/x//Mv9h/5z/0v/2/wYABwABAP3///8HABQAIgAqACcAGwAKAAAABQAaADQAQwA8ACUADwAKAB0APABSAFEAOwAgABAADwAWABUABQDm/8H/o/+Q/4z/k/+i/7v/3P8DACQAMAAgAPn/zf+1/73/5P8YAEQAXABcAEsALgAMAOv/0v/J/9L/6P8AAA4ADQACAPf/8//1//n/+//6//3/CAAdADQAQQA7ACEA/f/h/9v/8P8WADsATQBGACwADwD9//v/AwAIAAEA7P/R/7r/rf+q/6//vP/S//D/EgAuADsANgAjAAwA+P/u/+7/9v8DABEAHQAlACMAFgD8/9v/vf+w/7v/2/8BAB0AJAAWAAQA/P8GABgAIgAaAAMA7v/s////HwA3ADgA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KAArAC8AOgBGAEsAQQApAAkA7P/b/9b/2//k/+z/8f/z//T/9v/5//v/+//5//f/9v/x/+L/x/+l/47/jv+s/9//FQA5AEMANgAhABAADAASABwAIgAiABwAFQAPAAkABAD8//T/6v/f/9X/zv/Q/+D//f8gAD0ASgBHADYAIAAQAAwAGQAwAEQASQA2ABIA6v/O/8X/yv/U/9r/2//c/+P/7//8/wYADQATABkAHAAZAAoA8P/M/6n/kf+N/6H/yP/5/yYARABOAEYALwATAPr/7v/0/wgAHgAoABsA/P/Y/8P/yP/m/xAANQBLAE4AQwAwABoACAD5//D/6f/j/93/2f/d/+r//f8OABYAFQAOAAsADQASABMACwD8/+v/3v/Y/9r/4//y/wEADgAVABcAFwAZAB8AKQAxADMALAAbAAEA4f++/53/hP98/4n/qf/S//v/GQArADcARABVAGUAagBdAD0AEgDp/8v/vP+5/8D/z//j//n/DAAaACUAMgBFAFoAaQBmAE4AJQD3/87/sP+c/5P/k/+f/7b/0//t//v/+P/o/9j/0//f//b/CgASAA0ABAAEABUAMgBPAGAAYABSADwAKAAZABMAEgASAAwA/f/o/9f/0f/d//f/GAAyAD0ANQAeAAEA6v/h/+j/9/8DAAQA9v/f/8X/r/+i/6D/q//A/9r/8P/7//r/8f/n/+D/3//j/+7//v8RAB8AIgAZAA0ACAATACsASABfAGkAZwBcAE4APwAxACUAHgAbABkAFAAKAP7/8f/p/+X/5f/m/+f/6v/u//L/8f/m/9P/uf+g/43/gv+B/4n/mv+0/9T/8/8MAB0AJwArAC4ALgAvADAAMwA2ADkAOQA4ADYAMgAuACwAMAA+AFQAaQBtAFcAJgDq/7f/mv+V/5//rP+3/77/xf/M/9L/2P/h//D/BQAdADAAOQA2ACgAEgD5/+T/2P/X/93/5P/k/+H/4v/u/wgAKgBKAF8AZgBiAFQAPAAaAO//v/+Q/23/Xf9o/5H/1P8jAGoAlACXAHcARgAXAPr/8f/0//r//f/9//3///////v/9v/w/+//8v/2//n/+//+/wMABwAGAP//8v/j/9T/xf+4/7P/vP/X////JwA+AD0AKQARAAIAAAAHAA0AEAARABcAJgA8AE4AUgBEACkAEAACAAMACQAJAPn/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';
+
+/* ======================================================================================
+   Slides: panel text and camera framing. pose: target t, azimuth th, polar angle ph, and the box
+   [[min],[max]] the camera keeps in view (m = share of the view it fills).
+   ====================================================================================== */
+const headlineTable = `
+<table>
+  <caption>Protocol v2 · 3 seeds · test-time adaptation on</caption>
+  <thead><tr><th scope="col">Model</th><th scope="col">Params</th><th scope="col">Val</th><th scope="col">Test</th><th scope="col">κ</th></tr></thead>
+  <tbody>${HEADLINE.map(r => `<tr${r.ours ? ' class="ours"' : ''}><td>${r.name}</td><td>${r.params}</td><td>${r.val}</td><td>${r.test}</td><td>${r.kappa}</td></tr>`).join('')}</tbody>
+</table>`;
+
+const SLIDES = [
+  { id: 'title', label: 'Title', scene: 'head', hud: true, auto: 0.16,
+    pose: { t: [0, -0.08, 0], th: 0.6, ph: 0.98, box: [[-1.0, -1.45, -1.1], [1.0, 1.15, 1.25]], m: 0.74 },
+    aria: 'A low-poly head with 22 electrodes in their 10-20 positions, glowing with a synthetic signal.',
+    html: () => `
+<p class="eyebrow">Final-year project</p>
+<h1>Neural Decoder using EEG &amp; Motor Imagery</h1>
+<p class="lead">Classify four imagined movements — left hand, right hand, feet, tongue — from 22-channel scalp EEG, tested on people the model never trained on.</p>
+${headlineTable}
+<p class="callout"><strong>A tie.</strong> EEGNet is 0.7 ahead on validation, inside our 0.75 threshold. We do not claim to beat it.</p>
+<p class="hint">Press <kbd>&#8594;</kbd> or use the dots below. Press <kbd>?</kbd> for all controls.</p>` },
+
+  { id: 'problem', label: 'The problem', scene: 'problem',
+    pose: { t: [0.45, 2.1, 0], th: 0.4, ph: 1.24, box: [[-1.8, 0, -0.7], [3.6, 4.5, 1.4]] },
+    aria: 'Two bars: CTNet at 82.52 percent on a familiar person and 58.64 percent on a stranger.',
+    html: () => `
+<p class="eyebrow">The problem</p>
+<h2>The stranger is the hard case</h2>
+<p>CTNet reports <strong>82.52%</strong> on a familiar person and <strong>58.64%</strong> on a stranger: a <strong>23.88-point drop</strong>.</p>
+<p>Every number in this project is measured on the stranger: each test participant is someone the model never trained on.</p>
+<p class="note">Chance is 25.0% for four classes.</p>` },
+
+  { id: 'data', label: 'The data', scene: 'trial',
+    pose: { t: [0.3, -0.3, 0], th: 0.45, ph: 0.92, box: [[-7.2, -1.2, -2.8], [8.2, 0.8, 3.0]], m: 0.92 },
+    aria: 'One recorded trial drawn as a surface: 22 electrodes by 875 samples, height is amplitude.',
+    html: () => `
+<p class="eyebrow">The data</p>
+<h2>BCI Competition IV, Dataset 2a</h2>
+<ul class="facts">
+  <li>9 participants, 2 sessions each</li>
+  <li>5,184 trials, four classes</li>
+  <li>22 scalp electrodes at 250 Hz</li>
+  <li>Band-pass 4–38 Hz</li>
+  <li>Window 0.5–4.0 s after the cue = 875 samples</li>
+  <li>Chance = 25.0%</li>
+</ul>
+<p>The surface is one real trial: participant A01's first left-hand trial of session T, band-passed 4–38 Hz. It is 22 electrodes by 875 samples; height is amplitude and colour its sign (violet above zero, teal below).</p>
+<p class="hint">Drag to rotate · scroll to zoom · right-drag to pan</p>` },
+
+  { id: 'prep', label: 'Preprocessing', scene: 'pipeline',
+    pose: { t: [0, 0.15, 0], th: 0.16, ph: 1.2, box: [[-7.6, -1.0, -0.5], [7.6, 1.5, 0.6]], m: 0.92 },
+    aria: 'Eight preprocessing steps as a pipeline: five cached, three per fold.',
+    html: () => `
+<p class="eyebrow">Preprocessing</p>
+<h2>Eight steps: five cached, three per fold</h2>
+<p>Steps that do not depend on who is held out run once and are cached. The three that do run inside every fold.</p>
+<h3>Once, cached</h3>
+<ol>
+  <li>Select the 22 EEG channels</li>
+  <li>Band-pass 4–38 Hz</li>
+  <li>Cut 0.5–4.0 s after the cue: 875 samples</li>
+  <li>Flag artefact trials (100 µV peak-to-peak)</li>
+  <li>Cache each participant</li>
+</ol>
+<h3>Per fold</h3>
+<ol start="6">
+  <li>Euclidean alignment, per session</li>
+  <li>Standardise with training-split statistics</li>
+  <li>Augment the training split (segmentation and reconstruction)</li>
+</ol>` },
+
+  { id: 'arch', label: 'The architecture', scene: 'arch', arch: true,
+    pose: { t: [0, 0, 0], th: -0.3, ph: 1.08, box: [[-8.9, -1.2, -1.9], [8.9, 1.3, 1.9]], m: 0.93 },
+    poseB: { t: [0, 1.35, 0], th: -0.2, ph: 1.3, box: [[-7.9, -1.7, -0.5], [7.9, 4.9, 0.5]], m: 0.9 },
+    aria: 'HCT-Net config A drawn as sixteen blocks, one per stage, with particles flowing from input to classifier.',
+    html: () => `
+<p class="eyebrow">The architecture</p>
+<h2>HCT-Net config A — 3,924 parameters</h2>
+<p>An EEGNet convolutional front end feeds one Transformer encoder layer that runs over five overlapping windows. Block sizes follow the log of each tensor's dimensions; the flow narrows where 22 electrodes become 1.</p>
+<ul class="key" aria-label="Colour key">
+  ${['eegnet', 'transformer', 'pool', 'head', 'input'].map(k => `<li><span class="sw${ORIGINS[k].outline ? ' outline' : ''}" style="background:${ORIGINS[k].css}"></span>${ORIGINS[k].label}</li>`).join('')}
+</ul>
+<button class="toggle" id="budgetBtn" type="button" aria-pressed="false"><span class="box" aria-hidden="true"></span>Show parameter budget <kbd>B</kbd></button>
+<p class="budget">Convolutional block 1,456 · encoder 2,224 · positional 176 · head 68 = 3,924</p>
+<div class="detail" id="detail" aria-live="polite"></div>
+<ul class="layers" aria-label="Layers">
+  ${STAGES.map(s => `<li><button class="layer" type="button" data-id="${s.id}" aria-pressed="false"><span class="sw${ORIGINS[s.origin].outline ? ' outline' : ''}" style="background:${ORIGINS[s.origin].css}"></span><span class="nm">${s.name}</span><span class="pc">${s.params ? fmt(s.params) : '—'}</span></button></li>`).join('')}
+</ul>
+<p class="hint">Drag to orbit · scroll to zoom · right-drag to pan</p>` },
+
+  { id: 'protocol', label: 'The protocol', scene: 'protocol',
+    pose: { t: [-0.1, -0.25, 0], th: 0.15, ph: 1.32, box: [[-5.1, -2.9, -0.7], [5.7, 2.1, 0.7]] },
+    aria: 'Three participant groups around the model: train, validate and test. The test participant lights up once per fold.',
+    html: () => `
+<p class="eyebrow">The protocol</p>
+<h2>Leave one subject out</h2>
+<p>Nine folds. In each, 7 participants train the model, 1 validates it and 1 is the test.</p>
+<ul class="facts">
+  <li><span class="sw" style="background:#9AA4B8"></span><strong>Train</strong>: 7 participants, used throughout</li>
+  <li><span class="sw" style="background:#1B7F79"></span><strong>Validate</strong>: 1 participant; every keep-or-reject decision is made here</li>
+  <li><span class="sw" style="background:#5B3E96"></span><strong>Test</strong>: 1 participant, touched once</li>
+</ul>
+<p class="note">A configuration is judged on the validation participant only. The test participant is scored once and never steers a choice.</p>` },
+
+  { id: 'interventions', label: 'Five interventions', scene: 'interventions',
+    pose: { t: [-0.35, 1.75, 0], th: 0.1, ph: 1.24, box: [[-6.5, -0.9, -1.5], [5.9, 4.5, 1.7]] },
+    aria: 'Five interventions: three refuted, shown in warm grey, and two that worked, shown in teal.',
+    html: () => `
+<p class="eyebrow">The central finding</p>
+<h2>Five interventions, one protocol</h2>
+<h3 class="warmtxt">Refuted — acts on the model</h3>
+<ul class="iv">
+  <li><strong>More capacity</strong>, 3,924 → 20,996 params: 54.3 → 53.3. Nothing. <span class="ctx">v2 · validation</span></li>
+  <li><strong>Remove the attention block</strong>: 46.9 → 48.8. Better without it. <span class="ctx">v1 · test</span></li>
+  <li><strong>More adaptable norm layers</strong>, 3 → 7: 53.6 → 49.3, worse in 9/9, p = 0.0039. <span class="ctx">v2 · validation</span></li>
+</ul>
+<h3 class="tealtxt">Worked — acts on a distribution</h3>
+<ul class="iv">
+  <li><strong>Euclidean alignment per session</strong>: +5.5 points cross-subject. <span class="ctx">FBCSP · v1 · test</span></li>
+  <li><strong>Re-estimate BN statistics on the new person</strong>: +3.5 points, no labels, no gradients. <span class="ctx">v2 · validation</span></li>
+</ul>
+<p class="claim">Every point of cross-subject gain came from normalising distributions. None came from the model.</p>` },
+
+  { id: 'sweep', label: 'The size sweep', scene: 'sweep',
+    pose: { t: [0, 2.35, 0], th: 0.14, ph: 1.25, box: [[-6.4, -0.6, -0.6], [6.7, 5.5, 0.9]] },
+    aria: 'Two small charts: parameters grow five-fold from config A to D while test accuracy stays level.',
+    html: () => `
+<p class="eyebrow">The size sweep</p>
+<h2>5× the parameters, one point of accuracy</h2>
+<p>Four sizes of HCT-Net, protocol v2, three seeds each, adaptation on. Left: parameters, coloured by block. Right: test accuracy.</p>
+<table>
+  <thead><tr><th scope="col">Config</th><th scope="col">Params</th><th scope="col">Val</th><th scope="col">Test</th></tr></thead>
+  <tbody>${SWEEP.map(s => `<tr${s.cfg === 'A' ? ' class="ours"' : ''}><td>${s.cfg}</td><td>${fmt(s.params)}</td><td>${s.val}%</td><td>${s.test}%</td></tr>`).join('')}</tbody>
+</table>
+<p class="note">A and D are in the headline table; B and C come from the project's result logs.</p>` },
+
+  { id: 'participants', label: 'Per participant', scene: 'participants',
+    pose: { t: [0.55, 2.3, 0], th: 0.22, ph: 1.24, box: [[-5.3, -0.4, -0.6], [7.0, 4.9, 0.9]] },
+    aria: 'Nine bars, one per participant, from A03 at 76.7 percent down to A02 at 31.4 percent.',
+    html: () => `
+<p class="eyebrow">Per participant</p>
+<h2>Same model, nine people: 76.7% to 31.4%</h2>
+<p>HCT-Net config A on each test participant, protocol v2, three seeds, adaptation on. The mean is 53.6%; chance is 25.0%.</p>
+<table>
+  <thead><tr><th scope="col">Participant</th><th scope="col">Test</th></tr></thead>
+  <tbody>${PARTICIPANTS.map(([p, a]) => `<tr><td>${p}</td><td>${a}%</td></tr>`).join('')}</tbody>
+</table>` },
+
+  { id: 'close', label: 'Close', scene: 'close', auto: 0.1,
+    pose: { t: [0, -0.1, 0], th: 0.2, ph: 1.22, box: [[-3.6, -2.7, -2.4], [3.6, 2.6, 2.4]], m: 0.84 },
+    aria: 'An illustration: nine distributions, one per person, drifting into alignment.',
+    html: () => `
+<p class="eyebrow">Conclusion</p>
+<p class="bigclaim">Every point of cross-subject gain came from normalising distributions, none from the model.</p>
+<p>HCT-Net config A, with 3,924 parameters, ties EEGNet on people it never trained on: 53.6% against 54.3% test, κ 0.381 against 0.391.</p>
+<p class="note">The 3D view is an illustration: nine distributions, one per person, pulled into alignment.</p>` },
+];
+
+/* ======================================================================================
+   Navigation, panel, help — these work even without 3D.
+   ====================================================================================== */
+const $ = (s, el = document) => el.querySelector(s);
+const panelContent = $('#panelContent');
+const dotsEl = $('#dots');
+const counterEl = $('#counter');
+const hud = $('#hud');
+const hero = $('#hero');
+const help = $('#help');
+const helpBtn = $('#helpBtn');
+const canvas = $('#gl');
+const RM = window.matchMedia('(prefers-reduced-motion: reduce)');
+let reduced = RM.matches;
+let current = -1;
+let gl3d = null;            // set once the 3D engine is running
+const EMPTY_DETAIL = '<p class="empty">Click a block, or Tab to the list below, to see its shape, parameters, what it does and where it came from. <kbd>Esc</kbd> shows all blocks again.</p>';
+
+SLIDES.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.setAttribute('aria-label', `Slide ${i + 1}: ${s.label}`);
+  b.addEventListener('click', () => go(i));
+  dotsEl.append(b);
+});
+
+function go(i) {
+  i = Math.max(0, Math.min(SLIDES.length - 1, i));
+  if (i === current) return;
+  current = i;
+  const s = SLIDES[i];
+  panelContent.innerHTML = s.html();
+  panelContent.scrollTop = 0;
+  [...dotsEl.children].forEach((d, k) => { if (k === i) d.setAttribute('aria-current', 'step'); else d.removeAttribute('aria-current'); });
+  counterEl.textContent = `${String(i + 1).padStart(2, '0')} / ${SLIDES.length}`;
+  canvas.setAttribute('aria-label', '3D view: ' + s.aria);
+  hud.hidden = hero.hidden = !(s.hud && gl3d);
+  if (gl3d) gl3d.show(i);
+  if (s.arch) wireArchPanel();
+  document.title = `${s.label} · Neural Decoder using EEG & Motor Imagery`;
+}
+const next = () => go(current + 1);
+const prev = () => go(current - 1);
+$('#prevBtn').addEventListener('click', prev);
+$('#nextBtn').addEventListener('click', next);
+
+function openHelp() { help.hidden = false; $('#helpClose').focus(); }
+function closeHelp() { help.hidden = true; helpBtn.focus(); }
+helpBtn.addEventListener('click', () => (help.hidden ? openHelp() : closeHelp()));
+$('#helpClose').addEventListener('click', closeHelp);
+help.addEventListener('click', (e) => { if (e.target === help) closeHelp(); });
+
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key;
+  if (!help.hidden) {
+    if (k === 'Escape' || k === '?') { e.preventDefault(); closeHelp(); }
+    return;
+  }
+  const onButton = e.target instanceof HTMLButtonElement;
+  if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || (k === ' ' && !onButton)) { e.preventDefault(); next(); }
+  else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp') { e.preventDefault(); prev(); }
+  else if (k === 'Home') { e.preventDefault(); go(0); }
+  else if (k === 'End') { e.preventDefault(); go(SLIDES.length - 1); }
+  else if (k === '?') { e.preventDefault(); openHelp(); }
+  else if (k === 'Escape') { if (gl3d && SLIDES[current].arch) gl3d.deselect(); }
+  else if ((k === 'b' || k === 'B') && SLIDES[current].arch && gl3d) { gl3d.toggleBudget(); }
+  else if (/^[0-9]$/.test(k)) { go(k === '0' ? 9 : Number(k) - 1); }
+});
+
+// Scroll over the text panel: scroll its content first, then change slide.
+let wheelAcc = 0, wheelLock = 0;
+panelContent.addEventListener('wheel', (e) => {
+  const el = panelContent;
+  const atTop = el.scrollTop <= 0;
+  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+  if ((e.deltaY > 0 && !atBottom) || (e.deltaY < 0 && !atTop)) { wheelAcc = 0; return; }
+  e.preventDefault();
+  const now = performance.now();
+  if (now < wheelLock) return;
+  wheelAcc += e.deltaY;
+  if (Math.abs(wheelAcc) > 40) {
+    if (wheelAcc > 0) next(); else prev();
+    wheelAcc = 0;
+    wheelLock = now + 700;
+  }
+}, { passive: false });
+
+// Slide 5 panel: layer list, budget toggle, detail card.
+function wireArchPanel() {
+  const btn = $('#budgetBtn');
+  panelContent.querySelectorAll('.layer').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.id;
+    if (gl3d) gl3d.select(gl3d.selected() === id ? null : id);
+    else renderDetail(b.getAttribute('aria-pressed') === 'true' ? null : id);
+  }));
+  if (!gl3d) { btn.disabled = true; renderDetail(null); return; }
+  btn.addEventListener('click', () => gl3d.toggleBudget());
+  syncBudgetButton();
+  renderDetail(gl3d.selected());
+}
+function syncBudgetButton() {
+  const btn = $('#budgetBtn');
+  if (!btn || !gl3d) return;
+  const on = gl3d.budget();
+  btn.setAttribute('aria-pressed', String(on));
+  btn.querySelector('.box').textContent = on ? '✓' : '';
+}
+function renderDetail(id) {
+  const box = $('#detail');
+  if (!box) return;
+  panelContent.querySelectorAll('.layer').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+  if (!id) { box.innerHTML = EMPTY_DETAIL; return; }
+  const s = STAGES.find(x => x.id === id);
+  const o = ORIGINS[s.origin];
+  box.innerHTML = `<h3>${s.name}</h3>
+<dl>
+  <dt>Output shape</dt><dd>${s.shape}</dd>
+  <dt>Parameters</dt><dd>${s.params ? fmt(s.params) : '—'}</dd>
+  <dt>What it does</dt><dd>${s.does}</dd>
+  <dt>Where it came from</dt><dd><span class="sw${o.outline ? ' outline' : ''}" style="background:${o.css}"></span>${o.label.replace(' (outline)', '')}</dd>
+</dl>`;
+}
+
+// Head HUD (slide 1)
+hud.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  hud.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  if (gl3d) gl3d.setImagery(b.dataset.mode);
+}));
+
+/* ======================================================================================
+   3D engine
+   ====================================================================================== */
+let THREE = null;
+try { THREE = await import('three'); } catch (err) { console.warn('Three.js could not be loaded:', err); }
+if (THREE) {
+  try { gl3d = startEngine(THREE); } catch (err) { console.warn('3D view unavailable:', err); gl3d = null; }
+}
+if (!gl3d) { $('#nogl').hidden = false; canvas.style.display = 'none'; }
+go(0);
+RM.addEventListener?.('change', (e) => { reduced = e.matches; });
+window.deck = { go, next, prev, stats: () => (gl3d ? gl3d.stats() : null) };
+
+function startEngine(THREE) {
+  const BG = 0x131C2E;
+  const C = { muted: 0x9AA4B8, violet: 0x5B3E96, teal: 0x1B7F79, tealLift: 0x2BB3AA, warm: 0x9B9289, slate: 0x4A566E };
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const ease = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
+  const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), S3 = new THREE.Vector3(), P3 = new THREE.Vector3(), COL = new THREE.Color();
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  if (!renderer.capabilities.isWebGL2) throw new Error('WebGL 2 is required');
+  renderer.setClearColor(BG, 1);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
+
+  /* ---------------- framing: the distance at which a pose's box fills the visible view ---------------- */
+  const fitCam = new THREE.PerspectiveCamera();
+  const fT = new THREE.Vector3(), fR = new THREE.Vector3(), fU = new THREE.Vector3(), fB = new THREE.Vector3(), fq = new THREE.Vector3();
+  function fitDistance(p, av) {
+    fT.set(...p.t);
+    fitCam.position.set(fT.x + Math.sin(p.ph) * Math.sin(p.th), fT.y + Math.cos(p.ph), fT.z + Math.sin(p.ph) * Math.cos(p.th));
+    fitCam.lookAt(fT); fitCam.updateMatrixWorld();
+    fR.setFromMatrixColumn(fitCam.matrixWorld, 0); fU.setFromMatrixColumn(fitCam.matrixWorld, 1); fB.setFromMatrixColumn(fitCam.matrixWorld, 2);
+    const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), m = p.m || 0.88;
+    const [a, b] = p.box;
+    let r = 1;
+    for (let i = 0; i < 8; i++) {
+      fq.set(i & 1 ? b[0] : a[0], i & 2 ? b[1] : a[1], i & 4 ? b[2] : a[2]).sub(fT);
+      const f = -fq.dot(fB);                      // how far behind the target this corner lies
+      r = Math.max(r, Math.abs(fq.dot(fR)) / (m * t * av) - f, Math.abs(fq.dot(fU)) / (m * t) - f);
+    }
+    return r;
+  }
+
+  /* ---------------- orbit controls (no external dependency) ---------------- */
+  class Orbit {
+    constructor(cam, el) {
+      this.cam = cam; this.el = el;
+      this.target = new THREE.Vector3(); this.gTarget = new THREE.Vector3();
+      this.th = 0; this.ph = 1.2; this.gth = 0; this.gph = 1.2;
+      this.base = 10; this.gbase = 10; this.zoom = 1; this.gzoom = 1;
+      this.pose = null; this.auto = 0; this.touched = false;
+      this.av = 1.13; this.vh = 1;                // aspect and height (px) of the visible part of the canvas
+      this.speed = 10; this.pointers = new Map(); this.mode = null;
+      this.right = new THREE.Vector3(); this.up = new THREE.Vector3();
+      el.addEventListener('pointerdown', (e) => this.down(e));
+      el.addEventListener('pointermove', (e) => this.move(e));
+      el.addEventListener('pointerup', (e) => this.release(e));
+      el.addEventListener('pointercancel', (e) => this.release(e));
+      el.addEventListener('wheel', (e) => { e.preventDefault(); this.gzoom = clamp(this.gzoom * Math.exp(e.deltaY * 0.0012), 0.3, 2.6); this.speed = 10; this.touched = true; }, { passive: false });
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+    down(e) {
+      this.el.setPointerCapture(e.pointerId);
+      this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this.pointers.size === 1) this.mode = (e.button === 2 || e.shiftKey) ? 'pan' : 'rotate';
+      else if (this.pointers.size === 2) { this.mode = 'pinch'; this.pd = this.pinchDist(); this.pm = this.pinchMid(); }
+      this.speed = 10; this.touched = true;
+      this.el.classList.add('dragging');
+    }
+    move(e) {
+      const p = this.pointers.get(e.pointerId);
+      if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+      if (this.mode === 'rotate') { this.gth -= dx * 0.0065; this.gph = clamp(this.gph - dy * 0.0065, 0.12, Math.PI - 0.12); }
+      else if (this.mode === 'pan') this.pan(dx, dy);
+      else if (this.mode === 'pinch' && this.pointers.size === 2) {
+        const d = this.pinchDist(), m = this.pinchMid();
+        if (d > 0) this.gzoom = clamp(this.gzoom * this.pd / d, 0.3, 2.6);
+        this.pan(m.x - this.pm.x, m.y - this.pm.y);
+        this.pd = d; this.pm = m;
+      }
+    }
+    release(e) {
+      this.pointers.delete(e.pointerId);
+      this.mode = this.pointers.size === 1 ? 'rotate' : null;
+      if (!this.pointers.size) this.el.classList.remove('dragging');
+    }
+    pinchDist() { const [a, b] = [...this.pointers.values()]; return Math.hypot(a.x - b.x, a.y - b.y); }
+    pinchMid() { const [a, b] = [...this.pointers.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
+    pan(dx, dy) {
+      const s = 2 * this.base * this.zoom * Math.tan(THREE.MathUtils.degToRad(this.cam.fov / 2)) / Math.max(1, this.vh);
+      this.right.setFromMatrixColumn(this.cam.matrix, 0);
+      this.up.setFromMatrixColumn(this.cam.matrix, 1);
+      this.gTarget.addScaledVector(this.right, -dx * s).addScaledVector(this.up, dy * s);
+    }
+    setPose(p, instant) {
+      this.pose = p; this.touched = false;
+      this.gTarget.set(...p.t);
+      let th = p.th;
+      while (th - this.th > Math.PI) th -= 2 * Math.PI;
+      while (th - this.th < -Math.PI) th += 2 * Math.PI;
+      this.gth = th; this.gph = p.ph; this.gbase = fitDistance(p, this.av); this.gzoom = 1;
+      this.speed = 3.2;
+      if (instant) { this.target.copy(this.gTarget); this.th = this.gth; this.ph = this.gph; this.base = this.gbase; this.zoom = 1; }
+    }
+    refit() { if (this.pose) { this.gbase = fitDistance(this.pose, this.av); this.base = this.gbase; } }
+    update(dt) {
+      if (this.auto && !reduced && !this.touched && !this.pointers.size) this.gth += this.auto * dt;
+      const k = 1 - Math.exp(-dt * this.speed);
+      this.base += (this.gbase - this.base) * k; this.zoom += (this.gzoom - this.zoom) * k;
+      this.th += (this.gth - this.th) * k; this.ph += (this.gph - this.ph) * k;
+      this.target.lerp(this.gTarget, k);
+      const sp = Math.sin(this.ph), d = this.base * this.zoom;
+      this.cam.position.set(this.target.x + d * sp * Math.sin(this.th), this.target.y + d * Math.cos(this.ph), this.target.z + d * sp * Math.cos(this.th));
+      this.cam.lookAt(this.target);
+      this.cam.updateMatrixWorld();
+    }
+  }
+  const orbit = new Orbit(camera, canvas);
+
+  /* ---------------- shared helpers ---------------- */
+  const labelRoot = $('#labels');
+  const V = new THREE.Vector3();
+  function makeLayer(dense) { const d = document.createElement('div'); d.className = dense ? 'set dense' : 'set'; d.style.display = 'none'; labelRoot.append(d); return d; }
+  function label(layer, html, cls, pos, anchor = 'above') {
+    const el = document.createElement('div');
+    el.className = 'lbl ' + (cls || '');
+    el.innerHTML = html;
+    layer.append(el);
+    return { el, pos: pos ? pos.clone() : new THREE.Vector3(), get: null, show: true, anchor, vis: null };
+  }
+  const ANCHOR = { above: 'translate(-50%, calc(-100% - 4px))', below: 'translate(-50%, 4px)', belowStart: 'translate(-14px, 4px)', left: 'translate(calc(-100% - 6px), -50%)', right: 'translate(6px, -50%)', center: 'translate(-50%, -50%)' };
+  function placeLabels(list) {
+    const W = window.innerWidth, H = window.innerHeight;
+    for (const L of list) {
+      if (L.get) L.get(V); else V.copy(L.pos);
+      V.project(camera);
+      const vis = L.show && V.z > -1 && V.z < 1 && Math.abs(V.x) < 1.2 && Math.abs(V.y) < 1.2;
+      if (vis !== L.vis) { L.el.style.display = vis ? '' : 'none'; L.vis = vis; }
+      if (!vis) continue;
+      const x = (V.x + 1) * 0.5 * W, y = (1 - V.y) * 0.5 * H;
+      L.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) ${ANCHOR[L.anchor]}`;
+    }
+  }
+  function baseScene(near, far) {
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(BG);
+    scene.fog = new THREE.Fog(BG, near, far);
+    const key = new THREE.DirectionalLight(0xffffff, 2.3); key.position.set(6, 10, 8); scene.add(key);
+    const rim = new THREE.DirectionalLight(0x9DB4FF, 1.5); rim.position.set(-8, 5, -9); scene.add(rim);
+    return scene;
+  }
+  function mat(color, opts = {}) {
+    const op = opts.opacity ?? 1;
+    return new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: opts.ei ?? 0.32, roughness: opts.rough ?? 0.58, metalness: 0,
+      transparent: true, opacity: op, depthWrite: op > 0.5, flatShading: !!opts.flat });
+  }
+  const unitBox = new THREE.BoxGeometry(1, 1, 1);
+  const unitEdges = new THREE.EdgesGeometry(unitBox);
+  const barGeo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+  const barEdges = new THREE.EdgesGeometry(barGeo);
+  function box(color, edge, opts = {}) {
+    const m = new THREE.Mesh(opts.bar ? barGeo : unitBox, mat(color, opts));
+    const e = new THREE.LineSegments(opts.bar ? barEdges : unitEdges, new THREE.LineBasicMaterial({ color: edge ?? color, transparent: true, opacity: opts.edgeOpacity ?? 0.55 }));
+    m.add(e); m.userData.edges = e;
+    return m;
+  }
+  function line(points, color, opacity = 0.6, dashed = false) {
+    const g = new THREE.BufferGeometry().setFromPoints(points);
+    const m = dashed ? new THREE.LineDashedMaterial({ color, transparent: true, opacity, dashSize: 0.16, gapSize: 0.11 }) : new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+    const l = new THREE.Line(g, m);
+    if (dashed) l.computeLineDistances();
+    return l;
+  }
+  function floor(scene, w, d, cx = 0, cz = 0, y = 0) {      // a w x d grid with 1-unit cells, centred at (cx, cz)
+    const x0 = cx - w / 2, x1 = cx + w / 2, z0 = cz - d / 2, z1 = cz + d / 2, p = [];
+    for (let x = Math.ceil(x0 + 0.01); x < x1 - 0.01; x++) p.push(x, y, z0, x, y, z1);
+    for (let z = Math.ceil(z0 + 0.01); z < z1 - 0.01; z++) p.push(x0, y, z, x1, y, z);
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+    scene.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x2A3650, transparent: true, opacity: 0.8 })));
+    scene.add(line([new THREE.Vector3(x0, y, z0), new THREE.Vector3(x1, y, z0), new THREE.Vector3(x1, y, z1), new THREE.Vector3(x0, y, z1), new THREE.Vector3(x0, y, z0)], 0x3E4B68, 0.9));
+  }
+  function glowTexture() {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  }
+  function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+  function grow(bars, t0, now, dur = 1.2) {         // bars rise from the floor; stacked segments rise with them
+    const p = reduced ? 1 : ease((now - t0) / dur);
+    for (const b of bars) {
+      b.scale.y = Math.max(1e-4, b.userData.h * p);
+      if (b.userData.y0 !== undefined) b.position.y = b.userData.y0 * p;
+    }
+  }
+  const topBack = (v, m) => v.set(m.position.x, m.position.y + m.scale.y, m.position.z - m.scale.z / 2);   // for bars
+
+  /* ======================================================================
+     Scene: head with the 22-electrode montage (slide 1)
+     ====================================================================== */
+  function buildHead() {
+    const scene = baseScene(3.4, 10);
+    const layer = makeLayer();
+    const R = new THREE.Vector3(0.9, 1.0, 1.08);
+    const skin = new THREE.MeshStandardMaterial({ color: 0x2B3858, emissive: 0x18223C, emissiveIntensity: 1, roughness: 0.9, metalness: 0, flatShading: true });
+    const hg0 = new THREE.IcosahedronGeometry(1, 3), pa = hg0.attributes.position;
+    for (let i = 0; i < pa.count; i++) {            // an ellipsoid with a narrower jaw and neck line
+      const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), low = Math.max(0, -y);
+      pa.setXYZ(i, x * R.x * (1 - 0.2 * low * low), y * R.y, z * R.z * (1 - (z < 0 ? 0.3 : 0.1) * low * low));
+    }
+    hg0.computeVertexNormals();
+    scene.add(new THREE.Mesh(hg0, skin));
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.42, 0.6, 7, 1, true), skin);
+    neck.position.set(0, -1.12, -0.12); scene.add(neck);
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.24, 3), skin);
+    nose.rotation.x = Math.PI / 2; nose.position.set(0, -0.1, 1.1); scene.add(nose);
+    const earGeo = new THREE.IcosahedronGeometry(0.17, 0); earGeo.scale(0.38, 1, 0.62);
+    for (const s of [-1, 1]) { const ear = new THREE.Mesh(earGeo, skin); ear.position.set(s * 0.88, -0.1, 0); scene.add(ear); }
+    const pts = MONTAGE.map(([, x, y]) => {
+      const th = THREE.MathUtils.degToRad(Math.hypot(x, y)), az = Math.atan2(x, y);
+      return new THREE.Vector3(Math.sin(th) * Math.sin(az) * R.x, Math.cos(th) * R.y, Math.sin(th) * Math.cos(az) * R.z).multiplyScalar(1.025);
+    });
+    const n = pts.length;
+    const dots = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.046, 1), new THREE.MeshBasicMaterial({ color: 0xffffff }), n);
+    pts.forEach((p, i) => { M4.makeTranslation(p.x, p.y, p.z); dots.setMatrixAt(i, M4); dots.setColorAt(i, COL.setHex(C.tealLift)); });
+    dots.instanceMatrix.needsUpdate = true; dots.frustumCulled = false; scene.add(dots);
+    const hg = new THREE.BufferGeometry();
+    hg.setAttribute('position', new THREE.Float32BufferAttribute(pts.flatMap(p => [p.x, p.y, p.z]), 3));
+    const hc = new Float32Array(n * 3); hg.setAttribute('color', new THREE.BufferAttribute(hc, 3));
+    const halos = new THREE.Points(hg, new THREE.PointsMaterial({ size: 0.34, map: glowTexture(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+    halos.frustumCulled = false; scene.add(halos);
+    const labels = ['C3', 'Cz', 'C4'].map(nm => label(layer, nm, 'ann', pts[MONTAGE.findIndex(m => m[0] === nm)].clone().multiplyScalar(1.1)));
+    const r = rng(7);
+    const ph = MONTAGE.map(() => ({ a: r() * 6.283, f: 0.35 + r() * 0.25, b: r() * 6.283 }));   // 0.35–0.6 Hz: slow, no flicker
+    const dim = new Float32Array(n);
+    const glow = new THREE.Color(0x7FE3D9), low = new THREE.Color(0x24304A);
+    let mode = 'auto', shown = '';
+    const stateText = { rest: 'Rest: both sides glow alike', left: 'Imagining the left hand: the right side (C4) dims', right: 'Imagining the right hand: the left side (C3) dims' };
+    return {
+      scene, layer, labels,
+      setImagery(m) { mode = m; },
+      update(dt, t) {
+        let st = mode;
+        if (mode === 'auto') { const c = t % 13; st = reduced ? 'rest' : c < 3 ? 'rest' : c < 7 ? 'left' : c < 9 ? 'rest' : 'right'; }
+        if (st !== shown) { shown = st; $('#hudState').textContent = stateText[st]; }
+        const k = reduced ? 1 : 1 - Math.exp(-dt * 2.5);
+        for (let i = 0; i < n; i++) {
+          const x = MONTAGE[i][1];
+          const target = st === 'left' ? clamp(x / 36, 0, 1) : st === 'right' ? clamp(-x / 36, 0, 1) : 0;
+          dim[i] += (target - dim[i]) * k;
+          const osc = reduced ? 0.78 : 0.5 + 0.5 * (0.5 + 0.5 * Math.sin(6.283 * ph[i].f * t + ph[i].a)) * (0.8 + 0.2 * Math.sin(0.7 * t + ph[i].b));
+          const I = clamp(osc * (1 - 0.82 * dim[i]), 0.08, 1);
+          COL.copy(low).lerp(glow, I);
+          dots.setColorAt(i, COL);
+          hc[i * 3] = COL.r * I; hc[i * 3 + 1] = COL.g * I; hc[i * 3 + 2] = COL.b * I;
+        }
+        dots.instanceColor.needsUpdate = true; hg.attributes.color.needsUpdate = true;
+      },
+    };
+  }
+
+  /* ======================================================================
+     Scene: the problem, two bars (slide 2)
+     ====================================================================== */
+  function buildProblem() {
+    const scene = baseScene(8, 32);
+    const layer = makeLayer();
+    floor(scene, 6, 3.2);
+    const k = 0.05, W = 1.1, topF = 82.52 * k, topS = 58.64 * k, cy = 25 * k;
+    const fam = box(C.muted, 0xE8ECF4, { bar: true, ei: 0.22 }); fam.position.set(-1.1, 0, 0); fam.scale.set(W, 1e-4, W); fam.userData.h = topF;
+    const str = box(C.violet, 0xB9A3EC, { bar: true, ei: 0.55 }); str.position.set(1.1, 0, 0); str.scale.set(W, 1e-4, W); str.userData.h = topS;
+    fam.userData.tip = '<b>Familiar person</b><br>CTNet reports 82.52%';
+    str.userData.tip = '<b>Stranger</b><br>CTNet reports 58.64%';
+    scene.add(fam, str);
+    scene.add(line([new THREE.Vector3(-2.0, cy, W / 2 + 0.1), new THREE.Vector3(2.0, cy, W / 2 + 0.1)], 0xE8ECF4, 0.55, true));
+    const ref = line([new THREE.Vector3(-0.55, topF, 0), new THREE.Vector3(2.05, topF, 0)], 0xE8ECF4, 0.55, true);
+    const drop = line([new THREE.Vector3(2.05, topF, 0), new THREE.Vector3(2.05, topS, 0), new THREE.Vector3(1.65, topS, 0)], 0xE8ECF4, 0.9);
+    scene.add(ref, drop);
+    const labels = [
+      label(layer, '82.52%', 'value big'), label(layer, '58.64%', 'value big'),
+      label(layer, 'familiar person', 'small', new THREE.Vector3(-1.1, 0, W / 2 + 0.15), 'below'),
+      label(layer, 'stranger', 'small', new THREE.Vector3(1.1, 0, W / 2 + 0.15), 'below'),
+      label(layer, '23.88-point drop', 'value', new THREE.Vector3(2.15, (topF + topS) / 2, 0), 'right'),
+      label(layer, 'chance 25.0%', 'small', new THREE.Vector3(2.05, cy, W / 2 + 0.1), 'right'),
+      label(layer, 'CTNet, published figures', 'tag', new THREE.Vector3(0, 0, 1.45), 'below'),
+    ];
+    labels[0].get = (v) => topBack(v, fam);
+    labels[1].get = (v) => topBack(v, str);
+    let t0 = 0;
+    return {
+      scene, layer, labels, pickables: [fam, str],
+      enter(t) { t0 = t; },
+      update(dt, t) {
+        grow([fam, str], t0, t);
+        const done = reduced || t - t0 > 1.15;
+        ref.visible = drop.visible = done; labels[4].show = done;
+      },
+    };
+  }
+
+  /* ======================================================================
+     Scene: one trial as a 22 x 875 surface (slide 3)
+     ====================================================================== */
+  function buildTrial() {
+    const scene = baseScene(12, 46);
+    const layer = makeLayer();
+    const raw = Uint8Array.from(atob(TRIAL_B64), ch => ch.charCodeAt(0));
+    const NE = 22, NS = 875, step = 2, cols = Math.ceil(NS / step), rows = NE;
+    const dv = new DataView(raw.buffer);
+    const data = Int16Array.from({ length: NE * NS }, (_, i) => dv.getInt16(2 * i, true));   // 22 x 875, 0.1 µV
+    const X0 = -7, X1 = 7, Z0 = 2.7, Z1 = -2.7, yk = 0.0028, base = -1.1;
+    const pos = new Float32Array(rows * cols * 3), col = new Float32Array(rows * cols * 3);
+    const neg = new THREE.Color(C.tealLift), mid = new THREE.Color(0x34405A), posC = new THREE.Color(0xA58BE0);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const v = data[r * NS + Math.min(NS - 1, c * step)], i = (r * cols + c) * 3;
+      pos[i] = X0 + (X1 - X0) * c / (cols - 1); pos[i + 1] = v * yk; pos[i + 2] = Z0 + (Z1 - Z0) * r / (rows - 1);
+      const u = clamp(v / 160, -1, 1);
+      COL.copy(mid).lerp(u < 0 ? neg : posC, Math.abs(u));
+      col[i] = COL.r; col[i + 1] = COL.g; col[i + 2] = COL.b;
+    }
+    const idx = [];
+    for (let r = 0; r < rows - 1; r++) for (let c = 0; c < cols - 1; c++) {
+      const a = r * cols + c, b = a + 1, d = a + cols, e = d + 1;
+      idx.push(a, d, b, b, d, e);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    g.setIndex(idx); g.computeVertexNormals();
+    scene.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.75, metalness: 0, emissive: 0x0E1526, emissiveIntensity: 1 })));
+    for (let r = 0; r < rows; r++) {                  // one trace per electrode, drawn on the surface
+      const p = [];
+      for (let c = 0; c < cols; c++) { const i = (r * cols + c) * 3; p.push(new THREE.Vector3(pos[i], pos[i + 1] + 0.01, pos[i + 2])); }
+      scene.add(line(p, 0xE8ECF4, 0.16));
+    }
+    scene.add(line([new THREE.Vector3(X0, base, Z0), new THREE.Vector3(X1, base, Z0), new THREE.Vector3(X1, base, Z1), new THREE.Vector3(X0, base, Z1), new THREE.Vector3(X0, base, Z0)], 0x9AA4B8, 0.35));
+    const labels = [
+      label(layer, '0.5 s', 'small', new THREE.Vector3(X0, base, Z0 + 0.15), 'below'),
+      label(layer, '4.0 s after the cue', 'small', new THREE.Vector3(X1, base, Z0 + 0.15), 'below'),
+      label(layer, 'time · 875 samples at 250 Hz (every 2nd drawn)', 'tag', new THREE.Vector3(0, base, Z0 + 0.15), 'below'),
+    ];
+    for (const nm of ['Fz', 'C3', 'Cz', 'C4', 'POz']) {
+      const r = MONTAGE.findIndex(m => m[0] === nm);
+      labels.push(label(layer, nm, 'small', new THREE.Vector3(X1 + 0.2, 0, Z0 + (Z1 - Z0) * r / (rows - 1)), 'right'));
+    }
+    return { scene, layer, labels, update() {} };
+  }
+
+  /* ======================================================================
+     Scene: eight preprocessing steps (slide 4)
+     ====================================================================== */
+  function buildPipeline() {
+    const scene = baseScene(12, 44);
+    const layer = makeLayer(true);
+    const steps = [['1', '22 EEG<br>channels', 0], ['2', 'band-pass<br>4–38 Hz', 0], ['3', '0.5–4.0 s<br>875 samples', 0], ['4', 'flag artefacts<br>100 µV', 0], ['5', 'cache', 0],
+      ['6', 'Euclidean<br>alignment', 1], ['7', 'standardise<br>(training stats)', 1], ['8', 'augment<br>training split', 1]];
+    const sp = 1.85, gapX = 0.7, total = 7 * sp + gapX, BW = 1.15, BH = 0.8, BD = 0.8;
+    const xs = steps.map((_, i) => i * sp + (i >= 5 ? gapX : 0) - total / 2);
+    const blocks = steps.map(([n, nm, g], i) => {
+      const b = box(g ? C.teal : C.slate, g ? 0x7FD8D1 : 0xC3CAD6, { ei: g ? 0.45 : 0.3 });
+      b.scale.set(BW, BH, BD); b.position.set(xs[i], 0, 0);
+      b.userData.tip = `<b>${n}. ${nm.replace('<br>', ' ')}</b><br>${g ? 'Per fold' : 'Once, cached'}`;
+      scene.add(b); return b;
+    });
+    const sepX = (xs[4] + xs[5]) / 2, by = -0.72;
+    scene.add(line([new THREE.Vector3(sepX, -0.95, 0), new THREE.Vector3(sepX, 1.2, 0)], 0x9AA4B8, 0.6, true));
+    scene.add(line([new THREE.Vector3(xs[0] - BW / 2, by, BD / 2 + 0.1), new THREE.Vector3(xs[4] + BW / 2, by, BD / 2 + 0.1)], 0x9AA4B8, 0.7));
+    scene.add(line([new THREE.Vector3(xs[5] - BW / 2, by, BD / 2 + 0.1), new THREE.Vector3(xs[7] + BW / 2, by, BD / 2 + 0.1)], 0x2BB3AA, 0.95));
+    const labels = steps.map(([n, nm], i) => label(layer, `<b>${n}</b> · ${nm}`, '', new THREE.Vector3(xs[i], BH / 2 + 0.06, -BD / 2)));
+    labels.push(label(layer, 'once, cached', 'value', new THREE.Vector3((xs[0] + xs[4]) / 2, by, BD / 2 + 0.1), 'below'));
+    labels.push(label(layer, 'per fold: inside each of the 9 folds', 'value teal', new THREE.Vector3((xs[5] + xs[7]) / 2, by, BD / 2 + 0.1), 'below'));
+    const N = 160, r = rng(11);
+    const parts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.07, 0.07, 0.07), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 }), N);
+    parts.frustumCulled = false; scene.add(parts);
+    const seeds = Array.from({ length: N }, () => ({ p: r(), y: (r() - 0.5) * 0.5, z: (r() - 0.5) * 0.5 }));
+    const xA = xs[0] - 1.4, xB = xs[7] + 1.4;
+    const cMuted = new THREE.Color(0xC3CAD6), cTeal = new THREE.Color(0x7FD8D1);
+    function place(t) {
+      seeds.forEach((s, i) => {
+        const x = xA + (xB - xA) * ((s.p + t * 0.06) % 1);
+        M4.makeTranslation(x, s.y, s.z); parts.setMatrixAt(i, M4);
+        parts.setColorAt(i, x > sepX ? cTeal : cMuted);
+      });
+      parts.instanceMatrix.needsUpdate = true; parts.instanceColor.needsUpdate = true;
+    }
+    place(0);
+    return { scene, layer, labels, pickables: blocks, update(dt, t) { if (!reduced) place(t); } };
+  }
+
+  /* ======================================================================
+     Scene: HCT-Net config A (slide 5) — the centrepiece
+     ====================================================================== */
+  function buildArch() {
+    const AS = SLIDES.find(s => s.arch);
+    const scene = baseScene(18, 64);
+    const layer = makeLayer();
+    const L2 = Math.log2, size = (d) => 0.22 + 0.36 * L2(d), thick = (c) => 0.14 + 0.16 * L2(c);
+    function layoutShape() {          // log-proportional: x = feature maps, y = electrodes or windows, z = time
+      const out = []; let x = 0;
+      STAGES.forEach((s, i) => { const t = thick(s.c); if (i) x += 0.42; out.push({ x: x + t / 2, y: 0, sx: t, sy: size(s.h), sz: size(s.w), fy: size(s.flowH || s.h) }); x += t; });
+      const mid = x / 2; out.forEach(o => (o.x -= mid)); return out;
+    }
+    function layoutBudget() {         // height proportional to parameter count
+      const out = []; let x = 0; const t = 0.5;
+      STAGES.forEach((s, i) => { if (i) x += 0.5; const h = Math.max(0.05, 6.2 * s.params / 2224); out.push({ x: x + t / 2, y: -1.7 + h / 2, sx: t, sy: h, sz: 0.9 }); x += t; });
+      const mid = x / 2; out.forEach(o => (o.x -= mid)); return out;
+    }
+    const LS = layoutShape(), LB = layoutBudget();
+    const slabs = STAGES.map((s, i) => {
+      const o = ORIGINS[s.origin], base = o.outline ? 0.28 : 1;
+      const m = box(o.hex, o.edge, { ei: s.origin === 'transformer' ? 0.62 : s.origin === 'head' ? 0.15 : 0.36, opacity: base });
+      m.position.set(LS[i].x, 0, 0); m.scale.set(LS[i].sx, LS[i].sy, LS[i].sz);
+      Object.assign(m.userData, { stage: s, i, base, op: base, eo: o.outline ? 0.95 : s.origin === 'head' ? 0.95 : 0.6,
+        tip: `<b>${s.name}</b> ${s.shape} · ${s.params ? fmt(s.params) + ' params' : 'no parameters'}` });
+      scene.add(m); return m;
+    });
+    let budget = false, mix = 0, selected = null;
+    const at = (id) => STAGES.findIndex(s => s.id === id);
+    const ann = [['input', '22 electrodes × 875 samples', 'belowStart'], ['sconv', '22 → 1', 'above'], ['pool8', '27 time steps', 'above'],
+      ['window', '5 windows × 11 steps', 'above'], ['cls', '4 classes', 'right']].map(([id, txt, a]) => {
+      const i = at(id), L = label(layer, txt, 'ann', null, a);
+      L.get = (v) => {
+        const m = slabs[i];
+        if (a === 'belowStart') v.set(m.position.x, -m.scale.y / 2 - 0.06, m.scale.z / 2);
+        else if (a === 'right') v.set(m.position.x + m.scale.x / 2 + 0.1, 0, 0);
+        else v.set(m.position.x, m.scale.y / 2 + 0.06, -m.scale.z / 2);
+      };
+      return L;
+    });
+    const plabs = STAGES.map((s, i) => {
+      if (!s.params) return null;
+      const L = label(layer, s.id === 'enc' ? '2,224 of 3,924' : fmt(s.params), s.id === 'enc' ? 'value' : 'small');
+      L.get = (v) => { const m = slabs[i]; v.set(m.position.x, m.position.y + m.scale.y / 2 + 0.04, -m.scale.z / 2); };
+      return L;
+    }).filter(Boolean);
+    const selLabel = label(layer, '', 'sel');
+    selLabel.show = false;
+    // particle pulse: travels the chain left to right and narrows with the tensor
+    const N = 600, rg = rng(5), pulses = 8;
+    const pmat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false });
+    const parts = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.05, 0), pmat, N);
+    parts.frustumCulled = false; parts.renderOrder = 10; scene.add(parts);
+    const seeds = Array.from({ length: N }, (_, i) => { const a = rg() * 6.283, rr = Math.sqrt(rg()); return { p: ((i % pulses) / pulses + (rg() - 0.5) * 0.03 + 1) % 1, u: Math.cos(a) * rr, v: Math.sin(a) * rr }; });
+    const first = LS[0], last = LS[LS.length - 1];
+    const xStart = first.x - first.sx / 2 - 0.5, xEnd = last.x + last.sx / 2 + 0.5;
+    const cIn = new THREE.Color(0x8792A8), cOut = new THREE.Color(0xF2F5FA);
+    function flowAt(x) {              // half height, half depth, inside a block? (flat inside a block, linear in a gap)
+      for (let i = 0; i < LS.length; i++) {
+        const a = LS[i];
+        if (x <= a.x + a.sx / 2) {
+          if (x >= a.x - a.sx / 2) return [a.fy / 2, a.sz / 2, true];
+          if (i === 0) return [a.fy / 2, a.sz / 2, false];
+          const b = LS[i - 1], f = (x - (b.x + b.sx / 2)) / ((a.x - a.sx / 2) - (b.x + b.sx / 2));
+          return [b.fy / 2 + (a.fy - b.fy) / 2 * f, b.sz / 2 + (a.sz - b.sz) / 2 * f, false];
+        }
+      }
+      return [last.fy / 2, last.sz / 2, false];
+    }
+    let flowT = 0;
+    function placeParticles(alpha) {
+      const sc = alpha < 0.02 ? 1e-4 : 1;
+      seeds.forEach((s, i) => {
+        const x = xStart + (xEnd - xStart) * ((s.p + flowT) % 1);
+        const [hy, hz, inside] = flowAt(x);
+        P3.set(x, s.u * hy * 0.86, s.v * hz * 0.86); S3.setScalar(sc); Q.identity();
+        M4.compose(P3, Q, S3); parts.setMatrixAt(i, M4);
+        parts.setColorAt(i, inside ? cIn : cOut);
+      });
+      parts.instanceMatrix.needsUpdate = true; parts.instanceColor.needsUpdate = true;
+    }
+    placeParticles(1);
+    function applySelection() {
+      slabs.forEach((m) => { m.userData.op = !selected || m.userData.stage.id === selected ? m.userData.base : 0.15; });
+      const i = selected ? at(selected) : -1;
+      selLabel.show = i >= 0;
+      if (i >= 0) {
+        selLabel.el.textContent = STAGES[i].name;
+        selLabel.get = (v) => { const m = slabs[i]; v.set(m.position.x, m.position.y + m.scale.y / 2 + 0.45, -m.scale.z / 2); };
+      }
+      renderDetail(selected);
+    }
+    return {
+      scene, layer, labels: [...ann, ...plabs, selLabel], pickables: slabs,
+      poseFor: (s) => (budget ? s.poseB : s.pose),
+      onPick(obj) { const id = obj ? obj.userData.stage.id : null; this.select(selected === id ? null : id); },
+      select(id) { selected = id; applySelection(); },
+      selected: () => selected,
+      budget: () => budget,
+      toggleBudget() { budget = !budget; syncBudgetButton(); orbit.setPose(budget ? AS.poseB : AS.pose, reduced); },
+      exit() {                       // leaving the slide clears the selection
+        selected = null; selLabel.show = false;
+        slabs.forEach((m) => { m.userData.op = m.userData.base; m.material.opacity = m.userData.base; });
+      },
+      update(dt) {
+        const k = reduced ? 1 : 1 - Math.exp(-dt * 4), ko = reduced ? 1 : 1 - Math.exp(-dt * 8);
+        mix += ((budget ? 1 : 0) - mix) * k;
+        slabs.forEach((m, i) => {
+          const a = LS[i], b = LB[i], ud = m.userData;
+          m.position.set(a.x + (b.x - a.x) * mix, a.y + (b.y - a.y) * mix, 0);
+          m.scale.set(a.sx + (b.sx - a.sx) * mix, a.sy + (b.sy - a.sy) * mix, a.sz + (b.sz - a.sz) * mix);
+          const mt = m.material;
+          mt.opacity += (ud.op - mt.opacity) * ko;
+          mt.depthWrite = mt.opacity > 0.6;
+          const lit = ud.base > 0.15 ? clamp((mt.opacity - 0.15) / (ud.base - 0.15), 0, 1) : 1;
+          ud.edges.material.opacity = ud.eo * (0.2 + 0.8 * lit);
+        });
+        ann.forEach(L => (L.show = mix < 0.5 && !selected));
+        plabs.forEach(L => (L.show = mix > 0.5));
+        if (!reduced) flowT = (flowT + dt * 0.05) % 1;
+        pmat.opacity = (selected ? 0.25 : 0.95) * (1 - mix);
+        placeParticles(1 - mix);
+      },
+    };
+  }
+
+  /* ======================================================================
+     Scene: leave-one-subject-out protocol (slide 6)
+     ====================================================================== */
+  function buildProtocol() {
+    const scene = baseScene(8, 30);
+    const layer = makeLayer();
+    const model = new THREE.Group();
+    [[-0.34, C.teal, 0x7FD8D1], [0, C.teal, 0x7FD8D1], [0.34, C.violet, 0xB9A3EC]].forEach(([x, c, e]) => { const b = box(c, e, { ei: 0.5 }); b.scale.set(0.22, 1.25, 1.25); b.position.x = x; model.add(b); });
+    scene.add(model);
+    const sph = new THREE.IcosahedronGeometry(1, 2);
+    const trainC = new THREE.Vector3(-4.3, 0, 0);
+    const train = new THREE.InstancedMesh(sph, mat(C.muted, { ei: 0.25, flat: true }), 7);
+    for (let i = 0; i < 7; i++) {
+      const a = i === 0 ? 0 : (i - 1) / 6 * 6.283, rr = i === 0 ? 0 : 0.66;
+      P3.set(trainC.x + Math.cos(a) * rr, trainC.y + Math.sin(a) * rr, 0); S3.setScalar(0.27); Q.identity();
+      M4.compose(P3, Q, S3); train.setMatrixAt(i, M4);
+    }
+    train.instanceMatrix.needsUpdate = true; train.frustumCulled = false; scene.add(train);
+    const valP = new THREE.Vector3(3.9, 1.45, 0), testP = new THREE.Vector3(3.9, -1.55, 0);
+    const val = new THREE.Mesh(sph, mat(C.teal, { ei: 0.5, flat: true })); val.position.copy(valP); val.scale.setScalar(0.36); scene.add(val);
+    const testMat = mat(C.violet, { ei: 0.35, flat: true });
+    const test = new THREE.Mesh(sph, testMat); test.position.copy(testP); test.scale.setScalar(0.36); scene.add(test);
+    const cage = new THREE.LineSegments(unitEdges, new THREE.LineBasicMaterial({ color: 0xB9A3EC, transparent: true, opacity: 0.55 }));
+    cage.scale.setScalar(1.0); cage.position.copy(testP); scene.add(cage);
+    const cTrain = new THREE.QuadraticBezierCurve3(new THREE.Vector3(-3.5, 0, 0), new THREE.Vector3(-2.0, 0.55, 0), new THREE.Vector3(-0.6, 0, 0));
+    const cVal = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0.55, 0.35, 0), new THREE.Vector3(2.2, 1.6, 0), new THREE.Vector3(3.45, 1.45, 0));
+    const cTest = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0.55, -0.35, 0), new THREE.Vector3(2.2, -1.7, 0), new THREE.Vector3(3.4, -1.55, 0));
+    scene.add(line(cTrain.getPoints(40), 0x9AA4B8, 0.35), line(cVal.getPoints(40), 0x2BB3AA, 0.45), line(cTest.getPoints(40), 0xB9A3EC, 0.5, true));
+    const N = 70, r = rng(3);
+    const flow = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.05, 0), new THREE.MeshBasicMaterial({ color: 0xE8ECF4, transparent: true, opacity: 0.85 }), N);
+    flow.frustumCulled = false; scene.add(flow);
+    const seeds = Array.from({ length: N }, () => ({ p: r(), o: (r() - 0.5) * 0.35 }));
+    const ping = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09, 1), new THREE.MeshBasicMaterial({ color: 0x7FD8D1 }));
+    const tping = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 1), new THREE.MeshBasicMaterial({ color: 0xE5DBFF }));
+    scene.add(ping, tping);
+    const labels = [
+      label(layer, 'train · 7 participants', 'value', trainC.clone().add(new THREE.Vector3(0, 1.1, 0))),
+      label(layer, 'model', 'small', new THREE.Vector3(0, 0.82, 0)),
+      label(layer, 'validate · 1', 'value teal', valP.clone().add(new THREE.Vector3(0, 0.55, 0))),
+      label(layer, 'test · 1', 'value', testP.clone().add(new THREE.Vector3(0, -0.6, 0)), 'below'),
+      label(layer, 'touched once', 'ann', testP.clone().add(new THREE.Vector3(0.62, 0, 0)), 'right'),
+      label(layer, '', 'small', new THREE.Vector3(0, -2.55, 0), 'below'),
+    ];
+    const CYCLE = 9;
+    function place(t) {
+      seeds.forEach((s, i) => {
+        cTrain.getPoint((s.p + t * 0.22) % 1, P3); P3.y += s.o * Math.sin(((s.p + t * 0.22) % 1) * Math.PI);
+        M4.makeTranslation(P3.x, P3.y, P3.z); flow.setMatrixAt(i, M4);
+      });
+      flow.instanceMatrix.needsUpdate = true;
+    }
+    place(0);
+    return {
+      scene, layer, labels,
+      update(dt, t) {
+        if (reduced) {
+          ping.visible = tping.visible = false;
+          testMat.emissiveIntensity = 0.9; labels[4].show = true; labels[5].el.textContent = 'the same in each of the 9 folds';
+          return;
+        }
+        place(t);
+        const c = t % CYCLE, fold = Math.floor(t / CYCLE) % 9 + 1;
+        labels[5].el.textContent = `fold ${fold} of 9`;
+        const vp = (c % 1.5) / 1.5;               // validation checks: out and back, again and again
+        ping.visible = c < 7;
+        if (ping.visible) { cVal.getPoint(vp < 0.5 ? vp * 2 : 2 - vp * 2, P3); ping.position.copy(P3); }
+        const tp = (c - 7.2) / 0.8;               // the test participant: once, at the end of the fold
+        tping.visible = tp >= 0 && tp <= 1;
+        if (tping.visible) { cTest.getPoint(tp, P3); tping.position.copy(P3); }
+        testMat.emissiveIntensity = c > 8.0 ? 1.35 : 0.35;
+        labels[4].show = c > 7.9;
+      },
+    };
+  }
+
+  /* ======================================================================
+     Scene: five interventions (slide 7) — two separate charts
+     ====================================================================== */
+  function buildInterventions() {
+    const scene = baseScene(10, 42);
+    const layer = makeLayer(true);
+    floor(scene, 7, 3.2, -3.3, 0.1);
+    floor(scene, 4.2, 3.2, 3.65, 0.1);
+    const k = 0.06, g = 0.4, W = 0.7, kd = 0.42, WW = 1.0;
+    const refuted = [
+      { x: -5.6, a: 54.3, b: 53.3, name: 'more capacity', sub: '3,924 → 20,996', val: '54.3 → 53.3', note: 'nothing', ctx: 'v2 · validation' },
+      { x: -3.3, a: 46.9, b: 48.8, name: 'remove attention', sub: '', val: '46.9 → 48.8', note: 'better without it', ctx: 'v1 · test' },
+      { x: -1.0, a: 53.6, b: 49.3, name: 'norm layers 3 → 7', sub: '', val: '53.6 → 49.3', note: 'worse in 9/9, p = 0.0039', ctx: 'v2 · validation' }];
+    const worked = [
+      { x: 2.4, d: 5.5, name: 'Euclidean alignment', sub: 'per session', val: '+5.5 points', note: 'cross-subject', ctx: 'FBCSP · v1 · test' },
+      { x: 4.9, d: 3.5, name: 'BN re-estimation', sub: 'on the new person', val: '+3.5 points', note: 'no labels, no gradients', ctx: 'v2 · validation' }];
+    const bars = [], labels = [];
+    for (const it of refuted) {
+      const before = box(C.warm, 0xD8CFC4, { bar: true, opacity: 0.14, ei: 0.2, edgeOpacity: 0.9 });
+      before.position.set(it.x - g, 0, 0); before.scale.set(W, 1e-4, W); before.userData.h = it.a * k;
+      before.userData.tip = `<b>${it.name}</b><br>before: ${it.a.toFixed(1)}`;
+      const after = box(C.warm, 0xE3DCD2, { bar: true, ei: 0.3 });
+      after.position.set(it.x + g, 0, 0); after.scale.set(W, 1e-4, W); after.userData.h = it.b * k;
+      after.userData.tip = `<b>${it.name}</b><br>after: ${it.b.toFixed(1)}`;
+      scene.add(before, after); bars.push(before, after);
+      const L = label(layer, `${it.val}<span class="sub">${it.note}</span>`, 'value warm');
+      L.get = (v) => v.set(it.x, Math.max(before.scale.y, after.scale.y), -W / 2);
+      labels.push(L,
+        label(layer, it.sub ? `${it.name}<br>${it.sub}` : it.name, 'small', new THREE.Vector3(it.x, 0, W / 2 + 0.15), 'below'),
+        label(layer, it.ctx, 'tag', new THREE.Vector3(it.x, -0.6, W / 2 + 0.15), 'below'));
+    }
+    for (const it of worked) {
+      const b = box(C.teal, 0x7FD8D1, { bar: true, ei: 0.5 });
+      b.position.set(it.x, 0, 0); b.scale.set(WW, 1e-4, 0.9); b.userData.h = it.d * kd;
+      b.userData.tip = `<b>${it.name}</b> ${it.sub}<br>${it.val}, ${it.note}`;
+      scene.add(b); bars.push(b);
+      const L = label(layer, `${it.val}<span class="sub">${it.note}</span>`, 'value teal');
+      L.get = (v) => topBack(v, b);
+      labels.push(L,
+        label(layer, `${it.name}<br>${it.sub}`, 'small', new THREE.Vector3(it.x, 0, 0.6), 'below'),
+        label(layer, it.ctx, 'tag', new THREE.Vector3(it.x, -0.6, 0.6), 'below'));
+    }
+    labels.push(label(layer, 'acts on the model · refuted', 'value warm', new THREE.Vector3(-3.3, 4.25, 0)));
+    labels.push(label(layer, 'acts on a distribution · worked', 'value teal', new THREE.Vector3(3.65, 4.25, 0)));
+    labels.push(label(layer, 'accuracy, % · before (outline) → after (solid)', 'tag', new THREE.Vector3(-3.3, 3.9, 0)));
+    labels.push(label(layer, 'gain, points', 'tag', new THREE.Vector3(3.65, 3.9, 0)));
+    let t0 = 0;
+    return { scene, layer, labels, pickables: bars, enter(t) { t0 = t; }, update(dt, t) { grow(bars, t0, t); } };
+  }
+
+  /* ======================================================================
+     Scene: size sweep (slide 8) — parameters and accuracy as two charts
+     ====================================================================== */
+  function buildSweep() {
+    const scene = baseScene(10, 42);
+    const layer = makeLayer(true);
+    floor(scene, 5.8, 2.2, -3.3, 0);
+    floor(scene, 5.8, 2.2, 3.3, 0);
+    const kp = 4.6 / 20996, ka = 0.06, W = 0.86, sp = 1.3;
+    const bars = [], labels = [];
+    const segs = [['conv', ORIGINS.eegnet, 'convolutional block', 0.4], ['pos', ORIGINS.transformer, 'positional', 0.3], ['enc', ORIGINS.transformer, 'encoder', 0.6], ['head', ORIGINS.head, 'head', 0.15]];
+    SWEEP.forEach((s, i) => {
+      const xp = -3.3 + (i - 1.5) * sp, xa = 3.3 + (i - 1.5) * sp;
+      let y = 0;
+      const stack = [];
+      for (const [key, o, nm, ei] of segs) {
+        const h = Math.max(0.015, s[key] * kp);
+        const b = box(o.hex, o.edge, { bar: true, ei });
+        b.position.set(xp, 0, 0); b.scale.set(W, 1e-4, W); b.userData.h = h; b.userData.y0 = y;
+        b.userData.tip = `<b>Config ${s.cfg}</b> · ${nm}: ${fmt(s[key])} params`;
+        scene.add(b); bars.push(b); stack.push(b); y += h;
+      }
+      const acc = box(C.muted, 0xE8ECF4, { bar: true, ei: 0.25 });
+      acc.position.set(xa, 0, 0); acc.scale.set(W, 1e-4, W); acc.userData.h = Number(s.test) * ka;
+      acc.userData.tip = `<b>Config ${s.cfg}</b><br>test ${s.test}% · validation ${s.val}%`;
+      scene.add(acc); bars.push(acc);
+      const Lp = label(layer, fmt(s.params), 'value');
+      Lp.get = (v) => topBack(v, stack[stack.length - 1]);
+      const La = label(layer, `${s.test}%`, 'value');
+      La.get = (v) => topBack(v, acc);
+      labels.push(Lp, La,
+        label(layer, s.cfg, 'value big', new THREE.Vector3(xp, 0, W / 2 + 0.1), 'below'),
+        label(layer, s.cfg, 'value big', new THREE.Vector3(xa, 0, W / 2 + 0.1), 'below'));
+    });
+    const cy = 25 * ka;
+    scene.add(line([new THREE.Vector3(0.4, cy, W / 2 + 0.08), new THREE.Vector3(6.2, cy, W / 2 + 0.08)], 0xE8ECF4, 0.5, true));
+    labels.push(label(layer, 'chance 25.0%', 'tag', new THREE.Vector3(6.25, cy, W / 2 + 0.08), 'right'));
+    labels.push(label(layer, 'parameters', 'value', new THREE.Vector3(-3.3, 5.35, 0)));
+    labels.push(label(layer, 'teal: convolutional · violet: positional + encoder · dark: head', 'tag', new THREE.Vector3(-3.3, 5.0, 0)));
+    labels.push(label(layer, 'test accuracy, %', 'value', new THREE.Vector3(3.3, 5.35, 0)));
+    labels.push(label(layer, 'protocol v2 · 3 seeds · adaptation on', 'tag', new THREE.Vector3(3.3, 5.0, 0)));
+    let t0 = 0;
+    return { scene, layer, labels, pickables: bars, enter(t) { t0 = t; }, update(dt, t) { grow(bars, t0, t, 1.3); } };
+  }
+
+  /* ======================================================================
+     Scene: nine participants (slide 9)
+     ====================================================================== */
+  function buildParticipants() {
+    const scene = baseScene(10, 42);
+    const layer = makeLayer(true);
+    floor(scene, 11.4, 2.4);
+    const k = 0.06, W = 0.8, bars = [], labels = [];
+    PARTICIPANTS.forEach(([pid, a], i) => {
+      const x = -4.8 + i * 1.2;
+      const b = box(C.teal, 0x7FD8D1, { bar: true, ei: 0.45 });
+      b.position.set(x, 0, 0); b.scale.set(W, 1e-4, W); b.userData.h = Number(a) * k;
+      b.userData.tip = `<b>${pid}</b><br>${a}% test`;
+      scene.add(b); bars.push(b);
+      const L = label(layer, `${a}%`, 'value');
+      L.get = (v) => topBack(v, b);
+      labels.push(L, label(layer, pid, 'small', new THREE.Vector3(x, 0, W / 2 + 0.12), 'below'));
+    });
+    const z = W / 2 + 0.08;
+    scene.add(line([new THREE.Vector3(-5.5, 25 * k, z), new THREE.Vector3(5.5, 25 * k, z)], 0xE8ECF4, 0.5, true));
+    scene.add(line([new THREE.Vector3(-5.5, 53.6 * k, z), new THREE.Vector3(5.5, 53.6 * k, z)], 0xE8ECF4, 0.8));
+    labels.push(label(layer, 'chance 25.0%', 'small', new THREE.Vector3(5.55, 25 * k, z), 'right'));
+    labels.push(label(layer, 'mean 53.6%', 'small', new THREE.Vector3(5.55, 53.6 * k, z), 'right'));
+    let t0 = 0;
+    return { scene, layer, labels, pickables: bars, enter(t) { t0 = t; }, update(dt, t) { grow(bars, t0, t); } };
+  }
+
+  /* ======================================================================
+     Scene: close — nine distributions pulled into alignment (slide 10, an illustration)
+     ====================================================================== */
+  function buildClose() {
+    const scene = baseScene(6, 24);
+    const layer = makeLayer();
+    const N = 9, r = rng(21);
+    const blobs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x1B7F79, emissiveIntensity: 0.3, roughness: 0.45, metalness: 0, transparent: true, opacity: 0.17, depthWrite: false }), N);
+    blobs.frustumCulled = false; scene.add(blobs);
+    const cores = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.05, 1), new THREE.MeshBasicMaterial({ color: 0xE8ECF4 }), N);
+    cores.frustumCulled = false; scene.add(cores);
+    const from = Array.from({ length: N }, () => ({
+      p: new THREE.Vector3((r() - 0.5) * 5.0, (r() - 0.5) * 2.8, (r() - 0.5) * 3.0),
+      s: new THREE.Vector3(0.55 + r() * 0.6, 0.4 + r() * 0.55, 0.45 + r() * 0.55),
+      q: new THREE.Quaternion().setFromEuler(new THREE.Euler(r() * 3, r() * 3, r() * 3)),
+    }));
+    const toS = new THREE.Vector3(0.95, 0.95, 0.95), toQ = new THREE.Quaternion(), O = new THREE.Vector3();
+    const cA = new THREE.Color(0x9AA4B8), cB = new THREE.Color(0x2BB3AA);
+    const caption = label(layer, '', 'small', new THREE.Vector3(0, 2.1, 0));
+    const labels = [label(layer, 'illustration', 'tag', new THREE.Vector3(0, -2.4, 0), 'below'), caption];
+    let state = '';
+    function pose(f) {
+      for (let i = 0; i < N; i++) {
+        P3.copy(from[i].p).lerp(O, f); S3.copy(from[i].s).lerp(toS, f); Q.copy(from[i].q).slerp(toQ, f);
+        M4.compose(P3, Q, S3); blobs.setMatrixAt(i, M4);
+        M4.makeTranslation(P3.x, P3.y, P3.z); cores.setMatrixAt(i, M4);
+        COL.copy(cA).lerp(cB, f); blobs.setColorAt(i, COL);
+      }
+      blobs.instanceMatrix.needsUpdate = true; cores.instanceMatrix.needsUpdate = true; blobs.instanceColor.needsUpdate = true;
+      const s = f > 0.98 ? 'after normalising: one shared distribution' : f < 0.02 ? 'nine people, nine distributions' : state;
+      if (s !== state) { state = s; caption.el.textContent = s; }
+    }
+    pose(1);
+    return {
+      scene, layer, labels,
+      update(dt, t) {
+        if (reduced) { pose(1); return; }
+        const c = t % 10;
+        pose(c < 2.5 ? 0 : c < 5 ? ease((c - 2.5) / 2.5) : c < 8 ? 1 : 1 - ease((c - 8) / 2));
+      },
+    };
+  }
+
+  /* ---------------- scene registry, lazy build ---------------- */
+  const builders = { head: buildHead, problem: buildProblem, trial: buildTrial, pipeline: buildPipeline, arch: buildArch,
+    protocol: buildProtocol, interventions: buildInterventions, sweep: buildSweep, participants: buildParticipants, close: buildClose };
+  const built = {};
+  const getScene = (key) => (built[key] ||= builders[key]());
+  let active = null, clockT = 0, firstShow = true;
+
+  function show(i) {
+    const s = SLIDES[i];
+    if (active) { active.layer.style.display = 'none'; active.exit?.(); }
+    active = getScene(s.scene);
+    active.layer.style.display = '';
+    active.labels.forEach(L => (L.vis = null));
+    active.enter?.(clockT);
+    orbit.auto = s.auto || 0;
+    orbit.setPose(active.poseFor ? active.poseFor(s) : s.pose, firstShow || reduced);
+    firstShow = false;
+    hideTip();
+  }
+
+  /* ---------------- picking and hover ---------------- */
+  const ray = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const tip = $('#tip');
+  let downAt = null, hoverXY = null;
+  function pick(x, y) {
+    if (!active?.pickables) return null;
+    ndc.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObjects(active.pickables, false)[0];
+    return hit ? hit.object : null;
+  }
+  function hideTip() { tip.style.display = 'none'; canvas.classList.remove('pointing'); }
+  canvas.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY }; hideTip(); });
+  canvas.addEventListener('pointerup', (e) => {
+    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6 && active?.onPick) active.onPick(pick(e.clientX, e.clientY));
+    downAt = null;
+  });
+  canvas.addEventListener('pointermove', (e) => { hoverXY = orbit.pointers.size ? null : { x: e.clientX, y: e.clientY }; });
+  canvas.addEventListener('pointerleave', () => { hoverXY = null; hideTip(); });
+  function hover() {
+    if (!hoverXY) return;
+    const { x, y } = hoverXY; hoverXY = null;
+    const o = pick(x, y);
+    if (!o || !o.userData.tip) { hideTip(); return; }
+    tip.innerHTML = o.userData.tip; tip.style.display = 'block';
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.min(window.innerWidth - w - 8, x + 14) + 'px';
+    tip.style.top = Math.max(8, y - h - 10) + 'px';
+    canvas.classList.toggle('pointing', !!active.onPick);
+  }
+
+  /* ---------------- layout: keep the 3D clear of the text panel ---------------- */
+  const narrow = () => window.innerWidth <= 860;
+  function resize() {
+    const W = window.innerWidth, H = window.innerHeight;
+    renderer.setSize(W, H, false);
+    const panel = $('#panel').getBoundingClientRect();
+    // The visible part of the canvas is right of the panel (wide) or above it (narrow). Frame the scene
+    // for that rectangle and let the canvas extend under the panel.
+    const vx = narrow() ? 0 : panel.width, vw = Math.max(1, W - vx), vh = Math.max(1, narrow() ? H - panel.height : H);
+    camera.setViewOffset(vw, vh, -vx, 0, W, H);
+    camera.updateProjectionMatrix();
+    orbit.vh = vh; orbit.av = vw / vh;
+    orbit.refit();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* ---------------- loop ---------------- */
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; clockT += dt;
+    orbit.update(dt);
+    if (active) {
+      const d = orbit.base * orbit.zoom;               // subtle fog that follows the viewing distance
+      active.scene.fog.near = d * 0.92; active.scene.fog.far = d * 2.5;
+      active.update(dt, clockT);
+      renderer.render(active.scene, camera);
+      placeLabels(active.labels);
+      hover();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  const archScene = () => getScene('arch');
+  return {
+    show,
+    select: (id) => archScene().select(id),
+    selected: () => (built.arch ? built.arch.selected() : null),
+    deselect: () => { if (built.arch && built.arch.selected()) built.arch.select(null); },
+    budget: () => (built.arch ? built.arch.budget() : false),
+    toggleBudget: () => archScene().toggleBudget(),
+    setImagery: (m) => getScene('head').setImagery(m),
+    stats: () => ({ triangles: renderer.info.render.triangles, calls: renderer.info.render.calls, reduced }),
+  };
+}
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-<title>Neural Decoder Findings</title>
+<title>Neural Decoder Project</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root{
@@ -42,6 +42,10 @@
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
 
   header{border-bottom:1px solid var(--line);padding-block:44px 30px;margin-bottom:4px}
+  .toc{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:20px;padding-top:16px;
+       border-top:1px solid var(--line);font-size:13px}
+  .toc a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent}
+  .toc a:hover{color:var(--ink);border-bottom-color:var(--violet)}
   .warn{margin:18px 0;padding:12px 16px;border-left:3px solid #B8860B;
         background:rgba(184,134,11,.10);border-radius:0 6px 6px 0;font-size:13.5px}
   .warn strong{color:#9A5238}
@@ -91,7 +95,7 @@
 
 <div class="wrap">
 <header>
-  <div class="eyebrow">Phase 3 &middot; Results</div>
+  <div class="eyebrow">Final-year project &middot; the whole of it</div>
   <h1>Neural Decoder using EEG &amp; Motor Imagery</h1>
   <p class="lede">Reading imagined movement from brain signals &mdash; and what happens when
   the decoder meets someone it has never seen before.</p>
@@ -106,9 +110,14 @@
     improving.</strong> A second encoder layer adds nothing and doubling the width adds
     nothing, so the gap that remains is not a capacity problem.</p>
   </div>
-  <p class="note" style="margin-top:18px">The result first, then the evidence for it, then how it
-  was measured. Results that have since been overtaken are kept at the foot of the page rather
-  than deleted, and every change is dated in <code>FINDINGS.md</code>.</p>
+  <p class="note" style="margin-top:18px">This page is the whole project: the problem, the
+  recordings, how they are processed, the model, what it was compared against, the result, the
+  evidence behind it, how it was measured, and what we got wrong. Results that have since been
+  overtaken are kept near the foot of the page rather than deleted, and every change is dated in
+  <code>FINDINGS.md</code>.</p>
+  <nav class="toc" aria-label="Contents">
+    <a href="#data">The recordings</a><a href="#pipeline">Preprocessing</a><a href="#model">The model</a><a href="#baselines">What it was compared against</a><a href="#result">The result</a><a href="#why">Why the model was not the lever</a><a href="#people">Who it works for</a><a href="#method">How it was measured</a><a href="#ours">What is actually ours</a><a href="#limits">What it does not show</a><a href="#get">The code and the data</a>
+  </nav>
 </header>
 
 <section>
@@ -161,7 +170,110 @@
   decides whether the technology is usable.</p>
 </section>
 
-<section>
+<section id="data">
+  <div class="eyebrow">The recordings</div>
+  <h2>BCI Competition IV, Dataset 2a</h2>
+  <p>Nine volunteers, recorded at Graz University of Technology and distributed by BNCI Horizon
+  2020. Each sat two sessions on <em>different days</em>, which matters more than it sounds: a
+  person's own signals shift between them, and the people whose signals shift most turn out to be
+  the hardest to decode.</p>
+  <div class="scroll"><table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Participants</td><td class="n">9 &nbsp;(A01&ndash;A09)</td></tr>
+    <tr><td>Sessions each</td><td class="n">2, on different days</td></tr>
+    <tr><td>Trials</td><td class="n">288 per session &middot; 576 per person &middot; <strong>5,184</strong></td></tr>
+    <tr><td>Classes</td><td class="n">left hand, right hand, feet, tongue</td></tr>
+    <tr><td>Electrodes</td><td class="n">22 EEG &nbsp;(plus 3 eye channels, discarded)</td></tr>
+    <tr><td>Sampling</td><td class="n">250 Hz</td></tr>
+    <tr><td>Analysis window</td><td class="n">0.5&ndash;4.0 s after the cue = 875 samples</td></tr>
+  </table></div>
+  <p style="margin-top:14px">A trial runs like this. A fixation cross and a beep; two seconds
+  later an arrow pointing left, right, down or up, telling the volunteer which movement to
+  <em>imagine</em>; they hold the imagery until the cross clears at six seconds. The window the
+  decoder sees starts half a second after the arrow, which leaves out the brain's response to the
+  arrow itself.</p>
+  <p class="note">Trials are <strong>flagged, never deleted</strong>, when any channel swings past
+  100 &micro;V &mdash; 4.3% on average, but 25% for A09, whose flags fell mostly on one class. The
+  flag applies to training people only, so no test person is ever scored on a convenient subset of
+  their own trials. The 18 raw files are in the repository with SHA-256 checksums, so every number
+  here traces back to exact bytes.</p>
+</section>
+
+<section id="pipeline">
+  <div class="eyebrow">Preprocessing</div>
+  <h2>Eight steps, five of them cached</h2>
+  <p>Five steps do not depend on which person is held out, so they run once. Three do, so they run
+  again inside every one of the nine rounds.</p>
+  <div class="scroll"><table>
+    <tr><th>#</th><th>Step</th><th>When</th></tr>
+    <tr><td class="n">1</td><td>Keep the 22 EEG channels, drop the 3 eye channels</td><td>once</td></tr>
+    <tr><td class="n">2</td><td>Band-pass 4&ndash;38 Hz, zero phase, on the continuous recording</td><td>once</td></tr>
+    <tr><td class="n">3</td><td>Cut each trial, 0.5&ndash;4.0 s after the cue</td><td>once</td></tr>
+    <tr><td class="n">4</td><td>Flag artefact trials above 100 &micro;V peak to peak</td><td>once</td></tr>
+    <tr><td class="n">5</td><td>Cache each person as a 576 &times; 22 &times; 875 array</td><td>once</td></tr>
+    <tr><td class="n">6</td><td>Euclidean alignment: whiten each session by its own covariance</td><td class="n">per round</td></tr>
+    <tr><td class="n">7</td><td>Standardise, using statistics from the training split alone</td><td class="n">per round</td></tr>
+    <tr><td class="n">8</td><td>Augment the training split by recombining real segments</td><td class="n">per round</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">Two details carry more weight than they look. The
+  band-pass runs over the <em>continuous</em> recording before trials are cut, so no filter ringing
+  lands at a trial edge, and it runs in both directions, which cancels the phase shift that would
+  otherwise smear the signal in time. Step 6 needs no labels at all, which is why it can be applied
+  to a brand-new user.</p>
+</section>
+
+<section id="model">
+  <div class="eyebrow">The model</div>
+  <h2>HCT-Net, 3,924 parameters</h2>
+  <p>A convolutional front end borrowed from EEGNet, feeding one small Transformer encoder layer.
+  The convolution's output width <em>is</em> the encoder's model dimension, so the two halves join
+  with no projection layer between them, which is what makes the parameter count fall out exactly
+  as designed.</p>
+  <div class="scroll"><table>
+    <tr><th>Stage</th><th>What it does</th><th>Output</th><th>Params</th></tr>
+    <tr><td>Temporal conv</td><td>8 filters across time &mdash; learned frequency bands</td><td class="n">8&times;22&times;875</td><td class="n">528</td></tr>
+    <tr><td>Spatial conv</td><td>one filter per band across all 22 electrodes; 22 become 1</td><td class="n">16&times;1&times;875</td><td class="n">384</td></tr>
+    <tr><td>Separable conv</td><td>mixes the feature maps, then pools to 27 time steps</td><td class="n">16&times;27</td><td class="n">544</td></tr>
+    <tr><td>Windows</td><td>5 overlapping windows of 11 steps, with a learned position code</td><td class="n">5&times;11&times;16</td><td class="n">176</td></tr>
+    <tr><td>Encoder</td><td>one Transformer layer, two heads, shared by all five windows</td><td class="n">5&times;11&times;16</td><td class="n">2,224</td></tr>
+    <tr><td>Head</td><td>average over windows and time, then one linear layer</td><td class="n">4</td><td class="n">68</td></tr>
+    <tr><td colspan="3"><strong>Total</strong></td><td class="n"><strong>3,924</strong></td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">The four sizes are named A to D. <strong>A</strong>,
+  above, is the final model and the smallest. <strong>D</strong> is the size written into the
+  design document before any experiment &mdash; 20,996 parameters, five times larger, with two
+  encoder layers and double the width. B and C lie between. Only those two settings differ.</p>
+  <p class="note">On a new person, the batch-normalisation statistics inside the convolutional part
+  are recomputed from that person's <em>unlabelled</em> trials. No labels, no gradient steps, about
+  0.2 seconds of work. It is worth +4.3 points and improved all nine test people.</p>
+</section>
+
+<section id="baselines">
+  <div class="eyebrow">What it was compared against</div>
+  <h2>Five other decoders, one identical recipe</h2>
+  <p>One classical method we reimplemented, and four published networks taken from the
+  <code>braindecode</code> library at their authors' defaults &mdash; so a shortfall is a real
+  difference under this protocol rather than a bug in our copy of someone else's model.</p>
+  <div class="scroll"><table>
+    <tr><th>Decoder</th><th>Size</th><th>Ours, knows you</th><th>Published</th></tr>
+    <tr><td>EEG Conformer</td><td class="n">697,412</td><td class="n">77.3%</td><td class="n">78.66%</td></tr>
+    <tr><td>EEGNet</td><td class="n">3,188</td><td class="n">65.9%</td><td class="n">71.50%</td></tr>
+    <tr><td>FBCSP + LDA <span class="tag">classical</span></td><td class="n">&mdash;</td><td class="n">64.7%</td><td class="n">67.8%</td></tr>
+    <tr><td>CTNet</td><td class="n">152,364</td><td class="n">64.2%</td><td class="n">82.52%</td></tr>
+    <tr><td>ATCNet</td><td class="n">113,732</td><td class="n">62.8%</td><td class="n">81.10%</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">EEG Conformer lands 1.4 points below its published
+  figure and FBCSP about 3, which was the bar we set ourselves before writing our own model.
+  <strong>ATCNet and CTNet fall 18 points short</strong>, and we report that rather than averaging
+  it away: their reference code trains for far longer than this protocol allows, so their numbers
+  here may understate what those architectures can do.</p>
+  <p class="warn"><strong>Published figures are not all alike.</strong> The numbers usually quoted
+  for these models come from different protocols &mdash; some within-subject, some with more
+  training people, different windows and epoch budgets. They are here for reference, not as a
+  like-for-like ranking.</p>
+</section>
+
+<section id="result">
   <div class="eyebrow">The result</div>
   <h2>Where it finished</h2>
   <p>Cross subject: every number below is measured on a person the model never trained on.
@@ -214,7 +326,7 @@
   parameters the line is flat.</p>
 </section>
 
-<section>
+<section id="why">
   <div class="eyebrow">Why</div>
   <h2>The model was never the lever</h2>
   <p>Three separate measurements point the same way: what limits cross-subject decoding is
@@ -351,7 +463,7 @@
   Reproduce both figures with <code>py paper/extra_analyses.py</code>.</p>
 </section>
 
-<section>
+<section id="people">
   <div class="eyebrow">Who it works for</div>
   <h2>Three of nine people barely work at all</h2>
   <p>Averaged across all six decoders, here is how well each volunteer's imagined movements
@@ -376,7 +488,7 @@
   of users would get very little out of the device.</p>
 </section>
 
-<section>
+<section id="method">
   <div class="eyebrow">How it was measured</div>
   <h2>The rules, and what they cost us</h2>
   <p>Everything above depends on the measurement being trustworthy, so the protocol was fixed in
@@ -397,6 +509,44 @@
   </ul>
   <p class="note">It cost us two results of our own: two changes accepted earlier on single runs sat
   inside that noise band and did not survive being measured again. Both were dropped.</p>
+</section>
+
+<section id="ours">
+  <div class="eyebrow">What is actually ours</div>
+  <h2>Nothing in the architecture, and that is the point</h2>
+  <p>Every block of this model came from a published one, and the repository names the paper each
+  came from with the code beside it. The depthwise front end and the max-norm constraint are
+  EEGNet's. The encoder layer is the 2017 Transformer. Putting convolution before attention
+  follows EEG Conformer and CTNet. The windowed attention came from ATCNet, the augmentation from
+  EEG Conformer and CTNet, the alignment from He and Wu, and the test-time adaptation is the
+  no-gradient half of TENT.</p>
+  <div class="scroll"><table>
+    <tr><th>Borrowed</th><th>From</th><th>What measurement said</th></tr>
+    <tr><td>Depthwise&ndash;separable front end</td><td>EEGNet</td><td><span class="tag win">kept</span></td></tr>
+    <tr><td>Transformer encoder layer</td><td>Vaswani et al.</td><td><span class="tag win">kept, cut to one</span></td></tr>
+    <tr><td>Convolution before attention</td><td>EEG Conformer &middot; CTNet</td><td><span class="tag win">kept</span></td></tr>
+    <tr><td>Euclidean alignment</td><td>He &amp; Wu</td><td><span class="tag win">the one that clearly earns its place</span></td></tr>
+    <tr><td>Batch-norm re-estimation</td><td>TENT, its no-gradient half</td><td><span class="tag win">kept, +3.5</span></td></tr>
+    <tr><td>Sliding-window attention</td><td>ATCNet</td><td><span class="tag lose">rejected</span></td></tr>
+    <tr><td>Six encoder layers</td><td>CTNet</td><td><span class="tag lose">cut to one</span></td></tr>
+    <tr><td>Full TENT, entropy minimisation</td><td>TENT</td><td><span class="tag lose">rejected</span></td></tr>
+  </table></div>
+  <p style="margin-top:14px">So the contribution is not a new block. It is three things that the
+  papers above did not do:</p>
+  <ul>
+    <li><strong>A protocol strict enough that a refutation can be believed</strong> &mdash; three
+    roles held by three different people, a measured noise floor, and a threshold derived from it
+    rather than chosen to suit.</li>
+    <li><strong>Three ways of improving the model, tested and refuted</strong> under that protocol:
+    more capacity, the attention block, and making more of the network adaptable. The third was our
+    own idea, built at an identical parameter count, and it was worse on every one of the nine
+    people.</li>
+    <li><strong>The finding that is left</strong>: every point of cross-subject gain came from
+    normalising distributions, and none from the model.</li>
+  </ul>
+  <p class="note">Said plainly, because it is the question an examiner asks first: this model does
+  not beat EEGNet, and the deck and the paper both say so. What it does is make the comparison
+  honest enough that the negative results mean something.</p>
 </section>
 
 <section>
@@ -475,7 +625,7 @@
   </details>
 </section>
 
-<section>
+<section id="limits">
   <div class="eyebrow">Being straight about it</div>
   <h2>What this does and doesn't show</h2>
   <ul>
@@ -515,6 +665,26 @@
     like. And test whether the signal re-centring step is what drags ATCNet down on the three
     hardest people &mdash; the one explanation for its shortfall that was not ruled out.</p>
   </details>
+</section>
+
+<section id="get">
+  <div class="eyebrow">The code and the data</div>
+  <h2>Everything here can be checked</h2>
+  <div class="scroll"><table>
+    <tr><th>What</th><th>Where</th></tr>
+    <tr><td>Every number on this page, regenerated in about a second</td><td><code>py results.py</code></td></tr>
+    <tr><td>Intervals, the power analysis, the classical references</td><td><code>py paper/riemannian.py</code> &middot; <code>py paper/extra_analyses.py</code></td></tr>
+    <tr><td>The running record, every result with the date it was found</td><td><code>FINDINGS.md</code></td></tr>
+    <tr><td>The 18 raw recordings, 744 MB, with checksums</td><td><code>data/</code> &middot; <code>data/SHA256SUMS</code></td></tr>
+    <tr><td>The recordings as tables a browser will render</td><td><code>data/csv/</code></td></tr>
+    <tr><td>Per-fold metrics, one row per fold per seed</td><td><code>results/</code></td></tr>
+    <tr><td>Which part of the model came from which paper</td><td><code>model_provenance/</code></td></tr>
+    <tr><td>Every paper used, with DOIs</td><td><code>references/REFERENCES.md</code></td></tr>
+    <tr><td>The code, one folder per Phase 3 activity</td><td><code>phase3/</code></td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">Long runs write after every fold and skip work already
+  recorded, so an interrupted run continues where it stopped. Every script ends in a self-check
+  that fails loudly rather than printing a number nobody verified.</p>
 </section>
 
 <footer>

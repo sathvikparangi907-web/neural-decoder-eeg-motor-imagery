@@ -332,12 +332,10 @@ const SLIDES = [
     pose: { t: [0, -0.08, 0], th: 0.6, ph: 0.98, box: [[-1.0, -1.45, -1.1], [1.0, 1.15, 1.25]], m: 0.74 },
     aria: 'A low-poly head with 22 electrodes in their 10-20 positions, glowing with a synthetic signal.',
     html: () => `
-<p class="eyebrow">Final-year project</p>
 <h1>Neural Decoder using EEG &amp; Motor Imagery</h1>
 <p class="lead">Classify four imagined movements — left hand, right hand, feet, tongue — from 22-channel scalp EEG, tested on people the model never trained on.</p>
 ${headlineTable}
-<p class="callout"><strong>A tie.</strong> EEGNet is 0.7 ahead on validation, inside our 0.75 threshold. We do not claim to beat it.</p>
-<p class="hint">Press <kbd>&#8594;</kbd> or use the dots below. Press <kbd>?</kbd> for all controls.</p>` },
+<p class="callout"><strong>A tie.</strong> EEGNet is 0.7 ahead on validation, inside our 0.75 threshold. We do not claim to beat it.</p>` },
 
   { id: 'problem', label: 'The problem', scene: 'problem',
     pose: { t: [0.45, 2.1, 0], th: 0.4, ph: 1.24, box: [[-1.8, 0, -0.7], [3.6, 4.5, 1.4]] },
@@ -363,8 +361,7 @@ ${headlineTable}
   <li>Window 0.5–4.0 s after the cue = 875 samples</li>
   <li>Chance = 25.0%</li>
 </ul>
-<p>The surface is one real trial: participant A01's first left-hand trial of session T, band-passed 4–38 Hz. It is 22 electrodes by 875 samples; height is amplitude and colour its sign (violet above zero, teal below).</p>
-<p class="hint">The trial plays on a loop: the marker sweeps 0.5 s to 4.0 s and the signal lights as it passes. Only the lighting moves — every amplitude is the recorded one.<br>Drag to rotate · scroll to zoom · right-drag to pan</p>` },
+<p>The surface is one real trial: participant A01's first left-hand trial of session T, band-passed 4–38 Hz. It is 22 electrodes by 875 samples; height is amplitude and colour its sign (violet above zero, teal below).</p>` },
 
   { id: 'prep', label: 'Preprocessing', scene: 'pipeline',
     pose: { t: [0, 0.15, 0], th: 0.16, ph: 1.2, box: [[-7.6, -1.0, -0.5], [7.6, 1.5, 0.6]], m: 0.92 },
@@ -469,9 +466,23 @@ ${headlineTable}
     pose: { t: [0, -0.1, 0], th: 0.2, ph: 1.22, box: [[-3.6, -2.7, -2.4], [3.6, 2.6, 2.4]], m: 0.84 },
     aria: 'An illustration: nine distributions, one per person, drifting into alignment.',
     html: () => `
-<p class="eyebrow">Conclusion</p>
-<p class="bigclaim">Every point of cross-subject gain came from normalising distributions, none from the model.</p>
-<p>HCT-Net config A, with 3,924 parameters, ties EEGNet on people it never trained on: 53.6% against 54.3% test, κ 0.381 against 0.391.</p>
+<p class="eyebrow">What it would mean for a user</p>
+<p class="bigclaim">Someone puts the cap on and the decoder works straight away — for some of them.</p>
+<p>No calibration session, no labels, nothing asked of the new person but a short unlabelled recording. Adapting to them takes about <strong>0.2 s</strong>.</p>
+<table>
+  <tr><th>For whom</th><th>Accuracy</th></tr>
+  <tr><td>three of the nine</td><td>65–77%</td></tr>
+  <tr><td>four of the nine</td><td>38–58%</td></tr>
+  <tr><td>two of the nine</td><td>31–38%, near chance</td></tr>
+</table>
+<p>A usable system would run calibration-free for the first group and ask the rest for a short labelled session. At 3,924 parameters it is small enough for low-power hardware, though we did not measure it there.</p>
+<h3>What we would do next</h3>
+<ul>
+  <li>Every baseline under protocol v2 with adaptation, so the comparison is like for like</li>
+  <li>Config A without its encoder — the one ablation we never ran</li>
+  <li>Each model with its own analysis window</li>
+  <li>More training people, and alignment that goes beyond second-order statistics</li>
+</ul>
 <p class="note">The 3D view is an illustration: nine distributions, one per person, pulled into alignment.</p>` },
 ];
 

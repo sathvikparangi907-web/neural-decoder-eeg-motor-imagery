@@ -236,7 +236,7 @@ const t="168",e={LEFT:0,MIDDLE:1,RIGHT:2,ROTATE:0,DOLLY:1,PAN:2},n={ROTATE:0,PAN
       <dt><kbd>B</kbd></dt><dd>Toggle the parameter budget (slide 5)</dd>
       <dt><kbd>?</kbd></dt><dd>Show or hide this panel</dd>
     </dl>
-    <p class="note">Particle flow and auto-rotation stop when your system asks for reduced motion.</p>
+    <p class="note">Every scene turns slowly on its own; dragging it stops that. All motion stops when your system asks for reduced motion.</p>
   </div>
 </div>
 <p id="nogl" hidden>The 3D view could not start. It needs a browser with WebGL 2 enabled. The slides and every number still work in this panel.</p>
@@ -462,7 +462,7 @@ ${headlineTable}
 </table>
 <p class="note">Which particular dots are lit is arbitrary: per-trial predictions were not kept during the size sweep. The counts are the measured ones.</p>` },
 
-  { id: 'close', label: 'Close', scene: 'close', auto: 0.06,
+  { id: 'close', label: 'Close', scene: 'close', sway: 0.26,
     pose: { t: [0, 2.3, 0], th: 0.11, ph: 1.38, box: [[-7.2, -1.5, -1.0], [7.2, 6.1, 1.0]] },
     aria: 'Nine columns of light, one per decoder, each a different colour. Height is cross-subject accuracy measured from zero and width is the parameter count, so EEG Conformer is a broad column at 52.1 percent and our 3,924-parameter model a slender bright one at 53.6 percent. A dashed line marks chance at 25 percent.',
     html: () => `
@@ -667,7 +667,7 @@ function startEngine(THREE) {
       this.target = new THREE.Vector3(); this.gTarget = new THREE.Vector3();
       this.th = 0; this.ph = 1.2; this.gth = 0; this.gph = 1.2;
       this.base = 10; this.gbase = 10; this.zoom = 1; this.gzoom = 1;
-      this.pose = null; this.auto = 0; this.touched = false;
+      this.pose = null; this.auto = 0; this.sway = 0; this.swayT = 0; this.swayTh = 0; this.touched = false;
       this.av = 1.13; this.vh = 1;                // aspect and height (px) of the visible part of the canvas
       this.speed = 10; this.pointers = new Map(); this.mode = null;
       this.right = new THREE.Vector3(); this.up = new THREE.Vector3();
@@ -720,12 +720,16 @@ function startEngine(THREE) {
       while (th - this.th > Math.PI) th -= 2 * Math.PI;
       while (th - this.th < -Math.PI) th += 2 * Math.PI;
       this.gth = th; this.gph = p.ph; this.gbase = fitDistance(p, this.av); this.gzoom = 1;
+      this.swayTh = th; this.swayT = 0;
       this.speed = 3.2;
       if (instant) { this.target.copy(this.gTarget); this.th = this.gth; this.ph = this.gph; this.base = this.gbase; this.zoom = 1; }
     }
     refit() { if (this.pose) { this.gbase = fitDistance(this.pose, this.av); this.base = this.gbase; } }
     update(dt) {
-      if (this.auto && !reduced && !this.touched && !this.pointers.size) this.gth += this.auto * dt;
+      if (!reduced && !this.touched && !this.pointers.size) {
+        if (this.auto) this.gth += this.auto * dt;
+        else if (this.sway) { this.swayT += dt; this.gth = this.swayTh + this.sway * Math.sin(this.swayT * 0.4); }
+      }
       const k = 1 - Math.exp(-dt * this.speed);
       this.base += (this.gbase - this.base) * k; this.zoom += (this.gzoom - this.zoom) * k;
       this.th += (this.gth - this.th) * k; this.ph += (this.gph - this.ph) * k;
@@ -1497,6 +1501,7 @@ function startEngine(THREE) {
     active.labels.forEach(L => (L.vis = null));
     active.enter?.(clockT);
     orbit.auto = s.auto || 0;
+    orbit.sway = s.auto ? 0 : (s.sway ?? 0.2);     // every scene moves; the ones with no spin rock slowly
     orbit.setPose(active.poseFor ? active.poseFor(s) : s.pose, firstShow || reduced);
     firstShow = false;
     hideTip();

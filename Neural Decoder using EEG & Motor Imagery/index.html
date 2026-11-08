@@ -364,7 +364,7 @@ ${headlineTable}
   <li>Chance = 25.0%</li>
 </ul>
 <p>The surface is one real trial: participant A01's first left-hand trial of session T, band-passed 4–38 Hz. It is 22 electrodes by 875 samples; height is amplitude and colour its sign (violet above zero, teal below).</p>
-<p class="hint">Drag to rotate · scroll to zoom · right-drag to pan</p>` },
+<p class="hint">The trial plays on a loop: the marker sweeps 0.5 s to 4.0 s and the signal lights as it passes. Only the lighting moves — every amplitude is the recorded one.<br>Drag to rotate · scroll to zoom · right-drag to pan</p>` },
 
   { id: 'prep', label: 'Preprocessing', scene: 'pipeline',
     pose: { t: [0, 0.15, 0], th: 0.16, ph: 1.2, box: [[-7.6, -1.0, -0.5], [7.6, 1.5, 0.6]], m: 0.92 },
@@ -934,13 +934,12 @@ function startEngine(THREE) {
     const data = Int16Array.from({ length: NE * NS }, (_, i) => dv.getInt16(2 * i, true));   // 22 x 875, 0.1 µV
     const X0 = -7, X1 = 7, Z0 = 2.7, Z1 = -2.7, yk = 0.0028, base = -1.1;
     const pos = new Float32Array(rows * cols * 3), col = new Float32Array(rows * cols * 3);
+    const amp = new Float32Array(rows * cols);        // the sample behind each vertex, for the colour pass
     const neg = new THREE.Color(C.tealLift), mid = new THREE.Color(0x34405A), posC = new THREE.Color(0xA58BE0);
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const v = data[r * NS + Math.min(NS - 1, c * step)], i = (r * cols + c) * 3;
       pos[i] = X0 + (X1 - X0) * c / (cols - 1); pos[i + 1] = v * yk; pos[i + 2] = Z0 + (Z1 - Z0) * r / (rows - 1);
-      const u = clamp(v / 160, -1, 1);
-      COL.copy(mid).lerp(u < 0 ? neg : posC, Math.abs(u));
-      col[i] = COL.r; col[i + 1] = COL.g; col[i + 2] = COL.b;
+      amp[r * cols + c] = v;
     }
     const idx = [];
     for (let r = 0; r < rows - 1; r++) for (let c = 0; c < cols - 1; c++) {
@@ -957,6 +956,29 @@ function startEngine(THREE) {
       for (let c = 0; c < cols; c++) { const i = (r * cols + c) * 3; p.push(new THREE.Vector3(pos[i], pos[i + 1] + 0.01, pos[i + 2])); }
       scene.add(line(p, 0xE8ECF4, 0.16));
     }
+
+    // The trial plays. A playhead sweeps 0.5 s -> 4.0 s and the signal lights as it passes: bright at
+    // the head, settling behind it, dim ahead. Only vertex colours move, so the surface keeps the exact
+    // amplitudes and the time axis stays true.
+    const dimC = new THREE.Color(0x222C44), hotC = new THREE.Color(0xFFFFFF);
+    const headLine = line([new THREE.Vector3(X0, base, Z0), new THREE.Vector3(X0, base, Z1)], 0xE8ECF4, 0.8);
+    scene.add(headLine);
+    function paint(pc) {
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const i = (r * cols + c) * 3, v = amp[r * cols + c], u = clamp(v / 160, -1, 1);
+        COL.copy(mid).lerp(u < 0 ? neg : posC, Math.abs(u));
+        const d = c - pc;
+        COL.lerp(dimC, 1 - (d > 0 ? 0.14 : Math.max(0.5, 1 - (-d) / (cols * 0.6))));
+        if (d <= 0 && d > -6) COL.lerp(hotC, 0.4 * (1 + d / 6));
+        col[i] = COL.r; col[i + 1] = COL.g; col[i + 2] = COL.b;
+      }
+      g.attributes.color.needsUpdate = true;
+      const x = X0 + (X1 - X0) * clamp(pc / (cols - 1), 0, 1);
+      const hp = headLine.geometry.attributes.position.array;
+      hp[0] = x; hp[3] = x;
+      headLine.geometry.attributes.position.needsUpdate = true;
+    }
+    paint(cols - 1);
     scene.add(line([new THREE.Vector3(X0, base, Z0), new THREE.Vector3(X1, base, Z0), new THREE.Vector3(X1, base, Z1), new THREE.Vector3(X0, base, Z1), new THREE.Vector3(X0, base, Z0)], 0x9AA4B8, 0.35));
     const labels = [
       label(layer, '0.5 s', 'small', new THREE.Vector3(X0, base, Z0 + 0.15), 'below'),
@@ -967,7 +989,14 @@ function startEngine(THREE) {
       const r = MONTAGE.findIndex(m => m[0] === nm);
       labels.push(label(layer, nm, 'small', new THREE.Vector3(X1 + 0.2, 0, Z0 + (Z1 - Z0) * r / (rows - 1)), 'right'));
     }
-    return { scene, layer, labels, update() {} };
+    let shown = -1, resting = false;
+    return { scene, layer, labels, update(dt, time) {
+      if (reduced) { if (!resting) { resting = true; paint(cols - 1); headLine.visible = false; } return; }
+      resting = false; headLine.visible = true;
+      const sweep = 4.5, hold = 1.3;                   // 4.5 s to play the trial, then a short pause
+      const pc = Math.round(clamp((time % (sweep + hold)) / sweep, 0, 1) * (cols - 1));
+      if (pc !== shown) { shown = pc; paint(pc); }
+    } };
   }
 
   /* ======================================================================

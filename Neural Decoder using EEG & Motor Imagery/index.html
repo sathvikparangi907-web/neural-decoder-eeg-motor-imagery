@@ -226,7 +226,6 @@ const t="168",e={LEFT:0,MIDDLE:1,RIGHT:2,ROTATE:0,DOLLY:1,PAN:2},n={ROTATE:0,PAN
       <dt><kbd>Home</kbd> <kbd>End</kbd></dt><dd>First / last slide</dd>
       <dt><kbd>1</kbd>–<kbd>9</kbd>, <kbd>0</kbd></dt><dd>Jump to slide 1–9, or 10</dd>
       <dt>Dots, arrow buttons</dt><dd>Change slide (bottom of the text panel)</dd>
-      <dt>Scroll over the text panel</dt><dd>Change slide once the panel is scrolled to its end</dd>
       <dt>Drag</dt><dd>Orbit the 3D view</dd>
       <dt>Right-drag or <kbd>Shift</kbd>-drag</dt><dd>Pan</dd>
       <dt>Scroll or pinch over the 3D view</dt><dd>Zoom</dd>
@@ -560,23 +559,8 @@ window.addEventListener('keydown', (e) => {
   else if (/^[0-9]$/.test(k)) { go(k === '0' ? 9 : Number(k) - 1); }
 });
 
-// Scroll over the text panel: scroll its content first, then change slide.
-let wheelAcc = 0, wheelLock = 0;
-panelContent.addEventListener('wheel', (e) => {
-  const el = panelContent;
-  const atTop = el.scrollTop <= 0;
-  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-  if ((e.deltaY > 0 && !atBottom) || (e.deltaY < 0 && !atTop)) { wheelAcc = 0; return; }
-  e.preventDefault();
-  const now = performance.now();
-  if (now < wheelLock) return;
-  wheelAcc += e.deltaY;
-  if (Math.abs(wheelAcc) > 40) {
-    if (wheelAcc > 0) next(); else prev();
-    wheelAcc = 0;
-    wheelLock = now + 700;
-  }
-}, { passive: false });
+// The wheel scrolls the text panel and nothing else. Changing slide is always deliberate:
+// the arrow keys, the arrow buttons or the dots.
 
 // Slide 5 panel: layer list, budget toggle, detail card.
 function wireArchPanel() {

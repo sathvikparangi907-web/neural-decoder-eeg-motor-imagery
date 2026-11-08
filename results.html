@@ -112,7 +112,7 @@
     model.</strong></p>
   </div>
   <nav class="toc" aria-label="Contents">
-    <a href="#intro">1 Introduction</a><a href="#data">2 Data</a><a href="#method">3 Method</a><a href="#result">4 Results</a><a href="#discussion">5 Discussion</a><a href="#limits">6 Limitations</a><a href="#repro">7 Reproducibility</a>
+    <a href="#intro">1 Introduction</a><a href="#data">2 Data</a><a href="#method">3 Method</a><a href="#result">4 Results</a><a href="#discussion">5 Discussion</a>
   </nav>
 </header>
 
@@ -282,47 +282,7 @@
   skill and the size of the drop, and called it the project's strongest result. It was an
   artefact: the drop is computed from the familiar-person score, so the two must correlate. It was
   withdrawn on 7 November 2026.</p>
-</section>
-
-<section id="limits">
-  <div class="eyebrow">6</div>
-  <h2>Limitations</h2>
-  <ul>
-    <li><strong>Nine people, one dataset.</strong> Differences of a few points cannot be resolved
-    at this size, and nothing here is shown to carry to other montages or populations.</li>
-    <li><strong>We do not beat the baseline.</strong> EEGNet is 0.7 points ahead on validation.
-    Inside our threshold, so a tie &mdash; but a tie, not a win.</li>
-    <li><strong>The baselines were not treated equally.</strong> ATCNet, CTNet, EEG Conformer and
-    FBCSP ran under the first protocol with one seed and no adaptation; only EEGNet and HCT-Net
-    ran under the current one. Comparisons across that line indicate scale, not ranking.</li>
-    <li><strong>Two baselines under-reproduced</strong> their published within-subject accuracy by
-    about 18 points under our shared training budget, so their cross-subject numbers may understate
-    them.</li>
-    <li><strong>One ordering was not blind.</strong> The order in which two experiments were tried
-    was influenced by a test result already seen. The keep-or-reject decisions used validation
-    only, and the report says so.</li>
-    <li><strong>A planned experiment is unfinished</strong>: giving each model its own analysis
-    window, since some published models use 4&ndash;4.5 s against our 3.5 s.</li>
-  </ul>
-</section>
-
-<section id="repro">
-  <div class="eyebrow">7</div>
-  <h2>Reproducibility</h2>
-  <div class="scroll"><table>
-    <tr><th>What</th><th>Where</th></tr>
-    <tr><td>Every number above, regenerated in about a second</td><td><code>py results.py</code></td></tr>
-    <tr><td>Intervals, power analysis, classical references</td><td><code>paper/</code></td></tr>
-    <tr><td>The running record, every result with its date</td><td><code>FINDINGS.md</code></td></tr>
-    <tr><td>The 18 raw recordings, 744 MB, with checksums</td><td><code>data/</code></td></tr>
-    <tr><td>Per-fold metrics, one row per fold per seed</td><td><code>results/</code></td></tr>
-    <tr><td>Which part of the model came from which paper</td><td><code>model_provenance/</code></td></tr>
-    <tr><td>The code, one folder per project activity</td><td><code>phase3/</code></td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">Every script ends in a self-check that fails loudly
-  rather than printing a number nobody verified. Long runs write after each round and resume where
-  they stopped.</p>
-  <details style="margin-top:22px">
+<details style="margin-top:22px">
     <summary>Appendix &mdash; superseded results, kept</summary>
     <p class="note" style="margin-top:14px">This page first reported the project on 18 September
     2026. Since then, re-estimating statistics on the new person was accepted (19 September, +3.5
@@ -336,7 +296,6 @@
     kept or dropped, is in <code>FINDINGS.md</code>.</p>
   </details>
 </section>
-
 
 <footer>
   <p>Nine volunteers &middot; 5,184 recorded trials &middot; 22 electrodes &middot; four

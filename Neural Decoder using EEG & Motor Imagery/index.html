@@ -104,6 +104,11 @@ th:first-child, td:first-child { text-align: left; }
 th { font-weight: 500; color: var(--muted); font-size: 12px; }
 tr.ours td { font-weight: 600; }
 .callout { border-left: 3px solid var(--teal-lift); padding: 8px 12px; background: rgba(27, 127, 121, .12); border-radius: 0 4px 4px 0; }
+.warn { border-left: 3px solid #E8A33D; padding: 9px 12px; background: rgba(232, 163, 61, .13); border-radius: 0 4px 4px 0; font-size: 13.5px; }
+.warn b { color: #F0C27B; }
+.how { margin: 10px 0 14px; padding: 0; list-style: none; font-size: 13.5px; }
+.how li { display: flex; gap: 8px; align-items: baseline; margin: 5px 0; }
+.how .n { font-family: var(--serif); color: var(--teal-lift); font-weight: 600; min-width: 14px; }
 .claim { font-family: var(--serif); font-size: 18px; line-height: 1.35; margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
 .bigclaim { font-family: var(--serif); font-size: 27px; line-height: 1.28; font-weight: 600; margin: 4px 0 18px; }
 .warmtxt { color: #D8CFC4; }
@@ -248,7 +253,7 @@ const t="168",e={LEFT:0,MIDDLE:1,RIGHT:2,ROTATE:0,DOLLY:1,PAN:2},n={ROTATE:0,PAN
 const HEADLINE = [
   { name: 'HCT-Net config A (ours)', params: '3,924', val: '54.3%', test: '53.6%', kappa: '0.381', ours: true },
   { name: 'EEGNet', params: '3,188', val: '55.0%', test: '54.3%', kappa: '0.391' },
-  { name: 'HCT-Net config D', params: '20,996', val: '53.3%', test: '52.7%', kappa: '0.369' },
+  { name: 'HCT-Net config D <span class="ctx">as first designed</span>', params: '20,996', val: '53.3%', test: '52.7%', kappa: '0.369' },
 ];
 
 // HCT-Net config A, 3,924 parameters. Geometry: c = feature maps (along the flow), h = electrodes or windows (height),
@@ -336,6 +341,20 @@ const SLIDES = [
 ${headlineTable}
 <p class="callout"><strong>A tie.</strong> EEGNet is 0.7 ahead on validation, inside our 0.75 threshold. We do not claim to beat it.</p>
 <p>A motor-imagery decoder normally has to be calibrated for each new user before it works at all. This study asks whether the usual answer — more capacity, more attention — buys anything at all for someone the model has never seen, and measures it under one protocol for every model.</p>
+<h3>How to read these numbers</h3>
+<p>Guessing scores <strong>25%</strong>. Published cross-subject results on this dataset sit in the <strong>low-to-high 50s</strong> — CTNet reports 58.6%, and re-implementations of EEGNet and EEG Conformer 56.9% and 53.4%. So 53.6% on a stranger is ordinary for the task and far from a usable device.</p>
+<p>Small gaps should be read with care rather than excitement. With nine participants, a difference has to reach about <strong>5.4 points</strong> before this test could reliably detect it, so the one-to-four point gaps between the models here are not differences we can prove.</p>
+<h3>How it works</h3>
+<ul class="how">
+  <li><span class="n">1</span><span>22 electrodes record the scalp while a person imagines a movement</span></li>
+  <li><span class="n">2</span><span>Band-pass 4–38 Hz, cut 3.5 s per trial, flag artefacts</span></li>
+  <li><span class="n">3</span><span>Align each recording so everyone's signal statistics start from the same place</span></li>
+  <li><span class="n">4</span><span>A convolutional front end learns frequency and spatial filters</span></li>
+  <li><span class="n">5</span><span>One small Transformer layer reads the result over time</span></li>
+  <li><span class="n">6</span><span>On a new person, re-estimate the normalisation statistics from their unlabelled trials — no labels, no retraining</span></li>
+</ul>
+<h3>What is new here</h3>
+<p>Not the architecture: every block of it is borrowed, and the deck names the paper each came from. What is new is the <strong>finding</strong> — that under one strict protocol, three ways of improving the model all failed, and the only things that helped were two ways of normalising the data.</p>
 <p class="note">BCI Competition IV Dataset 2a · nine participants · leave one out · three seeds · all code, data checksums and per-fold logs published.</p>` },
 
   { id: 'problem', label: 'The problem', scene: 'problem',
@@ -401,6 +420,7 @@ ${headlineTable}
     html: () => `
 <p class="eyebrow">The architecture</p>
 <h2>HCT-Net config A — 3,924 parameters</h2>
+<p class="note">The four sizes are named A to D. <strong>A</strong> is the final model and the smallest. <strong>D</strong> is the size proposed in the design document before any experiment, five times larger. B and C lie between them; only the width and the number of encoder layers differ.</p>
 <p>An EEGNet convolutional front end feeds one Transformer encoder layer that runs over five overlapping windows. Block sizes follow the log of each tensor's dimensions; the flow narrows where 22 electrodes become 1.</p>
 <ul class="key" aria-label="Colour key">
   ${['eegnet', 'transformer', 'pool', 'head', 'input'].map(k => `<li><span class="sw${ORIGINS[k].outline ? ' outline' : ''}" style="background:${ORIGINS[k].css}"></span>${ORIGINS[k].label}</li>`).join('')}
@@ -451,7 +471,7 @@ ${headlineTable}
 </ul>
 <p class="claim">Every point of cross-subject gain came from normalising distributions. None came from the model.</p>
 <p>The third refutation was our own idea. A Transformer's layer normalisation stores no running statistics, so test-time adaptation can never reach the attention half of the model. We rebuilt the encoder to hold them, at an identical parameter count — and it was worse on every one of the nine participants. The gain it was built to increase fell from +3.5 to +2.4.</p>
-<p class="note">Rows are labelled with the protocol they were measured under, because v1 and v2 numbers are not comparable with each other.</p>` },
+<p class="warn"><b>Read the tags, not just the numbers.</b> Each row says which protocol produced it. <b>v1</b> was one seed with no adaptation; <b>v2</b> is three seeds with adaptation and a separate validation participant. A v1 number and a v2 number cannot be compared with each other — only rows sharing a tag are like for like.</p>` },
 
   { id: 'sweep', label: 'The size sweep', scene: 'sweep',
     pose: { t: [0, 2.35, 0], th: 0.14, ph: 1.25, box: [[-6.4, -0.6, -0.6], [6.7, 5.5, 0.9]] },
@@ -460,6 +480,7 @@ ${headlineTable}
 <p class="eyebrow">The size sweep</p>
 <h2>5× the parameters, one point of accuracy</h2>
 <p>Four sizes of HCT-Net, protocol v2, three seeds each, adaptation on. Left: parameters, coloured by block. Right: test accuracy.</p>
+<p class="note"><strong>A</strong> is the final model and the smallest; <strong>D</strong> is the size proposed in the design document before any experiment. Only the width and the number of encoder layers change between them.</p>
 <table>
   <thead><tr><th scope="col">Config</th><th scope="col">Params</th><th scope="col">Val</th><th scope="col">Test</th></tr></thead>
   <tbody>${SWEEP.map(s => `<tr${s.cfg === 'A' ? ' class="ours"' : ''}><td>${s.cfg}</td><td>${fmt(s.params)}</td><td>${s.val}%</td><td>${s.test}%</td></tr>`).join('')}</tbody>
@@ -498,7 +519,7 @@ ${headlineTable}
   <tr><td colspan="3" class="note">protocol v2 · 3 seeds · adaptation on</td></tr>
   <tr><td>EEGNet</td><td>3,188</td><td>54.3%</td></tr>
   <tr class="ours"><td>HCT-Net A — ours</td><td>3,924</td><td>53.6%</td></tr>
-  <tr><td>HCT-Net D</td><td>20,996</td><td>52.7%</td></tr>
+  <tr><td>HCT-Net D <span class="ctx">as first designed</span></td><td>20,996</td><td>52.7%</td></tr>
   <tr><td colspan="3" class="note">protocol v1 · 1 seed · no adaptation</td></tr>
   <tr><td>ATCNet</td><td>113,732</td><td>52.4%</td></tr>
   <tr><td>EEG Conformer</td><td>697,412</td><td>52.1%</td></tr>
@@ -509,7 +530,7 @@ ${headlineTable}
   <tr><td>FBCSP</td><td>—</td><td>44.2%</td></tr>
 </table>
 <p>Ours is <strong>178&times; smaller than EEG Conformer</strong> and 1.5 points better, <strong>29&times; smaller than ATCNet</strong> and 1.2 better. It does not beat EEGNet, and we say so.</p>
-<p class="note">The three groups ran under different protocols and are not comparable with one another; only inside a group is it like for like.</p>` },
+<p class="warn"><b>Three groups, three protocols.</b> The columns are grouped because the groups cannot be compared with each other: v2 had three seeds and adaptation, v1 had one seed and none, and the classical methods have no seeds or settings at all. Comparisons are only valid <b>inside</b> a group.</p>` },
 ];
 
 /* ======================================================================================

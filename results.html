@@ -95,597 +95,248 @@
 
 <div class="wrap">
 <header>
-  <div class="eyebrow">Final-year project &middot; the whole of it</div>
+  <div class="eyebrow">Final-year project &middot; School of Computer Science and Engineering, VIT-AP</div>
   <h1>Neural Decoder using EEG &amp; Motor Imagery</h1>
-  <p class="lede">Reading imagined movement from brain signals &mdash; and what happens when
-  the decoder meets someone it has never seen before.</p>
+  <p class="lede">Reading four imagined movements from scalp EEG, and testing it on people the
+  decoder has never met.</p>
   <div class="verdict">
-    <p><strong>The short version.</strong> Every decoder we tested works reasonably well on a
-    person it was trained on, and roughly <strong>20&ndash;26 points worse</strong> on a
-    stranger. The model we first designed to close that gap had the largest gap of all.
-    Improved one measured change at a time, it now reaches <strong>53.6%</strong> on a
-    stranger at <strong>3,924 parameters</strong> &mdash; smaller than EEGNet, and level
-    with it rather than ahead of it.</p>
-    <p>The finding the project turns on: <strong>above 3,924 parameters, accuracy stops
-    improving.</strong> A second encoder layer adds nothing and doubling the width adds
-    nothing, so the gap that remains is not a capacity problem.</p>
+    <p><strong>Abstract.</strong> A motor-imagery decoder normally has to be calibrated on each
+    new user before it works. We ask whether the usual remedy &mdash; more capacity, more
+    attention &mdash; helps at all on an unseen person. Six decoders from 3,188 to 697,412
+    parameters were run on BCI Competition IV Dataset 2a under one protocol, nine rounds, each
+    testing on a person held out entirely. Accuracy did not grow with size. Our own model,
+    HCT-Net, reaches <strong>53.6%</strong> on an unseen person at <strong>3,924 parameters</strong>
+    (chance 25%), level with EEGNet rather than ahead of it. Of five interventions tested, the
+    three that changed the model failed and the two that normalised the data worked.
+    <strong>Every point of cross-subject gain came from normalising distributions, none from the
+    model.</strong></p>
   </div>
-  <p class="note" style="margin-top:18px">This page is the whole project: the problem, the
-  recordings, how they are processed, the model, what it was compared against, the result, the
-  evidence behind it, how it was measured, and what we got wrong. Results that have since been
-  overtaken are kept near the foot of the page rather than deleted, and every change is dated in
-  <code>FINDINGS.md</code>.</p>
   <nav class="toc" aria-label="Contents">
-    <a href="#data">The recordings</a><a href="#pipeline">Preprocessing</a><a href="#model">The model</a><a href="#baselines">What it was compared against</a><a href="#result">The result</a><a href="#why">Why the model was not the lever</a><a href="#people">Who it works for</a><a href="#method">How it was measured</a><a href="#ours">What is actually ours</a><a href="#limits">What it does not show</a><a href="#get">The code and the data</a>
+    <a href="#intro">1 Introduction</a><a href="#data">2 Data</a><a href="#method">3 Method</a><a href="#result">4 Results</a><a href="#discussion">5 Discussion</a><a href="#limits">6 Limitations</a><a href="#repro">7 Reproducibility</a>
   </nav>
 </header>
 
-<section>
-  <div class="eyebrow">Start here</div>
-  <h2>What the decoder is being asked to do</h2>
-  <p>Nine volunteers wore a 22-electrode cap. An arrow told each of them which movement to
-  <em>imagine</em> &mdash; never actually perform &mdash; and the brain activity was recorded.
-  The decoder's job is to read the signal and name the movement.</p>
-  <div class="scroll"><table>
-    <tr>
-      <td><strong>Left hand</strong></td><td><strong>Right hand</strong></td>
-      <td><strong>Both feet</strong></td><td><strong>Tongue</strong></td>
-    </tr>
-  </table></div>
-  <p class="note" style="margin-top:12px">Four choices, so a decoder that simply guessed at
-  random would be right <span class="num">25%</span> of the time. Every number on this page
-  should be read against that floor: 30% is barely better than a coin toss with four sides,
-  and 75% is a genuinely useful device.</p>
-  <p class="note">For scale, the best published results for a stranger on this dataset sit in
-  the low-to-high fifties &mdash; CTNet reports 58.6%, and re-implementations of EEGNet and
-  EEG Conformer 56.9% and 53.4%. So the numbers here are ordinary for the task, and a long
-  way from a usable device.</p>
-  <p class="warn"><strong>Small gaps are not results.</strong> With nine volunteers, a
-  difference has to reach about <span class="num">5.4 points</span> before this test could
-  reliably detect it. The one-to-four point gaps between the models below are therefore
-  differences we cannot prove, and this page never claims otherwise.</p>
-</section>
-
-<section>
-  <div class="eyebrow">The problem</div>
-  <h2>It knows you, or it doesn't</h2>
-  <p>The same decoder is tested two ways. The difference between them is the entire project.</p>
-  <div class="split">
-    <div class="panel warm">
-      <h3>Trained on you</h3>
-      <span class="big">77.3%</span>
-      <span class="cap">Best model, tested on a <em>second session</em> from the same person
-      it learned from. This is what a device does after you sit through a calibration.</span>
-    </div>
-    <div class="panel cold">
-      <h3>Never met you</h3>
-      <span class="big">52.4%</span>
-      <span class="cap">Best model, tested on someone whose data it has never seen. This is
-      what a new user actually experiences when they put the cap on.</span>
-    </div>
-  </div>
-  <p class="note" style="margin-top:16px">A 25-point collapse. Calibration is exactly the
-  thing that makes these devices impractical &mdash; nobody wants to spend twenty minutes
-  training a wheelchair before using it &mdash; so the right-hand number is the one that
-  decides whether the technology is usable.</p>
+<section id="intro">
+  <div class="eyebrow">1</div>
+  <h2>Introduction</h2>
+  <p>A brain&ndash;computer interface lets someone act through recorded brain activity rather than
+  muscles. In <em>motor imagery</em> the user mentally rehearses a movement &mdash; a hand, the
+  feet, the tongue &mdash; and the decoder names it from the rhythms this produces over the
+  sensorimotor cortex. The people it would help most are those who cannot use a keyboard, a
+  touchscreen or their voice.</p>
+  <p>The obstacle is calibration. A decoder trained on you works for you and poorly for everyone
+  else, so each new user must first record a labelled session. CTNet, one of the models compared
+  here, reports <strong>82.52%</strong> on a person it trained on and <strong>58.64%</strong> on
+  one it did not: a drop of 23.88 points. Only the second number describes anyone's first use of
+  the device.</p>
+  <p>Recent decoders answer with scale &mdash; attention layers, hundreds of thousands of
+  parameters &mdash; but those gains are almost always measured <em>within</em> a person. This
+  project asks one question: on a small public dataset, does extra capacity make a decoder better
+  at people it has never seen?</p>
+  <p class="warn"><strong>How to read the numbers.</strong> Four classes, so guessing scores
+  <span class="num">25%</span>. Published cross-subject results on this dataset sit in the
+  low-to-high fifties. With nine volunteers, a difference must reach about
+  <span class="num">5.4 points</span> before this test can reliably detect it &mdash; so the one-
+  to four-point gaps below are not differences anyone can prove, and this page never claims
+  otherwise.</p>
 </section>
 
 <section id="data">
-  <div class="eyebrow">The recordings</div>
-  <h2>BCI Competition IV, Dataset 2a</h2>
-  <p>Nine volunteers, recorded at Graz University of Technology and distributed by BNCI Horizon
-  2020. Each sat two sessions on <em>different days</em>, which matters more than it sounds: a
-  person's own signals shift between them, and the people whose signals shift most turn out to be
-  the hardest to decode.</p>
+  <div class="eyebrow">2</div>
+  <h2>Data</h2>
+  <p>BCI Competition IV Dataset 2a, recorded at Graz University of Technology. Nine volunteers,
+  each in two sessions on <em>different days</em> &mdash; a detail that matters, because a
+  person's own signals shift between sessions and those who shift most are hardest to decode.</p>
   <div class="scroll"><table>
     <tr><th>Property</th><th>Value</th></tr>
-    <tr><td>Participants</td><td class="n">9 &nbsp;(A01&ndash;A09)</td></tr>
-    <tr><td>Sessions each</td><td class="n">2, on different days</td></tr>
-    <tr><td>Trials</td><td class="n">288 per session &middot; 576 per person &middot; <strong>5,184</strong></td></tr>
+    <tr><td>Participants &middot; sessions</td><td class="n">9 &middot; 2 each, different days</td></tr>
+    <tr><td>Trials</td><td class="n">288 per session &middot; 576 each &middot; <strong>5,184</strong></td></tr>
     <tr><td>Classes</td><td class="n">left hand, right hand, feet, tongue</td></tr>
-    <tr><td>Electrodes</td><td class="n">22 EEG &nbsp;(plus 3 eye channels, discarded)</td></tr>
-    <tr><td>Sampling</td><td class="n">250 Hz</td></tr>
-    <tr><td>Analysis window</td><td class="n">0.5&ndash;4.0 s after the cue = 875 samples</td></tr>
+    <tr><td>Electrodes &middot; rate</td><td class="n">22 EEG &middot; 250 Hz</td></tr>
+    <tr><td>Window analysed</td><td class="n">0.5&ndash;4.0 s after the cue = 875 samples</td></tr>
   </table></div>
-  <p style="margin-top:14px">A trial runs like this. A fixation cross and a beep; two seconds
-  later an arrow pointing left, right, down or up, telling the volunteer which movement to
-  <em>imagine</em>; they hold the imagery until the cross clears at six seconds. The window the
-  decoder sees starts half a second after the arrow, which leaves out the brain's response to the
-  arrow itself.</p>
-  <p class="note">Trials are <strong>flagged, never deleted</strong>, when any channel swings past
-  100 &micro;V &mdash; 4.3% on average, but 25% for A09, whose flags fell mostly on one class. The
-  flag applies to training people only, so no test person is ever scored on a convenient subset of
-  their own trials. The 18 raw files are in the repository with SHA-256 checksums, so every number
-  here traces back to exact bytes.</p>
-</section>
-
-<section id="pipeline">
-  <div class="eyebrow">Preprocessing</div>
-  <h2>Eight steps, five of them cached</h2>
-  <p>Five steps do not depend on which person is held out, so they run once. Three do, so they run
-  again inside every one of the nine rounds.</p>
-  <div class="scroll"><table>
-    <tr><th>#</th><th>Step</th><th>When</th></tr>
-    <tr><td class="n">1</td><td>Keep the 22 EEG channels, drop the 3 eye channels</td><td>once</td></tr>
-    <tr><td class="n">2</td><td>Band-pass 4&ndash;38 Hz, zero phase, on the continuous recording</td><td>once</td></tr>
-    <tr><td class="n">3</td><td>Cut each trial, 0.5&ndash;4.0 s after the cue</td><td>once</td></tr>
-    <tr><td class="n">4</td><td>Flag artefact trials above 100 &micro;V peak to peak</td><td>once</td></tr>
-    <tr><td class="n">5</td><td>Cache each person as a 576 &times; 22 &times; 875 array</td><td>once</td></tr>
-    <tr><td class="n">6</td><td>Euclidean alignment: whiten each session by its own covariance</td><td class="n">per round</td></tr>
-    <tr><td class="n">7</td><td>Standardise, using statistics from the training split alone</td><td class="n">per round</td></tr>
-    <tr><td class="n">8</td><td>Augment the training split by recombining real segments</td><td class="n">per round</td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">Two details carry more weight than they look. The
-  band-pass runs over the <em>continuous</em> recording before trials are cut, so no filter ringing
-  lands at a trial edge, and it runs in both directions, which cancels the phase shift that would
-  otherwise smear the signal in time. Step 6 needs no labels at all, which is why it can be applied
-  to a brand-new user.</p>
-</section>
-
-<section id="model">
-  <div class="eyebrow">The model</div>
-  <h2>HCT-Net, 3,924 parameters</h2>
-  <p>A convolutional front end borrowed from EEGNet, feeding one small Transformer encoder layer.
-  The convolution's output width <em>is</em> the encoder's model dimension, so the two halves join
-  with no projection layer between them, which is what makes the parameter count fall out exactly
-  as designed.</p>
-  <div class="scroll"><table>
-    <tr><th>Stage</th><th>What it does</th><th>Output</th><th>Params</th></tr>
-    <tr><td>Temporal conv</td><td>8 filters across time &mdash; learned frequency bands</td><td class="n">8&times;22&times;875</td><td class="n">528</td></tr>
-    <tr><td>Spatial conv</td><td>one filter per band across all 22 electrodes; 22 become 1</td><td class="n">16&times;1&times;875</td><td class="n">384</td></tr>
-    <tr><td>Separable conv</td><td>mixes the feature maps, then pools to 27 time steps</td><td class="n">16&times;27</td><td class="n">544</td></tr>
-    <tr><td>Windows</td><td>5 overlapping windows of 11 steps, with a learned position code</td><td class="n">5&times;11&times;16</td><td class="n">176</td></tr>
-    <tr><td>Encoder</td><td>one Transformer layer, two heads, shared by all five windows</td><td class="n">5&times;11&times;16</td><td class="n">2,224</td></tr>
-    <tr><td>Head</td><td>average over windows and time, then one linear layer</td><td class="n">4</td><td class="n">68</td></tr>
-    <tr><td colspan="3"><strong>Total</strong></td><td class="n"><strong>3,924</strong></td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">The four sizes are named A to D. <strong>A</strong>,
-  above, is the final model and the smallest. <strong>D</strong> is the size written into the
-  design document before any experiment &mdash; 20,996 parameters, five times larger, with two
-  encoder layers and double the width. B and C lie between. Only those two settings differ.</p>
-  <p class="note">On a new person, the batch-normalisation statistics inside the convolutional part
-  are recomputed from that person's <em>unlabelled</em> trials. No labels, no gradient steps, about
-  0.2 seconds of work. It is worth +4.3 points and improved all nine test people.</p>
-</section>
-
-<section id="baselines">
-  <div class="eyebrow">What it was compared against</div>
-  <h2>Five other decoders, one identical recipe</h2>
-  <p>One classical method we reimplemented, and four published networks taken from the
-  <code>braindecode</code> library at their authors' defaults &mdash; so a shortfall is a real
-  difference under this protocol rather than a bug in our copy of someone else's model.</p>
-  <div class="scroll"><table>
-    <tr><th>Decoder</th><th>Size</th><th>Ours, knows you</th><th>Published</th></tr>
-    <tr><td>EEG Conformer</td><td class="n">697,412</td><td class="n">77.3%</td><td class="n">78.66%</td></tr>
-    <tr><td>EEGNet</td><td class="n">3,188</td><td class="n">65.9%</td><td class="n">71.50%</td></tr>
-    <tr><td>FBCSP + LDA <span class="tag">classical</span></td><td class="n">&mdash;</td><td class="n">64.7%</td><td class="n">67.8%</td></tr>
-    <tr><td>CTNet</td><td class="n">152,364</td><td class="n">64.2%</td><td class="n">82.52%</td></tr>
-    <tr><td>ATCNet</td><td class="n">113,732</td><td class="n">62.8%</td><td class="n">81.10%</td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">EEG Conformer lands 1.4 points below its published
-  figure and FBCSP about 3, which was the bar we set ourselves before writing our own model.
-  <strong>ATCNet and CTNet fall 18 points short</strong>, and we report that rather than averaging
-  it away: their reference code trains for far longer than this protocol allows, so their numbers
-  here may understate what those architectures can do.</p>
-  <p class="warn"><strong>Published figures are not all alike.</strong> The numbers usually quoted
-  for these models come from different protocols &mdash; some within-subject, some with more
-  training people, different windows and epoch budgets. They are here for reference, not as a
-  like-for-like ranking.</p>
-</section>
-
-<section id="result">
-  <div class="eyebrow">The result</div>
-  <h2>Where it finished</h2>
-  <p>Cross subject: every number below is measured on a person the model never trained on.
-  This is the current protocol &mdash; three seeds, a separate validation person for every
-  decision, and the test person read once at the end.</p>
-  <p>The size sweep on 4 October tested four widths on three seeds each and the
-  <strong>smallest won</strong>. The ensemble of three copies is gone; so is the extra width.
-  Current protocol: a separate validation person decides every change, the test person is
-  read once, three seeds, batch-norm statistics re-estimated on the new person.</p>
-  <div class="scroll"><table>
-    <tr><th>Decoder</th><th>Validation</th><th>Stranger</th><th style="width:26%">&nbsp;</th><th>Size</th><th>&kappa;</th></tr>
-    <tr><td><strong>HCT-Net, config A</strong> <span class="tag">ours</span></td>
-      <td class="n">54.3%</td><td class="n"><strong>53.6%</strong></td>
-      <td><div class="bar"><i style="width:53.6%;background:var(--violet)"></i></div></td>
-      <td class="n"><strong>3,924</strong></td><td class="n">0.381</td></tr>
-    <tr><td>EEGNet</td><td class="n">55.0%</td><td class="n">54.3%</td>
-      <td><div class="bar"><i style="width:54.3%;background:var(--navy)"></i></div></td>
-      <td class="n">3,188</td><td class="n">0.391</td></tr>
-    <tr><td>HCT-Net, config D <span class="tag">as submitted</span></td>
-      <td class="n">53.3%</td><td class="n">52.7%</td>
-      <td><div class="bar"><i style="width:52.7%;background:var(--muted)"></i></div></td>
-      <td class="n">20,996</td><td class="n">0.369</td></tr>
-    <tr><td colspan="6" class="note" style="padding-top:14px">Classical references, run on the
-      same folds. They are deterministic: no seeds, and nothing chosen on a validation person.</td></tr>
-    <tr><td>Tangent space + logistic regression</td><td class="n">&mdash;</td><td class="n">50.5%</td>
-      <td><div class="bar"><i style="width:50.5%;background:var(--chance)"></i></div></td>
-      <td class="n">&mdash;</td><td class="n">0.340</td></tr>
-    <tr><td>Minimum distance to mean</td><td class="n">&mdash;</td><td class="n">47.1%</td>
-      <td><div class="bar"><i style="width:47.1%;background:var(--chance)"></i></div></td>
-      <td class="n">&mdash;</td><td class="n">0.295</td></tr>
-    <tr><td>Minimum distance to mean, <em>no re-centring</em></td><td class="n">&mdash;</td><td class="n">30.2%</td>
-      <td><div class="bar"><i style="width:30.2%;background:var(--poor)"></i></div></td>
-      <td class="n">&mdash;</td><td class="n">0.070</td></tr>
-  </table></div>
-  <p class="note" style="margin-top:12px">The configurations are named A to D by size.
-  <strong>A</strong> is the final model and the smallest of the four; <strong>D</strong> is the
-  size written into the design document before any experiment, five times larger. Only the
-  width and the number of encoder layers differ between them.</p>
-  <p class="note">That last row is the clearest single demonstration on this page: the same
-  classical method, with and without re-centring each session, goes from <span class="num">30.2%</span>
-  to <span class="num">47.1%</span>. Nothing about the classifier changed &mdash; only the
-  alignment of the input.</p>
-  <p class="note" style="margin-top:14px">EEGNet is <strong>0.7 points ahead on
-  validation</strong>, inside our own 0.75-point decision threshold, so this is a tie and is
-  reported as one. Measured on the test people, the gap is &minus;0.7 points with a 95%
-  confidence interval from &minus;4.3 to +2.9 &mdash; an interval that comfortably contains
-  zero, which is the statistical way of saying the same thing. The four deep baselines in the
-  table above have not been re-run under this protocol, so they are not in it. What the sweep
-  settled is that a second encoder layer and double the width each buy nothing: above 3,924
-  parameters the line is flat.</p>
-</section>
-
-<section id="why">
-  <div class="eyebrow">Why</div>
-  <h2>The model was never the lever</h2>
-  <p>Three separate measurements point the same way: what limits cross-subject decoding is
-  not the size of the network, not its attention block, and not how well it does on people
-  it has seen. Each is shown below.</p>
-</section>
-
-<section>
-  <div class="eyebrow">Evidence, one of three</div>
-  <h2>Every model loses the same way</h2>
-  <p>Six decoders, identical data, identical protocol. The dark bar is how well each does on a
-  familiar person; the light bar is a stranger.</p>
-  <p class="note"><strong>Protocol v1</strong>, one seed, no test-time adaptation. Our row is
-  the model as submitted in Phase 2, at 20,996 parameters. Under the current protocol the
-  same configuration drops 24.7 points rather than 26.3, and the 3,924-parameter model that
-  replaced it drops 18.5 with adaptation on.</p>
-  <div class="scroll"><table>
-    <tr><th>Decoder</th><th>Knows you</th><th>Stranger</th><th style="width:38%">&nbsp;</th><th>Drop</th></tr>
-    <tr><td>EEG Conformer</td><td class="n">77.3%</td><td class="n">52.1%</td>
-      <td><div class="pairbar">
-        <div class="bar"><i style="width:77.3%;background:var(--navy)"></i></div>
-        <div class="bar"><i style="width:52.1%;background:var(--chance)"></i></div></div></td>
-      <td class="n">&minus;25.2</td></tr>
-    <tr><td><strong>HCT-Net</strong> <span class="tag">ours</span></td>
-      <td class="n">73.2%</td><td class="n">46.9%</td>
-      <td><div class="pairbar">
-        <div class="bar"><i style="width:73.2%;background:var(--violet)"></i></div>
-        <div class="bar"><i style="width:46.9%;background:var(--chance)"></i></div></div></td>
-      <td class="n"><strong>&minus;26.3</strong></td></tr>
-    <tr><td>EEGNet</td><td class="n">65.9%</td><td class="n">51.2%</td>
-      <td><div class="pairbar">
-        <div class="bar"><i style="width:65.9%;background:var(--navy)"></i></div>
-        <div class="bar"><i style="width:51.2%;background:var(--chance)"></i></div></div></td>
-      <td class="n">&minus;14.7</td></tr>
-    <tr><td>FBCSP <span class="tag">classical</span></td><td class="n">64.7%</td><td class="n">44.2%</td>
-      <td><div class="pairbar">
-        <div class="bar"><i style="width:64.7%;background:var(--navy)"></i></div>
-        <div class="bar"><i style="width:44.2%;background:var(--chance)"></i></div></div></td>
-      <td class="n">&minus;20.5</td></tr>
-    <tr><td>CTNet</td><td class="n">64.2%</td><td class="n">50.2%</td>
-      <td><div class="pairbar">
-        <div class="bar"><i style="width:64.2%;background:var(--navy)"></i></div>
-        <div class="bar"><i style="width:50.2%;background:var(--chance)"></i></div></div></td>
-      <td class="n">&minus;14.0</td></tr>
-    <tr><td>ATCNet</td><td class="n">62.8%</td><td class="n">52.4%</td>
-      <td><div class="pairbar">
-        <div class="bar"><i style="width:62.8%;background:var(--navy)"></i></div>
-        <div class="bar"><i style="width:52.4%;background:var(--chance)"></i></div></div></td>
-      <td class="n">&minus;10.4</td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">Read the two columns against each other and a
-  pattern appears: <strong>the models that do best on a familiar person do worst on a
-  stranger.</strong> EEG Conformer and HCT-Net top the first column and bottom the second.
-  ATCNet is last on familiarity and first on strangers.</p>
-</section>
-
-<section>
-  <div class="eyebrow">Evidence, two of three</div>
-  <h2>Bigger models buy almost nothing</h2>
-  <p>For a stranger, the top three decoders finish within <strong>1.2 points</strong> of each
-  other &mdash; while differing in size by a factor of 219.</p>
-  <div class="scroll"><table>
-    <tr><th>Decoder</th><th>Stranger accuracy</th><th>Size</th><th>Relative size</th></tr>
-    <tr><td>ATCNet</td><td class="n">52.4%</td><td class="n">113,732</td><td class="n">36&times;</td></tr>
-    <tr><td>EEG Conformer</td><td class="n">52.1%</td><td class="n">697,412</td><td class="n">219&times;</td></tr>
-    <tr><td><strong>EEGNet</strong></td><td class="n">51.2%</td><td class="n">3,188</td><td class="n">1&times;</td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">Size is trainable parameters &mdash; roughly, how
-  many adjustable dials the model has. EEG Conformer carries 219 times as many as EEGNet and
-  gains <span class="num">0.9</span> of a point on a stranger. Whatever the extra capacity is
-  buying, it is not generalisation.</p>
-</section>
-
-<section>
-  <div class="eyebrow">Evidence, three of three</div>
-  <h2>Taking our own model apart</h2>
-  <p>HCT-Net combines a small signal-filtering front end with an attention block, and adds a
-  preprocessing step that mathematically re-centres each person's signal onto common ground.
-  It is deliberately small &mdash; <span class="num">20,996</span> parameters, about a fifth
-  of ATCNet.</p>
-  <p>On a familiar person it is excellent: <strong>second of six</strong>, beating EEGNet by
-  7.3 points. On a stranger it finishes <strong>fifth of six</strong>. To find out which part
-  was responsible, each component was removed in turn and the whole evaluation repeated.</p>
-  <div class="scroll"><table>
-    <tr><th>Take away&hellip;</th><th>Stranger accuracy</th><th style="width:30%">&nbsp;</th><th>Verdict</th></tr>
-    <tr><td>nothing &mdash; the full model</td><td class="n">46.9%</td>
-      <td><div class="bar"><i style="width:46.9%;background:var(--violet)"></i></div></td>
-      <td><span class="tag">baseline</span></td></tr>
-    <tr><td>the attention block</td><td class="n">48.8%</td>
-      <td><div class="bar"><i style="width:48.8%;background:var(--good)"></i></div></td>
-      <td><span class="tag win">better without</span></td></tr>
-    <tr><td>&hellip;or let attention see the whole trial</td><td class="n">49.8%</td>
-      <td><div class="bar"><i style="width:49.8%;background:var(--good)"></i></div></td>
-      <td><span class="tag win">better still</span></td></tr>
-    <tr><td>the data augmentation</td><td class="n">48.1%</td>
-      <td><div class="bar"><i style="width:48.1%;background:var(--muted)"></i></div></td>
-      <td><span class="tag">no effect</span></td></tr>
-    <tr><td>the signal re-centring</td><td class="n">41.8%</td>
-      <td><div class="bar"><i style="width:41.8%;background:var(--poor)"></i></div></td>
-      <td><span class="tag lose">needed</span></td></tr>
-    <tr><td>everything except the front end</td><td class="n">39.1%</td>
-      <td><div class="bar"><i style="width:39.1%;background:var(--poor)"></i></div></td>
-      <td><span class="tag lose">worst</span></td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">Only one component earns its place. Removing the
-  <strong>signal re-centring</strong> costs 5.1 points, so it is doing real work &mdash; and
-  it helps the classical decoder by a similar amount, so the effect is not specific to one
-  architecture. Removing the <strong>attention block</strong> makes the model
-  <em>better</em>, which is awkward, because attention is the component the model is named
-  after. Depth made no measurable difference at 1, 2 or 6 layers.</p>
-</section>
-
-<section>
-  <div class="eyebrow">And a trap we fell into</div>
-  <h2>Doing well on a familiar person predicts nothing</h2>
-  <p class="note" style="border-left:3px solid var(--poor);padding-left:14px"><strong>Corrected
-  7 November 2026.</strong> This section used to report r = &minus;0.86 between familiar-person
-  skill and the transfer loss, and called it the project's strongest result. That correlation
-  is an <strong>artefact</strong>: the loss is computed from the familiar-person score, so the
-  two share a term and must correlate. The honest test relates the two accuracies directly,
-  and at six models it settles nothing either way.</p>
-  <div class="panel" style="margin-top:18px">
-    <p style="margin:0"><span class="num" style="font-size:22px;color:var(--violet)">r = 0.08</span>
-    &nbsp; <span class="note">familiar-person against stranger accuracy, six models
-    (95% CI &minus;0.78 to 0.84, p&nbsp;=&nbsp;0.88) &mdash; no evidence either way</span></p>
-  </div>
-  <p style="margin-top:18px">The explanation is that a powerful decoder spends its capacity
-  learning things that are true of <em>the individuals it trained on</em> &mdash; skull
-  thickness, exactly where the cap sat, that person's particular way of imagining a movement
-  &mdash; rather than things true of imagined movement in general. The better it gets at that,
-  the less of it survives the move to a new head.</p>
-  <p>That story may still be true &mdash; the size sweep and the component study both point
-  at it &mdash; but this correlation is not evidence for it, and six models cannot settle it.
-  Reproduce both figures with <code>py paper/extra_analyses.py</code>.</p>
-</section>
-
-<section id="people">
-  <div class="eyebrow">Who it works for</div>
-  <h2>Three of nine people barely work at all</h2>
-  <p>Averaged across all six decoders, here is how well each volunteer's imagined movements
-  could be read by a model that never saw them.</p>
-  <div class="scroll"><table>
-    <tr><th>Person</th><th>Accuracy</th><th style="width:52%">&nbsp;</th></tr>
-    <tr><td>A01</td><td class="n">69.5%</td><td><div class="bar"><i style="width:69.5%;background:var(--good)"></i><span class="chance" style="left:25%"></span></div></td></tr>
-    <tr><td>A02</td><td class="n">30.0%</td><td><div class="bar"><i style="width:30%;background:var(--poor)"></i><span class="chance" style="left:25%"></span></div></td></tr>
-    <tr><td>A03</td><td class="n">68.9%</td><td><div class="bar"><i style="width:68.9%;background:var(--good)"></i><span class="chance" style="left:25%"></span></div></td></tr>
-    <tr><td>A04</td><td class="n">38.4%</td><td><div class="bar"><i style="width:38.4%;background:var(--poor)"></i><span class="chance" style="left:25%"></span></div></td></tr>
-    <tr><td>A05</td><td class="n">36.1%</td><td><div class="bar"><i style="width:36.1%;background:var(--poor)"></i><span class="chance" style="left:25%"></span></div></td></tr>
-    <tr><td>A06</td><td class="n">38.8%</td><td><div class="bar"><i style="width:38.8%;background:var(--poor)"></i><span class="chance" style="left:25%"></span></div></td></tr>
-    <tr><td>A07</td><td class="n">42.8%</td><td><div class="bar"><i style="width:42.8%;background:var(--muted)"></i><span class="chance" style="left:25%"></span></div></td></tr>
-    <tr><td>A08</td><td class="n">62.1%</td><td><div class="bar"><i style="width:62.1%;background:var(--good)"></i><span class="chance" style="left:25%"></span></div></td></tr>
-    <tr><td>A09</td><td class="n">58.9%</td><td><div class="bar"><i style="width:58.9%;background:var(--good)"></i><span class="chance" style="left:25%"></span></div></td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">The pale line marks the <span class="num">25%</span>
-  random-guessing floor. A02, A05 and A06 sit close to it no matter which decoder is used.
-  This is well documented and is a property of the <em>people</em>, not the software: some
-  produce clear, repeatable brain rhythms when they imagine movement and some do not. It is
-  why results are always reported per person &mdash; an average alone would hide that a third
-  of users would get very little out of the device.</p>
+  <p class="note" style="margin-top:14px">Each trial shows a fixation cross and a beep, then an
+  arrow two seconds later telling the volunteer which movement to imagine; they hold it until the
+  cross clears at six seconds. The decoder sees from half a second after the arrow, which excludes
+  the brain's response to the arrow itself. Trials above 100 &micro;V peak to peak are
+  <strong>flagged, not deleted</strong> &mdash; 4.3% on average, 25% for A09 &mdash; and the flag
+  is applied to training people only, so no test person is scored on a convenient subset.</p>
 </section>
 
 <section id="method">
-  <div class="eyebrow">How it was measured</div>
-  <h2>The rules, and what they cost us</h2>
-  <p>Everything above depends on the measurement being trustworthy, so the protocol was fixed in
-  advance and then corrected once, in public.</p>
-  <ul>
-    <li><strong>Three roles, three people.</strong> In each of the nine rounds, seven people train
-    the model, an eighth decides which version to keep, and the ninth is scored once at the end and
-    never influences a choice.</li>
-    <li><strong>Stopping and choosing were separated.</strong> Under the first protocol one person
-    did both jobs, and a model stopped on someone is already fitted to them. A tenth of the
-    <em>training</em> people's trials now decides when to stop.</li>
-    <li><strong>The noise floor was measured before anything was trusted.</strong> The same
-    configuration, three seeds, nothing else changed, moves the nine-round average by
-    <span class="num">0.9</span> points. So a single-run gain under about
-    <span class="num">1.3</span> points cannot be told apart from the random seed.</li>
-    <li><strong>Hence the threshold.</strong> Three seeds are the unit of evidence and a change is
-    kept only if it improves the validation average by <span class="num">0.75</span> points or more.</li>
-  </ul>
-  <p class="note">It cost us two results of our own: two changes accepted earlier on single runs sat
-  inside that noise band and did not survive being measured again. Both were dropped.</p>
+  <div class="eyebrow">3</div>
+  <h2>Method</h2>
+
+  <h3>3.1 &nbsp;Preprocessing</h3>
+  <p>Five steps run once and are cached: keep the 22 EEG channels, band-pass 4&ndash;38 Hz, cut
+  the trial window, flag artefacts, store. Three depend on who is held out and run inside every
+  round: <strong>Euclidean alignment</strong> (whiten each session by its own covariance),
+  standardisation using training-split statistics only, and augmentation of the training split by
+  recombining real segments of the same class. The band-pass runs over the continuous recording in
+  both directions, so no filter ringing lands at a trial edge and nothing is smeared in time.
+  Alignment needs no labels, which is why it can be applied to a brand-new user.</p>
+
+  <h3>3.2 &nbsp;The model</h3>
+  <p><strong>HCT-Net</strong> joins a convolutional front end modelled on EEGNet to one small
+  Transformer encoder layer. Eight temporal filters act as learned frequency bands; a depthwise
+  convolution gives each one a spatial filter across all 22 electrodes, collapsing them to one;
+  a separable convolution mixes the result and pools it to 27 time steps. Those are cut into five
+  overlapping windows of eleven steps and passed through a single two-head encoder, then averaged
+  and classified. The convolution's output width <em>is</em> the encoder's model dimension, so the
+  halves join with no projection layer.</p>
+  <p class="note">1,456 parameters in the convolutions, 2,224 in the encoder, 176 in the position
+  code, 68 in the classifier &mdash; <strong>3,924</strong> in all. Four sizes were compared:
+  <strong>A</strong> is this one, the smallest and the final model; <strong>D</strong> is the size
+  written into the design document before any experiment, 20,996 parameters. On a new person the
+  batch-normalisation statistics are recomputed from their <em>unlabelled</em> trials: no labels,
+  no gradients, about 0.2 s.</p>
+
+  <h3>3.3 &nbsp;What it was compared against</h3>
+  <p>FBCSP with LDA, reimplemented, and four published networks from <code>braindecode</code> at
+  their authors' defaults: EEGNet (3,188 parameters), ATCNet (113,732), CTNet (152,364) and EEG
+  Conformer (697,412). Two classical Riemannian methods were added later. Using the authors' own
+  code means a shortfall is a real difference under this protocol, not a bug in our copy.</p>
+  <p class="note">Checked against published within-subject figures, EEG Conformer came 1.4 points
+  short and FBCSP about 3, which was the bar set in advance before writing our own model. ATCNet
+  and CTNet fell <strong>18 points</strong> short; their reference code trains far longer than
+  this protocol allows, so their results here may understate those architectures.</p>
+
+  <h3>3.4 &nbsp;Protocol</h3>
+  <p>Nine rounds. In each, <strong>seven people train</strong> the model, <strong>an eighth
+  decides</strong> which version to keep, and <strong>the ninth is scored once</strong> and never
+  influences a choice. Early stopping uses a tenth of the training people's trials, never the
+  deciding person &mdash; a model stopped on someone is already fitted to them.</p>
+  <p>Before trusting any improvement we measured the noise: the same configuration, three seeds,
+  nothing else changed, moves the nine-round average by <span class="num">0.9</span> points. So a
+  single-run gain under about 1.3 points cannot be told apart from the random seed. Three seeds
+  are therefore the unit of evidence, and a change is kept only if it improves the validation
+  average by <span class="num">0.75</span> points or more.</p>
+  <p class="note">It cost us two results of our own: two changes accepted earlier on single runs
+  sat inside that noise band and did not survive being measured again.</p>
 </section>
 
-<section id="ours">
-  <div class="eyebrow">What is actually ours</div>
-  <h2>Nothing in the architecture, and that is the point</h2>
-  <p>Every block of this model came from a published one, and the repository names the paper each
-  came from with the code beside it. The depthwise front end and the max-norm constraint are
-  EEGNet's. The encoder layer is the 2017 Transformer. Putting convolution before attention
-  follows EEG Conformer and CTNet. The windowed attention came from ATCNet, the augmentation from
-  EEG Conformer and CTNet, the alignment from He and Wu, and the test-time adaptation is the
-  no-gradient half of TENT.</p>
+<section id="result">
+  <div class="eyebrow">4</div>
+  <h2>Results</h2>
+
+  <h3>4.1 &nbsp;Accuracy on an unseen person</h3>
   <div class="scroll"><table>
-    <tr><th>Borrowed</th><th>From</th><th>What measurement said</th></tr>
-    <tr><td>Depthwise&ndash;separable front end</td><td>EEGNet</td><td><span class="tag win">kept</span></td></tr>
-    <tr><td>Transformer encoder layer</td><td>Vaswani et al.</td><td><span class="tag win">kept, cut to one</span></td></tr>
-    <tr><td>Convolution before attention</td><td>EEG Conformer &middot; CTNet</td><td><span class="tag win">kept</span></td></tr>
-    <tr><td>Euclidean alignment</td><td>He &amp; Wu</td><td><span class="tag win">the one that clearly earns its place</span></td></tr>
-    <tr><td>Batch-norm re-estimation</td><td>TENT, its no-gradient half</td><td><span class="tag win">kept, +3.5</span></td></tr>
-    <tr><td>Sliding-window attention</td><td>ATCNet</td><td><span class="tag lose">rejected</span></td></tr>
-    <tr><td>Six encoder layers</td><td>CTNet</td><td><span class="tag lose">cut to one</span></td></tr>
-    <tr><td>Full TENT, entropy minimisation</td><td>TENT</td><td><span class="tag lose">rejected</span></td></tr>
+    <tr><th>Decoder</th><th>Size</th><th>Validation</th><th>Unseen person</th><th>&kappa;</th></tr>
+    <tr><td>EEGNet</td><td class="n">3,188</td><td class="n">55.0%</td><td class="n">54.3%</td><td class="n">0.391</td></tr>
+    <tr><td><strong>HCT-Net A</strong> <span class="tag">ours</span></td><td class="n"><strong>3,924</strong></td><td class="n"><strong>54.3%</strong></td><td class="n"><strong>53.6%</strong></td><td class="n">0.381</td></tr>
+    <tr><td>HCT-Net D <span class="tag">as first designed</span></td><td class="n">20,996</td><td class="n">53.3%</td><td class="n">52.7%</td><td class="n">0.369</td></tr>
+    <tr><td>Tangent space + LR <span class="tag">classical</span></td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">50.5%</td><td class="n">0.340</td></tr>
+    <tr><td>Minimum distance to mean <span class="tag">classical</span></td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">47.1%</td><td class="n">0.295</td></tr>
+    <tr><td>&hellip;the same, without alignment</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">30.2%</td><td class="n">0.070</td></tr>
   </table></div>
-  <p style="margin-top:14px">So the contribution is not a new block. It is three things that the
-  papers above did not do:</p>
-  <ul>
-    <li><strong>A protocol strict enough that a refutation can be believed</strong> &mdash; three
-    roles held by three different people, a measured noise floor, and a threshold derived from it
-    rather than chosen to suit.</li>
-    <li><strong>Three ways of improving the model, tested and refuted</strong> under that protocol:
-    more capacity, the attention block, and making more of the network adaptable. The third was our
-    own idea, built at an identical parameter count, and it was worse on every one of the nine
-    people.</li>
-    <li><strong>The finding that is left</strong>: every point of cross-subject gain came from
-    normalising distributions, and none from the model.</li>
-  </ul>
-  <p class="note">Said plainly, because it is the question an examiner asks first: this model does
-  not beat EEGNet, and the deck and the paper both say so. What it does is make the comparison
-  honest enough that the negative results mean something.</p>
+  <p class="note" style="margin-top:14px">Three seeds, adaptation on, chance 25%. EEGNet is 0.7
+  points ahead of us on validation, inside our own 0.75 threshold; on the test people the gap is
+  &minus;0.7 with a 95% interval from &minus;4.3 to +2.9, which contains zero. <strong>This is a
+  tie and is reported as one.</strong> The last two rows are the same classical method with and
+  without alignment: 30.2% to 47.1%, nothing changed but the data.</p>
+
+  <h3>4.2 &nbsp;What helped, and what did not</h3>
+  <div class="scroll"><table>
+    <tr><th>Intervention</th><th>Acts on</th><th>Result</th></tr>
+    <tr><td>More capacity, 3,924 &rarr; 20,996</td><td>the model</td><td class="n">54.3 &rarr; 53.3 &mdash; nothing</td></tr>
+    <tr><td>Remove the attention block</td><td>the model</td><td class="n">46.9 &rarr; 48.8 &mdash; better without</td></tr>
+    <tr><td>More adaptable layers, 3 &rarr; 7</td><td>the model</td><td class="n">53.6 &rarr; 49.3 &mdash; worse in 9/9</td></tr>
+    <tr><td>Euclidean alignment</td><td><strong>the data</strong></td><td class="n">+5.5 points</td></tr>
+    <tr><td>Re-estimate statistics on the new person</td><td><strong>the data</strong></td><td class="n">+3.5 points</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">The third was our own idea &mdash; a Transformer's layer
+  normalisation keeps no statistics, so adaptation can never reach the attention half. We rebuilt
+  the encoder to hold them, at an identical parameter count, and it was worse on every person.</p>
+
+  <h3>4.3 &nbsp;Who it works for</h3>
+  <div class="scroll"><table>
+    <tr><th>Person</th><th>A03</th><th>A01</th><th>A08</th><th>A09</th><th>A07</th><th>A06</th><th>A04</th><th>A05</th><th>A02</th></tr>
+    <tr><td>Accuracy</td><td class="n">76.7</td><td class="n">72.2</td><td class="n">65.0</td><td class="n">58.5</td><td class="n">51.6</td><td class="n">45.0</td><td class="n">44.6</td><td class="n">37.6</td><td class="n">31.4</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">The spread between people dwarfs every difference
+  between models in this study. A02 and A05 sit near chance whatever decoder is pointed at them,
+  and they were the hardest for the classical method and all four networks alike &mdash; a property
+  of the people, not the software. A device built on this would serve about a third of users well
+  and a third badly, which is why nothing here is reported as an average alone.</p>
 </section>
 
-<section>
-  <div class="eyebrow">The record</div>
-  <h2>Superseded results, kept</h2>
-  <p>Nothing measured in this project is deleted when it is overtaken. The tables below were the
-  answer at the time and are wrong now; they are here so the change is visible.</p>
-  <details>
-    <summary>Show the first-protocol results and the corrections</summary>
-    <p class="note" style="margin-top:14px">This page was first written on 18 September 2026. Three
-    things changed afterwards: re-estimating batch-norm statistics on the new person was accepted
-    (19 September, +3.5 points on validation), two architectural variants were rejected on three
-    seeds (23 September), and the size sweep replaced the model with a 3,924-parameter
-    configuration (4 October). On 7 November the correlation this page once led with was withdrawn
-    as an artefact. Every change is dated in <code>FINDINGS.md</code>.</p>
-
-  
-  <h2>From 47% to 52%, one change at a time</h2>
-  <p>Each change was stacked on the last one kept, and every one was judged on a
-  <strong>separate validation person</strong> set aside in each test round &mdash; never on
-  the people the final score is measured on. The test column below was read only once,
-  after every decision had been made.</p>
-  <div class="scroll"><table>
-    <tr><th>Change</th><th>Validation</th><th>Stranger</th><th style="width:26%">&nbsp;</th><th>Decision</th></tr>
-    <tr><td>the model as first designed</td><td class="n">53.8%</td><td class="n">47.1%</td>
-      <td><div class="bar"><i style="width:47.1%;background:var(--violet)"></i></div></td>
-      <td><span class="tag">start</span></td></tr>
-    <tr><td>read the whole signal over time, not its average</td><td class="n">55.0%</td><td class="n">48.5%</td>
-      <td><div class="bar"><i style="width:48.5%;background:var(--good)"></i></div></td>
-      <td><span class="tag win">kept</span></td></tr>
-    <tr><td>attend to the whole trial, not five windows</td><td class="n">56.0%</td><td class="n">49.1%</td>
-      <td><div class="bar"><i style="width:49.1%;background:var(--good)"></i></div></td>
-      <td><span class="tag win">kept</span></td></tr>
-    <tr><td>re-tune to each new person's signal statistics</td><td class="n">55.6%</td><td class="n">53.2%</td>
-      <td><div class="bar"><i style="width:53.2%;background:var(--muted)"></i></div></td>
-      <td><span class="tag lose">rejected</span></td></tr>
-    <tr><td>train three copies and average their answers</td><td class="n">58.6%</td><td class="n"><strong>51.9%</strong></td>
-      <td><div class="bar"><i style="width:51.9%;background:var(--violet)"></i></div></td>
-      <td><span class="tag win">kept &middot; final</span></td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">The rejected row scores <strong>53.2%</strong> on
-  strangers &mdash; higher than the final model and higher than every published decoder. It
-  was left out anyway, because the person used to judge it said no. Picking it then, knowing
-  its test score, would have turned the result into a choice made by looking at the answers.</p>
-  <p class="note"><strong>It was re-measured properly on 19 September and kept.</strong>
-  Re-estimating batch-norm statistics on the new person, three seeds, decided on validation,
-  improves validation by <strong>+3.5 points</strong> and is part of the current model. No
-  labels of that person are used at any point. The full method it comes from &mdash; TENT,
-  which also updates parameters by gradient &mdash; scored 0.3 above it, below the
-  0.75-point threshold, and was not kept.</p>
-
-  <p class="warn"><strong>Two protocols below, and they do not mix.</strong> The first table
-  is protocol v1: one seed, no adaptation. The second is v2: three seeds, adaptation, and a
-  separate validation person for every decision. A number from one table cannot be compared
-  with a number from the other. Only rows inside the same table are like for like.</p>
-  <h3 style="margin-top:28px">Where it landed under the first protocol</h3>
-  <p class="note">One seed, no test-time adaptation. Superseded by the table below, and kept
-  because no result in this project is overwritten.</p>
-  <div class="scroll"><table>
-    <tr><th>#</th><th>Decoder</th><th>Stranger</th><th>Size</th><th>Gap to ours</th></tr>
-    <tr><td class="n">1</td><td>ATCNet</td><td class="n">52.4%</td><td class="n">113,732</td><td class="n">+0.5, could be luck</td></tr>
-    <tr><td class="n">2</td><td>EEG Conformer</td><td class="n">52.1%</td><td class="n">697,412</td><td class="n">+0.2, could be luck</td></tr>
-    <tr><td class="n">3</td><td><strong>HCT-Net, final</strong> <span class="tag">ours</span></td><td class="n"><strong>51.9%</strong></td><td class="n">74,508</td><td class="n">&mdash;</td></tr>
-    <tr><td class="n">4</td><td>EEGNet</td><td class="n">51.2%</td><td class="n">3,188</td><td class="n">&minus;0.8, could be luck</td></tr>
-    <tr><td class="n">5</td><td>CTNet</td><td class="n">50.2%</td><td class="n">152,364</td><td class="n">&minus;1.7, could be luck</td></tr>
-    <tr><td class="n">6</td><td>FBCSP <span class="tag">classical</span></td><td class="n">44.2%</td><td class="n">&mdash;</td><td class="n">&minus;7.8</td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">None of the gaps between the top five can be told
-  apart from chance with nine people. The honest summary is that our model now
-  <strong>ties</strong> with the best published decoders rather than beating them. It does so
-  at 74,508 parameters &mdash; two thirds of ATCNet's &mdash; but that is three copies of a
-  24,836-parameter network, so the "small model" promise of the original design is only
-  partly kept.</p>
-
-  
-  </details>
+<section id="discussion">
+  <div class="eyebrow">5</div>
+  <h2>Discussion</h2>
+  <p>Three measurements point the same way. Capacity does nothing: four sizes of our model, from
+  3,924 to 20,996 parameters, finish within a point of each other, and across published decoders
+  EEG Conformer carries 219 times EEGNet's parameters for nine tenths of a point. The attention
+  block does nothing: removing it <em>improved</em> cross-subject accuracy, and global attention
+  beat the windowed design the project was built around. Making more of the network adaptable made
+  it worse.</p>
+  <p>What did work were two operations on the data rather than the model, both label-free:
+  aligning each recording's covariance, and recomputing normalisation statistics on the new
+  person. Alignment alone takes the classical method from 30.2% to 47.1%, and halves how often a
+  trial's own participant can be identified from its channel variances, from 46.8% to 22.9%.</p>
+  <p>The reading we take from this is that the cross-subject gap is a problem of
+  <strong>distribution</strong>, not of capacity, architecture or adaptability &mdash; and that
+  within-subject accuracy is a poor guide to it. Across six decoders the correlation between
+  doing well on a familiar person and doing well on a stranger is r = 0.08, which settles nothing
+  at six models but certainly offers no support for the usual assumption.</p>
+  <p class="note">An earlier version of this page reported r = &minus;0.86 between familiar-person
+  skill and the size of the drop, and called it the project's strongest result. It was an
+  artefact: the drop is computed from the familiar-person score, so the two must correlate. It was
+  withdrawn on 7 November 2026.</p>
 </section>
 
 <section id="limits">
-  <div class="eyebrow">Being straight about it</div>
-  <h2>What this does and doesn't show</h2>
+  <div class="eyebrow">6</div>
+  <h2>Limitations</h2>
   <ul>
-    <li><strong>Our model ties, it does not win.</strong> As first designed it was significantly
-    worse than ATCNet. After the improvements it sits within half a point of the leader, and no
-    difference among the top five is statistically reliable. Under the current protocol EEGNet
-    is still 0.7 points ahead of us on validation.</li>
-    <li><strong>Size turned out not to be the lever.</strong> Shrinking the model from 20,996
-    parameters to 3,924 narrowed the familiar-to-stranger gap from 24.7 points to 22.8, or
-    20.6 to 18.5 with adaptation. The ~18 points that survive at every size tested are not a
-    capacity problem and will not be fixed by shrinking further.</li>
-    <li><strong>One improvement was not chosen blind.</strong> Attending over the whole trial
-    was tried because an earlier experiment had already shown it winning on the test people.
-    It was then confirmed on the separate validation people, but its test result had been
-    seen first.</li>
-    <li><strong>The design's reasoning about windowed attention was wrong.</strong> Attending
-    over the whole trial beat it twice, so that part of the design document has to be
-    rewritten rather than defended.</li>
-    <li><strong>Nine people is a small sample.</strong> Several real effects &mdash; including
-    the 5.1-point value of signal re-centring &mdash; point consistently in one direction
-    without reaching statistical significance, because with nine subjects and two poor
-    performers the test simply cannot clear the bar. That is a limit of the dataset, not
-    evidence the effects are absent.</li>
-    <li><strong>Two baselines fell short of their published accuracy</strong> by around 18
-    points under our protocol. Their comparison is still fair &mdash; every model ran under
-    identical conditions &mdash; but their numbers should not be presented as matching the
-    original authors'.</li>
-    <li><strong>The baselines ran with a single random seed.</strong> Only our final model
-    averages three. How much a single-seed result moves between runs was not measured
-    properly, so small gaps between baselines should not be over-read.</li>
+    <li><strong>Nine people, one dataset.</strong> Differences of a few points cannot be resolved
+    at this size, and nothing here is shown to carry to other montages or populations.</li>
+    <li><strong>We do not beat the baseline.</strong> EEGNet is 0.7 points ahead on validation.
+    Inside our threshold, so a tie &mdash; but a tie, not a win.</li>
+    <li><strong>The baselines were not treated equally.</strong> ATCNet, CTNet, EEG Conformer and
+    FBCSP ran under the first protocol with one seed and no adaptation; only EEGNet and HCT-Net
+    ran under the current one. Comparisons across that line indicate scale, not ranking.</li>
+    <li><strong>Two baselines under-reproduced</strong> their published within-subject accuracy by
+    about 18 points under our shared training budget, so their cross-subject numbers may understate
+    them.</li>
+    <li><strong>One ordering was not blind.</strong> The order in which two experiments were tried
+    was influenced by a test result already seen. The keep-or-reject decisions used validation
+    only, and the report says so.</li>
+    <li><strong>A planned experiment is unfinished</strong>: giving each model its own analysis
+    window, since some published models use 4&ndash;4.5 s against our 3.5 s.</li>
   </ul>
-  <details>
-    <summary>What would be worth doing next</summary>
-    <p style="margin-top:12px">Measure the final model on familiar people too, so its
-    familiar-to-stranger drop can be compared with the original 26.3 points. Run the
-    baselines with three seeds each, so the comparison with our three-copy model is like for
-    like. And test whether the signal re-centring step is what drags ATCNet down on the three
-    hardest people &mdash; the one explanation for its shortfall that was not ruled out.</p>
+</section>
+
+<section id="repro">
+  <div class="eyebrow">7</div>
+  <h2>Reproducibility</h2>
+  <div class="scroll"><table>
+    <tr><th>What</th><th>Where</th></tr>
+    <tr><td>Every number above, regenerated in about a second</td><td><code>py results.py</code></td></tr>
+    <tr><td>Intervals, power analysis, classical references</td><td><code>paper/</code></td></tr>
+    <tr><td>The running record, every result with its date</td><td><code>FINDINGS.md</code></td></tr>
+    <tr><td>The 18 raw recordings, 744 MB, with checksums</td><td><code>data/</code></td></tr>
+    <tr><td>Per-fold metrics, one row per fold per seed</td><td><code>results/</code></td></tr>
+    <tr><td>Which part of the model came from which paper</td><td><code>model_provenance/</code></td></tr>
+    <tr><td>The code, one folder per project activity</td><td><code>phase3/</code></td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">Every script ends in a self-check that fails loudly
+  rather than printing a number nobody verified. Long runs write after each round and resume where
+  they stopped.</p>
+  <details style="margin-top:22px">
+    <summary>Appendix &mdash; superseded results, kept</summary>
+    <p class="note" style="margin-top:14px">This page first reported the project on 18 September
+    2026. Since then, re-estimating statistics on the new person was accepted (19 September, +3.5
+    points), two architectural variants were rejected on three seeds (23 September), the size
+    sweep replaced the model with a 3,924-parameter configuration (4 October), and the correlation
+    described in section 5 was withdrawn (7 November). Under the first protocol the field finished
+    ATCNet 52.4%, EEG Conformer 52.1%, EEGNet 51.2%, CTNet 50.2%, our model 51.9% at 74,508
+    parameters, and FBCSP 44.2%; our model as first designed scored 46.9% and dropped 26.3 points
+    from its familiar-person accuracy. Those runs used one seed and no adaptation and are not
+    comparable with section 4. Every figure, with the date it was measured and the reason it was
+    kept or dropped, is in <code>FINDINGS.md</code>.</p>
   </details>
 </section>
 
-<section id="get">
-  <div class="eyebrow">The code and the data</div>
-  <h2>Everything here can be checked</h2>
-  <div class="scroll"><table>
-    <tr><th>What</th><th>Where</th></tr>
-    <tr><td>Every number on this page, regenerated in about a second</td><td><code>py results.py</code></td></tr>
-    <tr><td>Intervals, the power analysis, the classical references</td><td><code>py paper/riemannian.py</code> &middot; <code>py paper/extra_analyses.py</code></td></tr>
-    <tr><td>The running record, every result with the date it was found</td><td><code>FINDINGS.md</code></td></tr>
-    <tr><td>The 18 raw recordings, 744 MB, with checksums</td><td><code>data/</code> &middot; <code>data/SHA256SUMS</code></td></tr>
-    <tr><td>The recordings as tables a browser will render</td><td><code>data/csv/</code></td></tr>
-    <tr><td>Per-fold metrics, one row per fold per seed</td><td><code>results/</code></td></tr>
-    <tr><td>Which part of the model came from which paper</td><td><code>model_provenance/</code></td></tr>
-    <tr><td>Every paper used, with DOIs</td><td><code>references/REFERENCES.md</code></td></tr>
-    <tr><td>The code, one folder per Phase 3 activity</td><td><code>phase3/</code></td></tr>
-  </table></div>
-  <p class="note" style="margin-top:14px">Long runs write after every fold and skip work already
-  recorded, so an interrupted run continues where it stopped. Every script ends in a self-check
-  that fails loudly rather than printing a number nobody verified.</p>
-</section>
 
 <footer>
   <p>Nine volunteers &middot; 5,184 recorded trials &middot; 22 electrodes &middot; four

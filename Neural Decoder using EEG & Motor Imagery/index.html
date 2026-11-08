@@ -334,7 +334,9 @@ const SLIDES = [
 <h1>Neural Decoder using EEG &amp; Motor Imagery</h1>
 <p class="lead">Classify four imagined movements — left hand, right hand, feet, tongue — from 22-channel scalp EEG, tested on people the model never trained on.</p>
 ${headlineTable}
-<p class="callout"><strong>A tie.</strong> EEGNet is 0.7 ahead on validation, inside our 0.75 threshold. We do not claim to beat it.</p>` },
+<p class="callout"><strong>A tie.</strong> EEGNet is 0.7 ahead on validation, inside our 0.75 threshold. We do not claim to beat it.</p>
+<p>A motor-imagery decoder normally has to be calibrated for each new user before it works at all. This study asks whether the usual answer — more capacity, more attention — buys anything at all for someone the model has never seen, and measures it under one protocol for every model.</p>
+<p class="note">BCI Competition IV Dataset 2a · nine participants · leave one out · three seeds · all code, data checksums and per-fold logs published.</p>` },
 
   { id: 'problem', label: 'The problem', scene: 'problem',
     pose: { t: [0.45, 2.1, 0], th: 0.4, ph: 1.24, box: [[-1.8, 0, -0.7], [3.6, 4.5, 1.4]] },
@@ -344,7 +346,9 @@ ${headlineTable}
 <h2>The stranger is the hard case</h2>
 <p>CTNet reports <strong>82.52%</strong> on a familiar person and <strong>58.64%</strong> on a stranger: a <strong>23.88-point drop</strong>.</p>
 <p>Every number in this project is measured on the stranger: each test participant is someone the model never trained on.</p>
-<p class="note">Chance is 25.0% for four classes.</p>` },
+<p>That gap is why these devices stay in the lab. Before a new user can do anything, they sit through a labelled calibration session, and for a sizeable share of people the system never becomes reliable at all — the literature calls it BCI inefficiency.</p>
+<p>So the familiar-person number, which is the one usually quoted, describes nobody's first experience of the device. Only the right-hand number does.</p>
+<p class="note">Chance is 25.0% for four classes. Both figures above are CTNet's own, from its paper, which is why they are a fair pair to quote.</p>` },
 
   { id: 'data', label: 'The data', scene: 'trial',
     pose: { t: [0.3, -0.3, 0], th: 0.45, ph: 0.92, box: [[-7.2, -1.2, -2.8], [8.2, 0.8, 3.0]], m: 0.92 },
@@ -360,7 +364,10 @@ ${headlineTable}
   <li>Window 0.5–4.0 s after the cue = 875 samples</li>
   <li>Chance = 25.0%</li>
 </ul>
-<p>The surface is one real trial: participant A01's first left-hand trial of session T, band-passed 4–38 Hz. It is 22 electrodes by 875 samples; height is amplitude and colour its sign (violet above zero, teal below).</p>` },
+<p>The surface is one real trial: participant A01's first left-hand trial of session T, band-passed 4–38 Hz. It is 22 electrodes by 875 samples; height is amplitude and colour its sign (violet above zero, teal below).</p>
+<p>A trial runs like this: a fixation cross and a beep, then two seconds later an arrow telling the participant which movement to imagine. They hold the imagery until the cross clears at six seconds. The window we decode starts half a second after the cue, which leaves out the brain's response to the arrow itself.</p>
+<p>The two sessions were recorded on different days, which matters: a participant's own signals shift between them, and the ones that shift most turn out to be the hardest to decode.</p>
+<p class="note">Trials are flagged rather than deleted when a channel swings past 100 µV — 4.3% on average, but 25% for A09. The flag applies to training participants only, so no test participant is ever scored on a convenient subset.</p>` },
 
   { id: 'prep', label: 'Preprocessing', scene: 'pipeline',
     pose: { t: [0, 0.15, 0], th: 0.16, ph: 1.2, box: [[-7.6, -1.0, -0.5], [7.6, 1.5, 0.6]], m: 0.92 },
@@ -382,7 +389,10 @@ ${headlineTable}
   <li>Euclidean alignment, per session</li>
   <li>Standardise with training-split statistics</li>
   <li>Augment the training split (segmentation and reconstruction)</li>
-</ol>` },
+</ol>
+<p>Two details carry more weight than they look. The band-pass runs over the <em>continuous</em> recording before trials are cut, so no filter ringing lands at a trial edge; and it runs in both directions, which cancels the phase shift that would otherwise smear the signal in time.</p>
+<p>Everything in the second group depends on which participant is held out, so it cannot be cached. The standardisation statistics come from the training split alone, and the synthetic trials are assembled only from real segments of the same class, so nothing from a validation or test participant reaches the model through the back door.</p>
+<p class="note">Two automatic checks guard this: the mean covariance after alignment must equal the identity, and no synthetic trial may mix segments from either side of a fold boundary.</p>` },
 
   { id: 'arch', label: 'The architecture', scene: 'arch', arch: true,
     pose: { t: [0, 0, 0], th: -0.3, ph: 1.08, box: [[-8.9, -1.2, -1.9], [8.9, 1.3, 1.9]], m: 0.93 },
@@ -415,7 +425,12 @@ ${headlineTable}
   <li><span class="sw" style="background:#1B7F79"></span><strong>Validate</strong>: 1 participant; every keep-or-reject decision is made here</li>
   <li><span class="sw" style="background:#5B3E96"></span><strong>Test</strong>: 1 participant, touched once</li>
 </ul>
-<p class="note">A configuration is judged on the validation participant only. The test participant is scored once and never steers a choice.</p>` },
+<p class="note">A configuration is judged on the validation participant only. The test participant is scored once and never steers a choice.</p>
+<h3>Why it was rebuilt</h3>
+<p>Under the first protocol the validation participant did two jobs at once: it picked the epoch to stop training at <em>and</em> judged which configuration to keep. A model stopped on someone is already fitted to them, so it flattered itself there. Now a tenth of the <em>training</em> participants' trials decides when to stop, and the validation participant only chooses.</p>
+<h3>How small a gain counts</h3>
+<p>Before trusting any improvement we measured the noise. The same configuration, three seeds, nothing else changed, moves the nine-fold mean by <strong>0.9 points</strong> — so a single-seed gain under about 1.3 points is indistinguishable from the seed. Hence three seeds as the unit of evidence and a <strong>0.75-point</strong> threshold on their mean.</p>
+<p class="note">It cost us two results: two changes accepted earlier on single runs sat inside that band and did not survive re-measurement.</p>` },
 
   { id: 'interventions', label: 'Five interventions', scene: 'interventions',
     pose: { t: [-0.35, 1.75, 0], th: 0.1, ph: 1.24, box: [[-6.5, -0.9, -1.5], [5.9, 4.5, 1.7]] },
@@ -434,7 +449,9 @@ ${headlineTable}
   <li><strong>Euclidean alignment per session</strong>: +5.5 points cross-subject. <span class="ctx">FBCSP · v1 · test</span></li>
   <li><strong>Re-estimate BN statistics on the new person</strong>: +3.5 points, no labels, no gradients. <span class="ctx">v2 · validation</span></li>
 </ul>
-<p class="claim">Every point of cross-subject gain came from normalising distributions. None came from the model.</p>` },
+<p class="claim">Every point of cross-subject gain came from normalising distributions. None came from the model.</p>
+<p>The third refutation was our own idea. A Transformer's layer normalisation stores no running statistics, so test-time adaptation can never reach the attention half of the model. We rebuilt the encoder to hold them, at an identical parameter count — and it was worse on every one of the nine participants. The gain it was built to increase fell from +3.5 to +2.4.</p>
+<p class="note">Rows are labelled with the protocol they were measured under, because v1 and v2 numbers are not comparable with each other.</p>` },
 
   { id: 'sweep', label: 'The size sweep', scene: 'sweep',
     pose: { t: [0, 2.35, 0], th: 0.14, ph: 1.25, box: [[-6.4, -0.6, -0.6], [6.7, 5.5, 0.9]] },
@@ -447,7 +464,10 @@ ${headlineTable}
   <thead><tr><th scope="col">Config</th><th scope="col">Params</th><th scope="col">Val</th><th scope="col">Test</th></tr></thead>
   <tbody>${SWEEP.map(s => `<tr${s.cfg === 'A' ? ' class="ours"' : ''}><td>${s.cfg}</td><td>${fmt(s.params)}</td><td>${s.val}%</td><td>${s.test}%</td></tr>`).join('')}</tbody>
 </table>
-<p class="note">A and D are in the headline table; B and C come from the project's result logs.</p>` },
+<p class="note">A and D are in the headline table; B and C come from the project's result logs.</p>
+<p>A second encoder layer adds nothing. Doubling the width adds nothing. For scale, ATCNet carries 36 times EEGNet's parameters and gains 1.2 points on a stranger.</p>
+<p>The part that rules something out is the last column of the study rather than this table: <strong>within-subject accuracy is flat across these four too</strong>, 71.9% to 73.4%. So the whole change in the familiar-to-stranger gap comes from the stranger side, and about <strong>18 points survive at every size tested</strong>.</p>
+<p>That is what makes the finding a refutation rather than a shrug: the gap is not a capacity problem, so no amount of making the model bigger was ever going to close it.</p>` },
 
   { id: 'participants', label: 'Per participant', scene: 'participants',
     pose: { t: [0, 0.8, 0], th: 0.05, ph: 1.46, box: [[-7.0, -1.0, -0.5], [7.0, 2.5, 0.5]] },
@@ -460,7 +480,10 @@ ${headlineTable}
   <thead><tr><th scope="col">Participant</th><th scope="col">Test</th></tr></thead>
   <tbody>${PARTICIPANTS.map(([p, a]) => `<tr><td>${p}</td><td>${a}%</td></tr>`).join('')}</tbody>
 </table>
-<p class="note">Which particular dots are lit is arbitrary: per-trial predictions were not kept during the size sweep. The counts are the measured ones.</p>` },
+<p class="note">Which particular dots are lit is arbitrary: per-trial predictions were not kept during the size sweep. The counts are the measured ones.</p>
+<p>The spread dwarfs every difference between models in this study. A03 and A01 are decoded well enough to be useful; A02 and A05 sit close to guessing whatever is pointed at them, and they were the hardest for the classical decoder and all four deep ones alike.</p>
+<p>So this is a property of the people, not of the software — which is why nothing here is ever reported as an average alone. A device built on today's accuracy would serve roughly a third of users well and a third badly.</p>
+<p class="note">An exploratory check ties it to how much a person's own recordings shift between their two sessions, r = −0.89 over nine points. Nine points is far too few to settle it, so it is a hypothesis, not a finding.</p>` },
 
   { id: 'close', label: 'Close', scene: 'close', sway: 0.26,
     pose: { t: [0, 2.3, 0], th: 0.11, ph: 1.38, box: [[-7.2, -1.5, -1.0], [7.2, 6.1, 1.0]] },

@@ -464,8 +464,8 @@ ${headlineTable}
 <p class="note">Which particular dots are lit is arbitrary: per-trial predictions were not kept during the size sweep. The counts are the measured ones.</p>` },
 
   { id: 'close', label: 'Close', scene: 'close', auto: 0.06,
-    pose: { t: [0, 2.45, 0], th: 0.15, ph: 1.33, box: [[-7.0, -0.9, -1.3], [7.0, 6.0, 1.3]] },
-    aria: 'Nine columns of light, one per decoder. Height is cross-subject accuracy measured from zero and width is the parameter count, so EEG Conformer is a broad dim column at 52.1 percent and our 3,924-parameter model a slender lit one at 53.6 percent. A dashed line marks chance at 25 percent.',
+    pose: { t: [0, 2.3, 0], th: 0.11, ph: 1.38, box: [[-7.2, -1.5, -1.0], [7.2, 6.1, 1.0]] },
+    aria: 'Nine columns of light, one per decoder, each a different colour. Height is cross-subject accuracy measured from zero and width is the parameter count, so EEG Conformer is a broad column at 52.1 percent and our 3,924-parameter model a slender bright one at 53.6 percent. A dashed line marks chance at 25 percent.',
     html: () => `
 <p class="eyebrow">Where we finished</p>
 <p class="bigclaim">Top of the field on people it had never seen, at a fraction of the size.</p>
@@ -1432,12 +1432,16 @@ function startEngine(THREE) {
     // with a faint mirrored copy below the floor standing in for a reflection.
     const M = [
       ['FBCSP', 0, 44.2, 'classical'], ['MDM', 0, 47.1, 'classical'], ['TS-LR', 0, 50.5, 'classical'],
-      ['CTNet', 152364, 50.2, 'v1'], ['EEG Conformer', 697412, 52.1, 'v1'], ['ATCNet', 113732, 52.4, 'v1'],
+      ['CTNet', 152364, 50.2, 'v1'], ['Conformer', 697412, 52.1, 'v1'], ['ATCNet', 113732, 52.4, 'v1'],
       ['HCT-Net D', 20996, 52.7, 'v2'], ['HCT-Net A', 3924, 53.6, 'ours'], ['EEGNet', 3188, 54.3, 'v2'],
     ];
     const k = 0.098, sp = 1.34, L0 = Math.log10(3188), L1 = Math.log10(697412);
     const x0 = -(M.length - 1) * sp / 2;
-    const HUE = { ours: 0xB69BE4, v2: 0x7FD8D1, v1: 0x8A93A8, classical: 0xC9B79C };
+    // One hue each, warm on the left where the classical methods sit and cool on the right where the
+    // compact networks do, with ours the brightest. Protocol stays in the label and the tooltip.
+    const HUE = { 'FBCSP': 0xE8A33D, 'MDM': 0xE2735B, 'TS-LR': 0xD2639B,
+      'CTNet': 0x8A6FE0, 'Conformer': 0x5C8CE6, 'ATCNet': 0x3FB6DE,
+      'HCT-Net D': 0x2FC9A5, 'HCT-Net A': 0xC9A6FF, 'EEGNet': 0x6FDC8C };
     const cols = [], labels = [], picks = [];
 
     floor(scene, 15.5, 4.6, 0, 0, 0);
@@ -1447,22 +1451,22 @@ function startEngine(THREE) {
     M.forEach(([nm, prm, acc, kind], i) => {
       const x = x0 + i * sp, h = acc * k, ours = kind === 'ours';
       const r = prm ? 0.075 + 0.345 * (Math.log10(prm) - L0) / (L1 - L0) : 0.05;
-      const hue = HUE[kind];
+      const hue = HUE[nm];
       const g = new THREE.Group(); g.position.set(x, 0, 0); scene.add(g);
 
       const core = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.42, r * 0.42, 1, 18),
-        new THREE.MeshBasicMaterial({ color: hue, transparent: true, opacity: ours ? 0.95 : 0.5 }));
+        new THREE.MeshBasicMaterial({ color: hue, transparent: true, opacity: ours ? 1 : 0.85 }));
       const sheath = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 26, 1, true),
-        new THREE.MeshStandardMaterial({ color: hue, emissive: hue, emissiveIntensity: ours ? 0.6 : 0.3,
-          roughness: 0.3, metalness: 0, transparent: true, opacity: ours ? 0.3 : 0.16, side: THREE.DoubleSide, depthWrite: false }));
+        new THREE.MeshStandardMaterial({ color: hue, emissive: hue, emissiveIntensity: ours ? 0.85 : 0.55,
+          roughness: 0.3, metalness: 0, transparent: true, opacity: ours ? 0.42 : 0.3, side: THREE.DoubleSide, depthWrite: false }));
       const mirror = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 26, 1, true),
-        new THREE.MeshBasicMaterial({ color: hue, transparent: true, opacity: ours ? 0.1 : 0.05, side: THREE.DoubleSide, depthWrite: false }));
+        new THREE.MeshBasicMaterial({ color: hue, transparent: true, opacity: ours ? 0.16 : 0.09, side: THREE.DoubleSide, depthWrite: false }));
       g.add(core, sheath, mirror);
       const cap = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.25, r * 1.25, 0.012, 26),
         new THREE.MeshBasicMaterial({ color: ours ? 0xFFFFFF : hue, transparent: true, opacity: ours ? 0.95 : 0.55 }));
       g.add(cap);
       const foot = new THREE.Mesh(new THREE.RingGeometry(r * 1.3, r * 1.75, 28),
-        new THREE.MeshBasicMaterial({ color: hue, transparent: true, opacity: ours ? 0.6 : 0.22, side: THREE.DoubleSide, depthWrite: false }));
+        new THREE.MeshBasicMaterial({ color: hue, transparent: true, opacity: ours ? 0.8 : 0.45, side: THREE.DoubleSide, depthWrite: false }));
       foot.rotation.x = -Math.PI / 2; foot.position.y = 0.004; g.add(foot);
 
       core.userData.tip = `<b>${nm}</b><br>${prm ? fmt(prm) + ' parameters' : 'no trained parameters'}<br>${acc}% cross subject`;
@@ -1472,10 +1476,10 @@ function startEngine(THREE) {
       labels.push(label(layer, `${acc}`, ours ? 'value' : 'value small', new THREE.Vector3(x, h + 0.2, 0)));
       labels.push(label(layer, ours ? `${nm}<span class="sub">ours · ${fmt(prm)} parameters</span>`
         : `${nm}<span class="sub">${prm ? fmt(prm) : 'no parameters'}</span>`, ours ? 'small' : 'tag',
-        new THREE.Vector3(x, -0.06, 0), 'below'));
+        new THREE.Vector3(x, i % 2 ? -0.30 : -0.04, 0), 'below'));
     });
-    labels.push(label(layer, 'height is accuracy on unseen people, from zero · width is the parameter count',
-      'tag', new THREE.Vector3(0, -0.62, 0), 'below'));
+    labels.push(label(layer, 'height is accuracy on unseen people, measured from zero · width is the parameter count',
+      'tag', new THREE.Vector3(0, -1.02, 0), 'below'));
 
     let t0 = 0;
     return { scene, layer, labels, pickables: picks,
@@ -1486,10 +1490,10 @@ function startEngine(THREE) {
           const h = Math.max(1e-4, c.h * f);
           c.core.scale.y = h; c.core.position.y = h / 2;
           c.sheath.scale.y = h; c.sheath.position.y = h / 2;
-          c.mirror.scale.y = h * 0.55; c.mirror.position.y = -h * 0.275;
+          c.mirror.scale.y = h * 0.22; c.mirror.position.y = -h * 0.11;
           c.cap.position.y = h;
           const pulse = reduced ? 1 : 0.9 + 0.1 * Math.sin(t * 1.1 + i);
-          c.sheath.material.emissiveIntensity = (c.ours ? 0.6 : 0.3) * pulse;
+          c.sheath.material.emissiveIntensity = (c.ours ? 0.85 : 0.55) * pulse;
         });
       } };
   }

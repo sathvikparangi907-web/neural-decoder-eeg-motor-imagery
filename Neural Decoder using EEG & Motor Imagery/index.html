@@ -463,12 +463,12 @@ ${headlineTable}
 </table>` },
 
   { id: 'close', label: 'Close', scene: 'close', auto: 0.06,
-    pose: { t: [-1.1, 4.3, 0], th: 0.17, ph: 1.3, box: [[-8.8, 2.1, -1.2], [6.6, 6.5, 1.2]] },
-    aria: 'Every decoder we ran, placed by parameter count along a log axis and by cross-subject accuracy in height. Each block’s volume is its parameter count: EEG Conformer is a large block at 52.1 percent, our 3,924-parameter model a small one at 53.6 percent, and all of them fall inside a ten-point band far above the 25 percent chance line.',
+    pose: { t: [0, 2.45, 0], th: 0.15, ph: 1.33, box: [[-7.0, -0.9, -1.3], [7.0, 6.0, 1.3]] },
+    aria: 'Nine columns of light, one per decoder. Height is cross-subject accuracy measured from zero and width is the parameter count, so EEG Conformer is a broad dim column at 52.1 percent and our 3,924-parameter model a slender lit one at 53.6 percent. A dashed line marks chance at 25 percent.',
     html: () => `
 <p class="eyebrow">Where we finished</p>
 <p class="bigclaim">Top of the field on people it had never seen, at a fraction of the size.</p>
-<p>Each block&rsquo;s <strong>volume is its parameter count</strong> and its <strong>height is its cross-subject accuracy</strong>. They differ by <strong>219&times;</strong> in size and by four points in accuracy.</p>
+<p>Each column&rsquo;s <strong>height is its accuracy</strong> on unseen people, measured from zero, and its <strong>width is its parameter count</strong>. They differ by <strong>219&times;</strong> in width and by four points in height.</p>
 <table>
   <caption>Cross-subject accuracy. Chance is 25.0%.</caption>
   <tr><th>Model</th><th>Params</th><th>Test</th></tr>
@@ -1381,80 +1381,72 @@ function startEngine(THREE) {
      Scene: close — nine distributions pulled into alignment (slide 10, an illustration)
      ====================================================================== */
   function buildClose() {
-    const scene = baseScene(10, 56);
+    const scene = baseScene(14, 60);
     const layer = makeLayer(true);
-    // Accuracy against size. Each block's VOLUME is its parameter count and its HEIGHT is its
-    // cross-subject accuracy, so the finding is the picture: the blocks differ enormously in size
-    // and hardly at all in height. x is log10(parameters), which makes it a scatter as well.
-    const DEEP = [
-      ['EEGNet', 3188, 54.3, 'v2'], ['HCT-Net A', 3924, 53.6, 'ours'], ['HCT-Net D', 20996, 52.7, 'v2'],
-      ['ATCNet', 113732, 52.4, 'v1'], ['CTNet', 152364, 50.2, 'v1'], ['EEG Conformer', 697412, 52.1, 'v1'],
+    // Columns of light. Height is cross-subject accuracy measured from zero - no truncated axis -
+    // and thickness is the parameter count on a log scale, so the largest models are broad and dim
+    // and ours is slender and lit. Each column is a bright core inside a soft translucent sheath,
+    // with a faint mirrored copy below the floor standing in for a reflection.
+    const M = [
+      ['FBCSP', 0, 44.2, 'classical'], ['MDM', 0, 47.1, 'classical'], ['TS-LR', 0, 50.5, 'classical'],
+      ['CTNet', 152364, 50.2, 'v1'], ['EEG Conformer', 697412, 52.1, 'v1'], ['ATCNet', 113732, 52.4, 'v1'],
+      ['HCT-Net D', 20996, 52.7, 'v2'], ['HCT-Net A', 3924, 53.6, 'ours'], ['EEGNet', 3188, 54.3, 'v2'],
     ];
-    const FLAT = [['TS-LR', 50.5], ['MDM', 47.1], ['FBCSP', 44.2]];
-    const yk = 0.108, L0 = Math.log10(3188), L1 = Math.log10(697412);
-    const xOf = (n) => -2.6 + 7.4 * (Math.log10(n) - L0) / (L1 - L0);
-    const tint = { ours: C.violet, v2: C.teal, v1: C.slate };
-    const edge = { ours: 0xA58BE0, v2: 0x7FD8D1, v1: 0xC3CAD6 };
-    const labels = [], picks = [];
+    const k = 0.098, sp = 1.34, L0 = Math.log10(3188), L1 = Math.log10(697412);
+    const x0 = -(M.length - 1) * sp / 2;
+    const HUE = { ours: 0xB69BE4, v2: 0x7FD8D1, v1: 0x8A93A8, classical: 0xC9B79C };
+    const cols = [], labels = [], picks = [];
 
-    const chanceY = 25 * yk;
-    floor(scene, 24, 7, 0.5, 0, chanceY - 1.35);
-    scene.add(line([new THREE.Vector3(-11, chanceY, 0), new THREE.Vector3(11, chanceY, 0)], 0xE8ECF4, 0.45, true));
-    labels.push(label(layer, 'chance 25.0%', 'small', new THREE.Vector3(-11.1, chanceY, 0), 'left'));
+    floor(scene, 15.5, 4.6, 0, 0, 0);
+    scene.add(line([new THREE.Vector3(x0 - 1.1, 25 * k, 0), new THREE.Vector3(-x0 + 1.1, 25 * k, 0)], 0xE8ECF4, 0.3, true));
+    labels.push(label(layer, 'chance 25%', 'tag', new THREE.Vector3(x0 - 1.2, 25 * k, 0), 'left'));
 
-    // the band every model falls inside, drawn so the flatness is visible at a glance
-    const lo = 44.2 * yk, hi = 54.3 * yk;
-    const bandM = new THREE.MeshBasicMaterial({ color: 0x2BB3AA, transparent: true, opacity: 0.07, side: THREE.DoubleSide, depthWrite: false });
-    const band = new THREE.Mesh(new THREE.PlaneGeometry(22, hi - lo), bandM);
-    band.position.set(0.5, (lo + hi) / 2, -0.9); scene.add(band);
-    labels.push(label(layer, 'every model lands in this 10-point band', 'tag', new THREE.Vector3(-10.6, hi, -0.9), 'above'));
+    M.forEach(([nm, prm, acc, kind], i) => {
+      const x = x0 + i * sp, h = acc * k, ours = kind === 'ours';
+      const r = prm ? 0.075 + 0.345 * (Math.log10(prm) - L0) / (L1 - L0) : 0.05;
+      const hue = HUE[kind];
+      const g = new THREE.Group(); g.position.set(x, 0, 0); scene.add(g);
 
-    DEEP.forEach(([nm, prm, acc, kind]) => {
-      const e = 0.40 * Math.cbrt(prm / 3188);        // volume proportional to the parameter count
-      const x = xOf(prm), y = acc * yk, ours = kind === 'ours';
-      const b = box(tint[kind], edge[kind], { ei: ours ? 0.5 : 0.26, opacity: ours ? 0.95 : 0.34, edgeOpacity: ours ? 0.9 : 0.5 });
-      b.scale.set(e, e, e); b.position.set(x, y, 0);
-      b.userData.tip = `<b>${nm}</b><br>${fmt(prm)} parameters<br>${acc}% cross subject`;
-      scene.add(b); picks.push(b);
-      scene.add(line([new THREE.Vector3(x - e / 2 - 0.25, y, 0), new THREE.Vector3(x + e / 2 + 0.25, y, 0)], ours ? 0xA58BE0 : 0xE8ECF4, ours ? 0.95 : 0.4));
-      labels.push(label(layer, `${acc}%`, ours ? 'value' : 'value small', new THREE.Vector3(x, y + e / 2 + 0.1, 0)));
-      labels.push(label(layer, ours ? `${nm} · ours<span class="sub">${fmt(prm)} parameters</span>` : `${nm}<span class="sub">${fmt(prm)}</span>`,
-        ours ? 'small' : 'tag', new THREE.Vector3(x, y - e / 2 - 0.12, 0), 'below'));
+      const core = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.42, r * 0.42, 1, 18),
+        new THREE.MeshBasicMaterial({ color: hue, transparent: true, opacity: ours ? 0.95 : 0.5 }));
+      const sheath = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 26, 1, true),
+        new THREE.MeshStandardMaterial({ color: hue, emissive: hue, emissiveIntensity: ours ? 0.6 : 0.3,
+          roughness: 0.3, metalness: 0, transparent: true, opacity: ours ? 0.3 : 0.16, side: THREE.DoubleSide, depthWrite: false }));
+      const mirror = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 26, 1, true),
+        new THREE.MeshBasicMaterial({ color: hue, transparent: true, opacity: ours ? 0.1 : 0.05, side: THREE.DoubleSide, depthWrite: false }));
+      g.add(core, sheath, mirror);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.25, r * 1.25, 0.012, 26),
+        new THREE.MeshBasicMaterial({ color: ours ? 0xFFFFFF : hue, transparent: true, opacity: ours ? 0.95 : 0.55 }));
+      g.add(cap);
+      const foot = new THREE.Mesh(new THREE.RingGeometry(r * 1.3, r * 1.75, 28),
+        new THREE.MeshBasicMaterial({ color: hue, transparent: true, opacity: ours ? 0.6 : 0.22, side: THREE.DoubleSide, depthWrite: false }));
+      foot.rotation.x = -Math.PI / 2; foot.position.y = 0.004; g.add(foot);
+
+      core.userData.tip = `<b>${nm}</b><br>${prm ? fmt(prm) + ' parameters' : 'no trained parameters'}<br>${acc}% cross subject`;
+      picks.push(core);
+      cols.push({ g, core, sheath, mirror, cap, h, ours });
+
+      labels.push(label(layer, `${acc}`, ours ? 'value' : 'value small', new THREE.Vector3(x, h + 0.2, 0)));
+      labels.push(label(layer, ours ? `${nm}<span class="sub">ours · ${fmt(prm)} parameters</span>`
+        : `${nm}<span class="sub">${prm ? fmt(prm) : 'no parameters'}</span>`, ours ? 'small' : 'tag',
+        new THREE.Vector3(x, -0.06, 0), 'below'));
     });
-
-    FLAT.forEach(([nm, acc], i) => {                 // classical: no trained parameters, so no volume
-      const x = -7.4 + i * 1.5, y = acc * yk;
-      const d = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 28), mat(C.warm, { ei: 0.3, opacity: 0.75 }));
-      d.position.set(x, y, 0); d.userData.tip = `<b>${nm}</b><br>no trained parameters<br>${acc}% cross subject`;
-      scene.add(d); picks.push(d);
-      labels.push(label(layer, `${acc}%`, 'value small', new THREE.Vector3(x, y + 0.14, 0)));
-      labels.push(label(layer, nm, 'tag', new THREE.Vector3(x, y - 0.14, 0), 'below'));
-    });
-    labels.push(label(layer, 'classical · no trained parameters', 'tag warm', new THREE.Vector3(-6.0, 41.4 * yk, 0), 'below'));
-
-    // the size axis
-    const ax = 40.2 * yk;
-    scene.add(line([new THREE.Vector3(xOf(3188) - 0.6, ax, 0), new THREE.Vector3(xOf(697412) + 0.9, ax, 0)], 0x9AA4B8, 0.5));
-    [[3188, '3.2k'], [20996, '21k'], [113732, '114k'], [697412, '697k']].forEach(([n, s]) => {
-      const x = xOf(n);
-      scene.add(line([new THREE.Vector3(x, ax, 0), new THREE.Vector3(x, ax - 0.12, 0)], 0x9AA4B8, 0.5));
-      labels.push(label(layer, s, 'tag', new THREE.Vector3(x, ax - 0.16, 0), 'below'));
-    });
-    labels.push(label(layer, 'parameters, log scale · block volume is the parameter count', 'tag',
-      new THREE.Vector3((xOf(3188) + xOf(697412)) / 2, ax - 0.52, 0), 'below'));
+    labels.push(label(layer, 'height is accuracy on unseen people, from zero · width is the parameter count',
+      'tag', new THREE.Vector3(0, -0.62, 0), 'below'));
 
     let t0 = 0;
     return { scene, layer, labels, pickables: picks,
       enter(t) { t0 = t; },
       update(dt, t) {
-        const f = reduced ? 1 : ease((t - t0) / 1.1);
-        band.material.opacity = 0.07 * f;
-        picks.forEach((o, i) => {
-          const d = clamp((t - t0) * 1.6 - i * 0.07, 0, 1);
-          o.visible = d > 0;
-          if (o.geometry.type === 'CylinderGeometry') { o.scale.setScalar(ease(d)); return; }
-          const e = 0.40 * Math.cbrt(DEEP[i][1] / 3188);
-          o.scale.setScalar(e * (0.2 + 0.8 * ease(d)));
+        cols.forEach((c, i) => {
+          const f = reduced ? 1 : ease(clamp((t - t0) * 0.85 - i * 0.075, 0, 1));
+          const h = Math.max(1e-4, c.h * f);
+          c.core.scale.y = h; c.core.position.y = h / 2;
+          c.sheath.scale.y = h; c.sheath.position.y = h / 2;
+          c.mirror.scale.y = h * 0.55; c.mirror.position.y = -h * 0.275;
+          c.cap.position.y = h;
+          const pulse = reduced ? 1 : 0.9 + 0.1 * Math.sin(t * 1.1 + i);
+          c.sheath.material.emissiveIntensity = (c.ours ? 0.6 : 0.3) * pulse;
         });
       } };
   }

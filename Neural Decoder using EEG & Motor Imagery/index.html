@@ -462,28 +462,30 @@ ${headlineTable}
   <tbody>${PARTICIPANTS.map(([p, a]) => `<tr><td>${p}</td><td>${a}%</td></tr>`).join('')}</tbody>
 </table>` },
 
-  { id: 'close', label: 'Close', scene: 'close', auto: 0.1,
-    pose: { t: [0, -0.1, 0], th: 0.2, ph: 1.22, box: [[-3.6, -2.7, -2.4], [3.6, 2.6, 2.4]], m: 0.84 },
-    aria: 'An illustration: nine distributions, one per person, drifting into alignment.',
+  { id: 'close', label: 'Close', scene: 'close', auto: 0.08,
+    pose: { t: [0.3, 2.2, 0], th: 0.2, ph: 1.24, box: [[-6.6, -1.1, -0.7], [6.9, 4.4, 1.0]] },
+    aria: 'Ten bars comparing every decoder we ran on unseen people, grouped by protocol, from EEGNet at 54.3 percent down to FBCSP at 44.2 percent, against a chance line at 25 percent.',
     html: () => `
-<p class="eyebrow">What it would mean for a user</p>
-<p class="bigclaim">Someone puts the cap on and the decoder works straight away — for some of them.</p>
-<p>No calibration session, no labels, nothing asked of the new person but a short unlabelled recording. Adapting to them takes about <strong>0.2 s</strong>.</p>
+<p class="eyebrow">Where we finished</p>
+<p class="bigclaim">Against every decoder we ran, on people none of them had seen.</p>
 <table>
-  <tr><th>For whom</th><th>Accuracy</th></tr>
-  <tr><td>three of the nine</td><td>65–77%</td></tr>
-  <tr><td>four of the nine</td><td>38–58%</td></tr>
-  <tr><td>two of the nine</td><td>31–38%, near chance</td></tr>
+  <caption>Cross-subject accuracy. Chance is 25.0%.</caption>
+  <tr><th>Model</th><th>Params</th><th>Test</th></tr>
+  <tr><td colspan="3" class="note">protocol v2 · 3 seeds · adaptation on</td></tr>
+  <tr><td>EEGNet</td><td>3,188</td><td>54.3%</td></tr>
+  <tr class="ours"><td>HCT-Net A — ours</td><td>3,924</td><td>53.6%</td></tr>
+  <tr><td>HCT-Net D</td><td>20,996</td><td>52.7%</td></tr>
+  <tr><td colspan="3" class="note">protocol v1 · 1 seed · no adaptation</td></tr>
+  <tr><td>ATCNet</td><td>113,732</td><td>52.4%</td></tr>
+  <tr><td>EEG Conformer</td><td>697,412</td><td>52.1%</td></tr>
+  <tr><td>CTNet</td><td>152,364</td><td>50.2%</td></tr>
+  <tr><td>FBCSP</td><td>—</td><td>44.2%</td></tr>
+  <tr><td colspan="3" class="note">classical, deterministic</td></tr>
+  <tr><td>Tangent space + LR</td><td>—</td><td>50.5%</td></tr>
+  <tr><td>MDM</td><td>—</td><td>47.1%</td></tr>
 </table>
-<p>A usable system would run calibration-free for the first group and ask the rest for a short labelled session. At 3,924 parameters it is small enough for low-power hardware, though we did not measure it there.</p>
-<h3>What we would do next</h3>
-<ul>
-  <li>Every baseline under protocol v2 with adaptation, so the comparison is like for like</li>
-  <li>Config A without its encoder — the one ablation we never ran</li>
-  <li>Each model with its own analysis window</li>
-  <li>More training people, and alignment that goes beyond second-order statistics</li>
-</ul>
-<p class="note">The 3D view is an illustration: nine distributions, one per person, pulled into alignment.</p>` },
+<p>Our model lands at the top of the field on a fraction of the parameters — <strong>178× smaller than EEG Conformer</strong> for half a point more. It does not beat EEGNet, and we say so.</p>
+<p class="note">The three groups are not comparable with one another: only inside a group is the protocol identical.</p>` },
 ];
 
 /* ======================================================================================
@@ -1378,44 +1380,45 @@ function startEngine(THREE) {
      Scene: close — nine distributions pulled into alignment (slide 10, an illustration)
      ====================================================================== */
   function buildClose() {
-    const scene = baseScene(6, 24);
-    const layer = makeLayer();
-    const N = 9, r = rng(21);
-    const blobs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x1B7F79, emissiveIntensity: 0.3, roughness: 0.45, metalness: 0, transparent: true, opacity: 0.17, depthWrite: false }), N);
-    blobs.frustumCulled = false; scene.add(blobs);
-    const cores = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.05, 1), new THREE.MeshBasicMaterial({ color: 0xE8ECF4 }), N);
-    cores.frustumCulled = false; scene.add(cores);
-    const from = Array.from({ length: N }, () => ({
-      p: new THREE.Vector3((r() - 0.5) * 5.0, (r() - 0.5) * 2.8, (r() - 0.5) * 3.0),
-      s: new THREE.Vector3(0.55 + r() * 0.6, 0.4 + r() * 0.55, 0.45 + r() * 0.55),
-      q: new THREE.Quaternion().setFromEuler(new THREE.Euler(r() * 3, r() * 3, r() * 3)),
-    }));
-    const toS = new THREE.Vector3(0.95, 0.95, 0.95), toQ = new THREE.Quaternion(), O = new THREE.Vector3();
-    const cA = new THREE.Color(0x9AA4B8), cB = new THREE.Color(0x2BB3AA);
-    const caption = label(layer, '', 'small', new THREE.Vector3(0, 2.1, 0));
-    const labels = [label(layer, 'illustration', 'tag', new THREE.Vector3(0, -2.4, 0), 'below'), caption];
-    let state = '';
-    function pose(f) {
-      for (let i = 0; i < N; i++) {
-        P3.copy(from[i].p).lerp(O, f); S3.copy(from[i].s).lerp(toS, f); Q.copy(from[i].q).slerp(toQ, f);
-        M4.compose(P3, Q, S3); blobs.setMatrixAt(i, M4);
-        M4.makeTranslation(P3.x, P3.y, P3.z); cores.setMatrixAt(i, M4);
-        COL.copy(cA).lerp(cB, f); blobs.setColorAt(i, COL);
-      }
-      blobs.instanceMatrix.needsUpdate = true; cores.instanceMatrix.needsUpdate = true; blobs.instanceColor.needsUpdate = true;
-      const s = f > 0.98 ? 'after normalising: one shared distribution' : f < 0.02 ? 'nine people, nine distributions' : state;
-      if (s !== state) { state = s; caption.el.textContent = s; }
-    }
-    pose(1);
-    return {
-      scene, layer, labels,
-      update(dt, t) {
-        if (reduced) { pose(1); return; }
-        const c = t % 10;
-        pose(c < 2.5 ? 0 : c < 5 ? ease((c - 2.5) / 2.5) : c < 8 ? 1 : 1 - ease((c - 8) / 2));
-      },
-    };
+    const scene = baseScene(10, 44);
+    const layer = makeLayer(true);
+    floor(scene, 12.4, 2.4);
+    // Every decoder we ran, cross subject. Grouped by protocol, because the groups are not
+    // comparable with each other: only within a group is it like for like.
+    const G = [
+      { cap: 'protocol v2 · 3 seeds · adaptation', rows: [['HCT-Net A', 53.6, 'ours'], ['EEGNet', 54.3], ['HCT-Net D', 52.7]] },
+      { cap: 'protocol v1 · 1 seed · no adaptation', rows: [['ATCNet', 52.4], ['Conformer', 52.1], ['EEGNet', 51.2], ['CTNet', 50.2], ['FBCSP', 44.2]] },
+      { cap: 'classical · deterministic', rows: [['TS-LR', 50.5], ['MDM', 47.1]] },
+    ];
+    const k = 0.058, W = 0.72, sp = 1.04, gap = 0.62;
+    const n = G.reduce((a, g) => a + g.rows.length, 0);
+    const total = (n - 1) * sp + (G.length - 1) * gap;
+    const bars = [], labels = [];
+    let i = 0;
+    G.forEach((grp, gi) => {
+      const x0 = i * sp + gi * gap - total / 2;
+      grp.rows.forEach(([nm, acc, tag]) => {
+        const x = i * sp + gi * gap - total / 2;
+        const ours = tag === 'ours';
+        const b = box(ours ? C.violet : gi === 2 ? C.warm : C.slate, ours ? 0xA58BE0 : gi === 2 ? 0xD8CFC4 : 0xC3CAD6,
+          { bar: true, ei: ours ? 0.5 : 0.28 });
+        b.position.set(x, 0, 0); b.scale.set(W, 1e-4, W); b.userData.h = acc * k;
+        b.userData.tip = `<b>${nm}</b><br>${acc}% cross subject<br>${grp.cap}`;
+        scene.add(b); bars.push(b);
+        const L = label(layer, `${acc}`, ours ? 'value' : 'value small');
+        L.get = (v) => topBack(v, b);
+        labels.push(L, label(layer, nm + (ours ? ' ·&nbsp;ours' : ''), ours ? 'small' : 'tag',
+          new THREE.Vector3(x, 0, W / 2 + 0.12), 'below'));
+        i++;
+      });
+      const xc = (x0 + (i - 1) * sp + gi * gap - total / 2) / 2;
+      labels.push(label(layer, grp.cap, 'tag', new THREE.Vector3(xc, -0.52, W / 2 + 0.12), 'below'));
+    });
+    const z = W / 2 + 0.08, xEdge = total / 2 + 0.6;
+    scene.add(line([new THREE.Vector3(-xEdge, 25 * k, z), new THREE.Vector3(xEdge, 25 * k, z)], 0xE8ECF4, 0.5, true));
+    labels.push(label(layer, 'chance 25.0%', 'small', new THREE.Vector3(xEdge + 0.05, 25 * k, z), 'right'));
+    let t0 = 0;
+    return { scene, layer, labels, pickables: bars, enter(t) { t0 = t; }, update(dt, t) { grow(bars, t0, t); } };
   }
 
   /* ---------------- scene registry, lazy build ---------------- */

@@ -102,21 +102,30 @@ function figure(file, width, alt) {
 const mr = (t) => new MathRun(t);
 const sub = (base, s) => new MathSubScript({ children: [mr(base)], subScript: [mr(s)] });
 const EQ = {
-  "ea-mean": () => [mr("R\u0304 = "), new MathFraction({ numerator: [mr("1")], denominator: [mr("N")] }),
+  "ea-mean": () => [mr("RBARX"), mr(" = "), new MathFraction({ numerator: [mr("1")], denominator: [mr("N")] }),
     new MathSum({ children: [sub("X", "i"), new MathSubSuperScript({ children: [mr("X")], subScript: [mr("i")], superScript: [mr("T")] })],
       subScript: [mr("i=1")], superScript: [mr("N")] })],
-  "ea-whiten": () => [sub("X\u0303", "i"), mr(" = "), new MathSuperScript({ children: [mr("R\u0304")], superScript: [mr("\u22121/2")] }), sub("X", "i")],
+  "ea-whiten": () => [sub("XTILDEX", "i"), mr(" = "), new MathSuperScript({ children: [mr("RBARX")], superScript: [mr("\u22121/2")] }), sub("X", "i")],
   attention: () => [new MathFunction({ name: [mr("Attention")], children: [new MathRoundBrackets({ children: [mr("Q, K, V")] })] }),
     mr(" = "), new MathFunction({ name: [mr("softmax")], children: [new MathRoundBrackets({ children: [new MathFraction({
       numerator: [new MathSuperScript({ children: [mr("QK")], superScript: [mr("T")] })],
       denominator: [new MathRadical({ children: [mr("d")] })] })] })] }), mr("V")],
 };
+// An equation sits alone in the middle cell of an invisible three-cell row, so Word sets it in display style
+// (full-size fractions, limits above and below the sum); its number sits in the right-hand cell.
 function equation(name) {
   if (!EQ[name]) throw new Error(`unknown equation ${name}`);
-  return new Paragraph({ keepLines: true, spacing: { before: 140, after: 180 },
-    tabStops: [{ type: TabStopType.CENTER, position: Math.round(TW / 2) }, { type: TabStopType.RIGHT, position: TW }],
-    children: [new TextRun({ children: [new Tab()] }), new OMath({ children: EQ[name]() }),
-      new TextRun({ children: [new Tab(), `(${labels[`eq:${name}`].slice(9)})`], size: BODY })] });
+  const side = 900, mid = TW - 2 * side, none = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  const cell = (w, p) => new TableCell({ width: { size: w, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 90, bottom: 90, left: 0, right: 0 }, children: [p] });
+  return new Table({ width: { size: TW, type: WidthType.DXA }, columnWidths: [side, mid, side], layout: TableLayoutType.FIXED,
+    borders: { top: none, bottom: none, left: none, right: none, insideHorizontal: none, insideVertical: none },
+    rows: [new TableRow({ cantSplit: true, children: [
+      cell(side, new Paragraph({ spacing: { after: 0 }, children: [] })),
+      cell(mid, new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new OMath({ children: EQ[name]() })] })),
+      cell(side, new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 0 },
+        children: [new TextRun({ text: `(${labels[`eq:${name}`].slice(9)})`, size: BODY })] })),
+    ] })] });
 }
 
 const NUMERIC = /^[\d.,\s×±%()+\-−–—/:=×]*$/;
@@ -362,4 +371,19 @@ const doc = new Document({
   }],
 });
 
-Packer.toBuffer(doc).then((b) => { fs.writeFileSync(OUT, b); console.log("written", OUT, b.length, "bytes;", nf, "figures,", nt, "tables"); });
+// docx has no accent or upright-style option for maths, so three things are written into the XML after packing:
+// an overbar on R (the mean covariance), a tilde on X (an aligned trial) and upright function names.
+async function polishMath(buf) {
+  const JSZip = require("jszip");
+  const zip = await JSZip.loadAsync(buf);
+  let x = await zip.file("word/document.xml").async("string");
+  const run = (token) => new RegExp(`<m:r>(<w:rPr>(?:(?!</m:r>).)*?</w:rPr>)?<m:t(?: [^>]*)?>${token}</m:t></m:r>`, "g");
+  x = x.replace(run("RBARX"), '<m:bar><m:barPr><m:pos m:val="top"/></m:barPr><m:e><m:r>$1<m:t>R</m:t></m:r></m:e></m:bar>')
+    .replace(run("XTILDEX"), '<m:acc><m:accPr><m:chr m:val="\u0303"/></m:accPr><m:e><m:r>$1<m:t>X</m:t></m:r></m:e></m:acc>')
+    .replace(/<m:fName><m:r>/g, '<m:fName><m:r><m:rPr><m:sty m:val="p"/></m:rPr>')
+    .replace(/<m:oMath>/g, '<m:oMathPara><m:oMath>').replace(/<\/m:oMath>/g, '</m:oMath></m:oMathPara>');
+  if (/RBARX|XTILDEX/.test(x)) throw new Error("an equation placeholder was not replaced");
+  zip.file("word/document.xml", x);
+  return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+}
+Packer.toBuffer(doc).then(polishMath).then((b) => { fs.writeFileSync(OUT, b); console.log("written", OUT, b.length, "bytes;", nf, "figures,", nt, "tables"); });

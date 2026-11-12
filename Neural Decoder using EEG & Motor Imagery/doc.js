@@ -17,7 +17,9 @@ const {
   Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle,
   AlignmentType, HeadingLevel, LevelFormat, TableOfContents, Footer, PageNumber, PositionalTab, PositionalTabAlignment,
   PositionalTabRelativeTo, PositionalTabLeader, HorizontalPositionRelativeFrom, VerticalPositionRelativeFrom,
-  TextWrappingType, PageBreak, VerticalAlign, TableLayoutType, Tab, TabStopType,
+  TextWrappingType, PageBreak, VerticalAlign, TableLayoutType, Tab, TabStopType, StyleLevel,
+  Math: OMath, MathRun, MathFraction, MathSum, MathSubScript, MathSuperScript, MathSubSuperScript, MathRadical,
+  MathRoundBrackets, MathFunction,
 } = require("docx");
 
 const FIG = path.join(__dirname, "fig");
@@ -39,7 +41,9 @@ let nf = 0, nt = 0;
 for (const m of SRC.matchAll(/\{#(fig|tab):([\w-]+)/g)) {
   labels[`${m[1]}:${m[2]}`] = m[1] === "fig" ? `Figure ${++nf}` : `Table ${++nt}`;
 }
-const refs = (s) => s.replace(/\{(fig|tab):([\w-]+)\}/g, (_, k, id) => {
+let ne = 0;
+for (const m of SRC.matchAll(/^@equation\s+([\w-]+)/gm)) labels[`eq:${m[1]}`] = `Equation ${++ne}`;
+const refs = (s) => s.replace(/\{(fig|tab|eq):([\w-]+)\}/g, (_, k, id) => {
   const v = labels[`${k}:${id}`];
   if (!v) throw new Error(`unknown reference ${k}:${id}`);
   return v;
@@ -64,22 +68,55 @@ function heading(level, text) {
   return new Paragraph({ heading: [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3][level - 1], children: kids });
 }
 
+// The first sentence of a caption is its title, which the lists of figures and tables pick up through the
+// caption style; the rest is a note underneath. Abbreviations such as "et al." do not end the title.
+function splitCaption(text) {
+  const m = text.match(/^(.+?(?<!\bal|\be\.g|\bi\.e|\bvs)\.)\s+(.+)$/);
+  return m ? [m[1], m[2]] : [text, ""];
+}
 function caption(kind, text) {
   const id = (text.match(/\{#((?:fig|tab):[\w-]+)/) || [])[1];
-  const clean = text.replace(/\s*\{#[^}]*\}\s*$/, "");
-  return new Paragraph({
-    keepNext: kind === "tab", keepLines: true, spacing: kind === "tab" ? { before: 200, after: 90 } : { before: 60, after: 240 },
-    children: [new TextRun({ text: `${labels[id]}.  `, bold: true, color: C.TEAL_D, size: SMALL }), ...runs(clean, { size: SMALL, color: C.MUTED })],
-  });
+  const [title, note] = splitCaption(text.replace(/\s*\{#[^}]*\}\s*$/, ""));
+  const tab = kind === "tab";
+  const out = [new Paragraph({
+    style: tab ? "TableCaption" : "FigureCaption", keepNext: tab || !!note, keepLines: true,
+    spacing: tab ? { before: 200, after: note ? 20 : 90 } : { before: 60, after: note ? 20 : 240 },
+    children: [new TextRun({ text: `${labels[id]}.  `, bold: true, color: C.TEAL_D, size: SMALL }), ...runs(title, { size: SMALL, color: C.INK })],
+  })];
+  if (note) out.push(new Paragraph({ keepNext: tab, keepLines: true, spacing: { after: tab ? 90 : 240 },
+    children: runs(note, { size: 16, color: C.MUTED }) }));
+  return out;
 }
 
-function figure(file, width) {
+function figure(file, width, alt) {
   const buf = fs.readFileSync(path.join(FIG, file));
   const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
   return new Paragraph({
     alignment: AlignmentType.CENTER, keepNext: true, spacing: { before: 160, after: 40 },
-    children: [new ImageRun({ type: "png", data: buf, transformation: { width: width * 96, height: (width * 96 * h) / w } })],
+    children: [new ImageRun({ type: "png", data: buf, transformation: { width: width * 96, height: (width * 96 * h) / w },
+      altText: { title: alt, description: alt, name: file } })],
   });
+}
+
+// ---------------------------------------------------------------- equations (Word math), numbered on the right
+const mr = (t) => new MathRun(t);
+const sub = (base, s) => new MathSubScript({ children: [mr(base)], subScript: [mr(s)] });
+const EQ = {
+  "ea-mean": () => [mr("R\u0304 = "), new MathFraction({ numerator: [mr("1")], denominator: [mr("N")] }),
+    new MathSum({ children: [sub("X", "i"), new MathSubSuperScript({ children: [mr("X")], subScript: [mr("i")], superScript: [mr("T")] })],
+      subScript: [mr("i=1")], superScript: [mr("N")] })],
+  "ea-whiten": () => [sub("X\u0303", "i"), mr(" = "), new MathSuperScript({ children: [mr("R\u0304")], superScript: [mr("\u22121/2")] }), sub("X", "i")],
+  attention: () => [new MathFunction({ name: [mr("Attention")], children: [new MathRoundBrackets({ children: [mr("Q, K, V")] })] }),
+    mr(" = "), new MathFunction({ name: [mr("softmax")], children: [new MathRoundBrackets({ children: [new MathFraction({
+      numerator: [new MathSuperScript({ children: [mr("QK")], superScript: [mr("T")] })],
+      denominator: [new MathRadical({ children: [mr("d")] })] })] })] }), mr("V")],
+};
+function equation(name) {
+  if (!EQ[name]) throw new Error(`unknown equation ${name}`);
+  return new Paragraph({ keepLines: true, spacing: { before: 140, after: 180 },
+    tabStops: [{ type: TabStopType.CENTER, position: Math.round(TW / 2) }, { type: TabStopType.RIGHT, position: TW }],
+    children: [new TextRun({ children: [new Tab()] }), new OMath({ children: EQ[name]() }),
+      new TextRun({ children: [new Tab(), `(${labels[`eq:${name}`].slice(9)})`], size: BODY })] });
 }
 
 const NUMERIC = /^[\d.,\s×±%()+\-−–—/:=×]*$/;
@@ -145,7 +182,7 @@ function body() {
   const flushList = () => { list = null; };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (!line.trim()) { flushPara(/^(!\[|Table: )/.test(nextLine(i))); flushList(); continue; }
+    if (!line.trim()) { flushPara(/^(!\[|Table: |@equation)/.test(nextLine(i))); flushList(); continue; }
     let m;
     if ((m = line.match(/^(#{1,3})\s+(.*)$/))) {
       flushPara(); flushList();
@@ -167,15 +204,18 @@ function body() {
         i++;
       }
       i--;
-      if (pendingCaption) { out.push(caption("tab", pendingCaption)); pendingCaption = null; }
+      if (pendingCaption) { out.push(...caption("tab", pendingCaption)); pendingCaption = null; }
       out.push(table(rows, opts.widths, opts.center || []));
       out.push(spacer(160));
       opts = {};
     } else if ((m = line.match(/^!\[(.*)\]\(([^)]+)\)\{([^}]*)\}$/))) {
       flushPara();
       const width = Number((m[3].match(/width=([\d.]+)/) || [])[1] || 6.4);
-      out.push(figure(m[2], width));
-      out.push(caption("fig", `${m[1]} {${m[3].split(" ")[0]}}`));
+      out.push(figure(m[2], width, splitCaption(m[1])[0]));
+      out.push(...caption("fig", `${m[1]} {${m[3].split(" ")[0]}}`));
+    } else if ((m = line.match(/^@equation\s+([\w-]+)/))) {
+      flushPara();
+      out.push(equation(m[1]));
     } else if (line.startsWith("> ")) {
       flushPara();
       const block = [];
@@ -243,7 +283,35 @@ function cover() {
   out.push(new Paragraph({ spacing: { after: 160 }, children: [new TextRun({ text: "Contents", font: "Georgia", size: 34, bold: true, color: C.INK })] }));
   out.push(new TableOfContents("Contents", { hyperlink: true, headingStyleRange: "1-2" }));
   out.push(new Paragraph({ children: [new PageBreak()] }));
+  const listHead = (t, before = 0) => new Paragraph({ spacing: { before, after: 110 }, keepNext: true,
+    children: [new TextRun({ text: t, font: "Georgia", size: 28, bold: true, color: C.INK })] });
+  out.push(listHead("Figures"));
+  out.push(new TableOfContents("Figures", { hyperlink: true, stylesWithLevels: [new StyleLevel("FigureCaption", 3)] }));
+  out.push(listHead("Tables", 260));
+  out.push(new TableOfContents("Tables", { hyperlink: true, stylesWithLevels: [new StyleLevel("TableCaption", 3)] }));
+  out.push(listHead("Abbreviations", 260));
+  out.push(abbreviations());
+  out.push(new Paragraph({ children: [new PageBreak()] }));
   return out;
+}
+
+function abbreviations() {
+  const items = [["ALS", "amyotrophic lateral sclerosis"], ["BCI", "brain–computer interface"],
+    ["CNN", "convolutional neural network"], ["CUDA", "NVIDIA's GPU computing platform"], ["EEG", "electroencephalography"],
+    ["ELU", "exponential linear unit"], ["EOG", "electrooculography"], ["ERD", "event-related desynchronisation"],
+    ["FBCSP", "filter-bank common spatial patterns"], ["GELU", "Gaussian error linear unit"], ["GPU", "graphics processing unit"],
+    ["GRU", "gated recurrent unit"], ["HCT-Net", "Hybrid Convolution–Transformer Network"], ["LDA", "linear discriminant analysis"],
+    ["LSTM", "long short-term memory"], ["MOABB", "Mother of All BCI Benchmarks"], ["SD", "standard deviation"],
+    ["YAML", "a plain-text configuration format"]];
+  const half = Math.ceil(items.length / 2), a = 1250, b = Math.floor(TW / 2) - a;
+  const none = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  const cell = (text, w, abbr) => new TableCell({ width: { size: w, type: WidthType.DXA }, margins: { top: 25, bottom: 25, left: 0, right: 80 },
+    children: [new Paragraph({ spacing: { after: 0, line: 240 }, children: [new TextRun({ text, size: 18, bold: abbr, color: abbr ? C.TEAL_D : C.INK })] })] });
+  return new Table({ width: { size: TW, type: WidthType.DXA }, columnWidths: [a, b, a, TW - 2 * a - b], layout: TableLayoutType.FIXED,
+    borders: { top: none, bottom: none, left: none, right: none, insideHorizontal: none, insideVertical: none },
+    rows: Array.from({ length: half }, (_, r) => new TableRow({ cantSplit: true, children: [
+      cell(items[r][0], a, true), cell(items[r][1], b, false),
+      cell(items[r + half] ? items[r + half][0] : "", a, true), cell(items[r + half] ? items[r + half][1] : "", TW - 2 * a - b, false)] })) });
 }
 
 // ---------------------------------------------------------------- document
@@ -274,6 +342,10 @@ const doc = new Document({
         paragraph: { spacing: { before: 20, after: 0, line: 226 } } },
       { id: "TOC2", name: "toc 2", basedOn: "Normal", next: "Normal", run: { size: 18 },
         paragraph: { spacing: { after: 0, line: 226 }, indent: { left: 300 } } },
+      { id: "TOC3", name: "toc 3", basedOn: "Normal", next: "Normal", run: { size: 18 },
+        paragraph: { spacing: { after: 10, line: 228 }, indent: { left: 0 } } },
+      { id: "FigureCaption", name: "FigureCaption", basedOn: "Normal", next: "Normal", run: { size: SMALL, color: C.INK } },
+      { id: "TableCaption", name: "TableCaption", basedOn: "Normal", next: "Normal", run: { size: SMALL, color: C.INK } },
     ],
   },
   numbering: { config: [

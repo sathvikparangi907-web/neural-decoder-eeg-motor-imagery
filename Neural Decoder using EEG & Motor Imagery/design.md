@@ -2,15 +2,17 @@
 
 This is our Phase 2 solution design. Decoders of imagined movement work well on people they were trained on and much worse on anyone new, and that gap is what keeps brain–computer interfaces tied to long calibration sessions. We propose HCT-Net, a network of 20,996 parameters that joins EEGNet's convolutional front end to a two-layer Transformer attending within short windows, with Euclidean alignment of each person's data before training. We will test it against EEGNet, ATCNet, EEG Conformer, CTNet and FBCSP on BCI Competition IV dataset 2a, with every model under the same leave-one-subject-out protocol, three random seeds and paired statistics. A component study will show what each part contributes. The plan fits an eighteen-day implementation phase, and the data pipeline and baselines are verified before our own model is written.
 
+**Keywords:** electroencephalography, motor imagery, brain–computer interface, cross-subject decoding, leave-one-subject-out evaluation, Transformer, Euclidean alignment
+
 # 1. Introduction
 
 ## 1.1 The problem
 
-When someone imagines moving their left hand, the electrical rhythm over the right side of their motor cortex changes, and a scalp EEG cap can pick that change up. A brain–computer interface (BCI) that reads these changes can turn imagined movements into commands without any physical movement. The catch is that EEG looks different from one person to the next. A decoder trained on one group of people usually does much worse on someone new, so in practice every new user first records a long labelled calibration session before the system works for them. This project is about removing that step. We want a decoder that classifies four imagined movements (left hand, right hand, both feet and tongue) for a person it has never seen.
+When someone imagines moving their left hand, the electrical rhythm over the right side of their motor cortex changes, and electroencephalography (EEG), recorded through a cap of electrodes on the scalp, can pick that change up. A brain–computer interface (BCI) that reads these changes can turn imagined movements into commands without any physical movement. The catch is that EEG looks different from one person to the next. A decoder trained on one group of people usually does much worse on someone new, so in practice every new user first records a long labelled calibration session before the system works for them. This project is about removing that step. We want a decoder that classifies four imagined movements (left hand, right hand, both feet and tongue) for a person it has never seen.
 
 ## 1.2 Why it matters
 
-The people who would gain most from a working BCI are the ones for whom other ways of giving input fail: people with advanced ALS, a high spinal cord injury or a brainstem stroke. For them, a long calibration session at every visit is a real cost, and one that has to be repeated whenever the cap is moved is worse. A decoder that works on a new person from the start would make BCIs far easier to use outside a lab. It would also help in rehabilitation, where detecting the intention to move can trigger assisted movement, and in any setting where hands-free control is useful.
+The people who would gain most from a working BCI are the ones for whom other ways of giving input fail: people with advanced amyotrophic lateral sclerosis (ALS), a high spinal cord injury or a brainstem stroke. For them, a long calibration session at every visit is a real cost, and one that has to be repeated whenever the cap is moved is worse. A decoder that works on a new person from the start would make BCIs far easier to use outside a lab. It would also help in rehabilitation, where detecting the intention to move can trigger assisted movement, and in any setting where hands-free control is useful.
 
 That is why we treat accuracy on unseen people as the main result of this project, not as a side note.
 
@@ -119,7 +121,7 @@ Table: Datasets we considered. {#tab:datasets}
 
 ## 4.2 What is in it
 
-Table: BCI Competition IV dataset 2a [6]. {#tab:props}
+Table: Properties of BCI Competition IV dataset 2a [6]. {#tab:props}
 ::table widths=32,68
 | Property | Value |
 |---|---|
@@ -278,7 +280,15 @@ We expect this step to do most of the work against the new-person problem, so it
 
 Any EEG trial can be summarised by its spatial covariance matrix: a 22 × 22 table showing how strongly each pair of electrodes moves together. That matrix reflects how activity inside the brain is mixed on its way to the scalp, and the mixing depends on the person: the thickness and conductivity of the skull, the folding of the cortex, exactly where the cap sits. None of this has anything to do with which movement the person is imagining, yet all of it shapes the recording. It is the main reason a model trained on some people transfers badly to someone new.
 
-Alignment removes most of that person-specific mixing in two steps. First, we average the covariance matrices of all of a person's trials. With the four classes equally represented, this average describes how that person's signals are mixed in general, with the class-specific detail averaged out. Second, we multiply each of that person's trials by the inverse square root of the average. Afterwards, the average covariance of their trials is the identity matrix ({fig:alignment}).
+Alignment removes most of that person-specific mixing in two steps. First, we average the covariance matrices of all N trials recorded from one person in one session, where each trial is a 22 × 875 matrix ({eq:ea-mean}):
+
+@equation ea-mean
+
+With the four classes equally represented, this average describes how that person's signals are mixed in general, with the class-specific detail averaged out. Second, we multiply each trial by the inverse square root of the average ({eq:ea-whiten}):
+
+@equation ea-whiten
+
+Afterwards, the average covariance of the aligned trials is the identity matrix ({fig:alignment}).
 
 ![What alignment does, sketched for three people. Before, each person's trials sit in their own region. After, every person's average covariance is moved to the identity (the star), so the model sees everyone in the same frame. Illustration, not measured data.](alignment.png){#fig:alignment width=5.2}
 
@@ -343,9 +353,9 @@ Table: Constraints fixed before the design. {#tab:constraints}
 
 {fig:model} shows HCT-Net with the shape of the data after each block, and {tab:layers} gives the exact settings for 22 channels and 875 samples.
 
-![HCT-Net. Shapes on the right are for BCI IV-2a; the tags name the paper each block is adapted from.](model.png){#fig:model width=4.3}
+![The HCT-Net architecture. Shapes on the right are for BCI IV-2a; the tags name the paper each block is adapted from.](model.png){#fig:model width=4.3}
 
-Table: Layer-by-layer specification. {#tab:layers}
+Table: Layer-by-layer specification of HCT-Net. {#tab:layers}
 ::table widths=6,31,41,22
 | # | Layer | Settings | Output shape |
 |---|---|---|---|
@@ -390,7 +400,7 @@ Table: The parameter budget, worked out by hand. {#tab:budget}
 
 In context, HCT-Net is about a fifth of the size of ATCNet and a thirty-third of EEG Conformer, but 6.6 times the size of EEGNet ({tab:sizes}). That last comparison matters most. If HCT-Net cannot beat EEGNet on new people, its attention is not paying for itself.
 
-Table: Parameter counts for 22 channels and four classes, from the braindecode 1.8.1 reference implementations, at our 875-sample input and at the 1,125 samples used by the ATCNet reference code. The ratio compares like with like, at 875 samples. Some models size their classifier from the input, so their count depends on the window length; the 2,548 often quoted for EEGNet corresponds to a window of about 2.2 s. {#tab:sizes}
+Table: Parameter counts of HCT-Net and the published models. Counts are for 22 channels and four classes, from the braindecode 1.8.1 reference implementations, at our 875-sample input and at the 1,125 samples used by the ATCNet reference code. The ratio compares like with like, at 875 samples. Some models size their classifier from the input, so their count depends on the window length; the 2,548 often quoted for EEGNet corresponds to a window of about 2.2 s. {#tab:sizes}
 ::table widths=34,22,22,22
 | Model | At 875 samples | At 1,125 samples | Relative to HCT-Net |
 |---|---|---|---|
@@ -411,7 +421,11 @@ Next, a depthwise convolution works across the channels. Its kernel spans all 22
 
 Two pooling steps then shorten the time axis, first by four (875 to 218 steps) and then by eight (218 to 27). Shrinking time this hard is safe because the information in a mu rhythm lies in how its power changes over hundreds of milliseconds, not in where individual peaks fall. Between the two pooling steps, a separable convolution first summarises each feature map over time and then mixes the maps, which does the job of a full convolution for a fraction of the parameters.
 
-What leaves the convolutional block is a sequence of 27 steps with 32 features each. Instead of letting every step attend to every other, we cut the sequence into five windows of eleven steps, one starting every four steps, so neighbouring windows overlap. The overlap matters: without it, a window boundary could split an informative stretch of signal between two windows that never see each other. A learned positional encoding is added to each window, because self-attention on its own ignores order. Inside each window, two attention heads work out how much each step should draw on every other, and a small feed-forward network transforms the result; this repeats over two encoder layers. A feature at one moment can now be read in the light of what happens at another moment in the same window, which a convolution cannot do beyond the length of its kernel.
+What leaves the convolutional block is a sequence of 27 steps with 32 features each. Instead of letting every step attend to every other, we cut the sequence into five windows of eleven steps, one starting every four steps, so neighbouring windows overlap. The overlap matters: without it, a window boundary could split an informative stretch of signal between two windows that never see each other. A learned positional encoding is added to each window, because self-attention on its own ignores order. Inside each window, two attention heads work out how much each step should draw on every other, using scaled dot-product attention [10] ({eq:attention}):
+
+@equation attention
+
+Here Q, K and V are learned projections of the window's features, and d = 16 is the width of each head. A small feed-forward network then transforms the result, and this repeats over two encoder layers. A feature at one moment can now be read in the light of what happens at another moment in the same window, which a convolution cannot do beyond the length of its kernel.
 
 Finally the five window outputs are averaged, and so is the time axis inside them, which gives one vector of 32 numbers for the whole trial. A linear layer maps it to four scores, a softmax turns those into probabilities, and the predicted class is the most probable one.
 
@@ -454,7 +468,7 @@ If time allows, we will also try one extra variant: a branch that tries to predi
 
 Every headline number comes from leave-one-subject-out cross-validation. With nine people there are nine folds. In each fold one person is the test person, the next one in order is the validation person, and the other seven train the model ({fig:loso}). The roles rotate, so everyone is the test person exactly once. We report the mean and standard deviation across the nine folds, and the result for each person.
 
-![Fold structure. In every fold one person is tested (red), the next one validates (teal), and the other seven train.](loso.png){#fig:loso width=4.5}
+![The leave-one-subject-out fold structure. In every fold one person is tested (red), the next one validates (teal), and the other seven train.](loso.png){#fig:loso width=4.5}
 
 Each fold starts from a freshly built model with reset seeds; carrying weights over between folds would mean the model had already seen the person it is about to be tested on. The test person's trials are never augmented and play no part in choosing weights or hyperparameters. The loop is written once and shared by every model, so no model can end up under a slightly different protocol by accident.
 
@@ -470,7 +484,7 @@ As a sanity check, we also train and test every model within each person, from s
 
 Every model is scored with the same set of metrics ({tab:metrics}).
 
-Table: Metrics. {#tab:metrics}
+Table: Evaluation metrics. {#tab:metrics}
 ::table widths=22,36,42
 | Metric | Definition | Why we use it |
 |---|---|---|

@@ -5,8 +5,8 @@ anything, edit the source and rebuild. Edits made by hand in Word or PowerPoint 
 
 | File | What it is |
 |---|---|
-| `Phase2_Solution_Design.docx` / `.pdf` | The solution design: 27 pages, 10 figures, 26 tables |
-| `Phase2_Presentation.pptx` / `.pdf` | The presentation: 18 slides, speaker notes on every slide |
+| `Phase2_Solution_Design.docx` / `.pdf` | The solution design: 30 pages, 10 figures, 26 tables, 3 equations |
+| `Phase2_Presentation.pptx` / `.pdf` | The presentation: 21 slides, speaker notes on every slide |
 | `design.md` | The text of the design document |
 | `doc.js` | Builds the `.docx` from `design.md` |
 | `deck.js` | Builds the `.pptx` |

@@ -102,9 +102,9 @@ function pngSize(file) {
   const b = fs.readFileSync(file);
   return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
 }
-function img(s, name, x, y, w) {
+function img(s, name, x, y, w, altText) {
   const file = path.join(FIG, name), { w: pw, h: ph } = pngSize(file);
-  s.addImage({ path: file, x, y, w, h: (w * ph) / pw });
+  s.addImage({ path: file, x, y, w, h: (w * ph) / pw, altText });
   return (w * ph) / pw;
 }
 const para = (text, extra = {}) => ({ text, options: Object.assign({ breakLine: true, paraSpaceAfter: 10 }, extra) });
@@ -132,6 +132,28 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
     "solution design. The short version: we want to decode imagined movements from EEG for a person the model has never " +
     "seen, and we want to do it with a small model. The next slides cover why that is hard, what others have tried, what " +
     "we will build, and how we will test it fairly.");
+}
+
+// ---------------------------------------------------------------------------- outline
+{
+  const s = content("Overview", "Overview", "What we will cover");
+  const parts = [
+    ["The problem", "Why decoders that work for familiar people fail on someone new"],
+    ["The data", "BCI Competition IV 2a: nine people, four imagined movements"],
+    ["What others have tried", "Four published models, what each gives us, and the gap they leave"],
+    ["Our design", "HCT-Net, the preprocessing pipeline and Euclidean alignment"],
+    ["How we test it", "Leave-one-subject-out, the metrics, and six experiments"],
+    ["Plan", "An 18-day build, the risks, and what we expect to learn"],
+  ];
+  parts.forEach(([h, b], i) => {
+    const x = M + (i % 3) * (3.89 + 0.23), y = i < 3 ? 1.75 : 4.2;
+    box(s, x, y, 3.89, 2.2, C.TINT);
+    T(s, String(i + 1).padStart(2, "0"), { x: x + 0.3, y: y + 0.28, w: 1.2, h: 0.6, fontFace: "Georgia", fontSize: 30, bold: true, color: C.TEAL });
+    T(s, h, { x: x + 0.3, y: y + 0.98, w: 3.3, h: 0.4, fontSize: 18, bold: true });
+    T(s, b, { x: x + 0.3, y: y + 1.42, w: 3.3, h: 0.7, fontSize: 14, color: C.MUTED });
+  });
+  s.addNotes("Here is the route through the talk. We start with the problem and the data, look at what published models " +
+    "have achieved and where they fall short, then walk through our design, how we will test it, and the plan for Phase 3.");
 }
 
 // ---------------------------------------------------------------------------- 2 the problem
@@ -163,7 +185,8 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
 // ---------------------------------------------------------------------------- 3 what to detect
 {
   const s = content("The problem", "01  ·  The problem", "What the decoder has to pick up");
-  img(s, "erd.png", M, 1.55, 8.4);
+  img(s, "erd.png", M, 1.55, 8.4, "Schematic: the mu rhythm loses power after the cue while the person imagines a movement, " +
+    "and scalp maps show the weaker rhythm on the side of the head opposite the imagined hand.");
   T(s, "Imagine moving your left hand and the 8–13 Hz rhythm over the right side of your head gets weaker. " +
     "Right hand, left side. The decoder has to find that drop inside very noisy signals.",
     { x: 9.35, y: 1.85, w: 3.38, h: 2.7, fontSize: 17 });
@@ -189,7 +212,8 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
 // ---------------------------------------------------------------------------- 4 dataset
 {
   const s = content("The data", "02  ·  The data", "Our data: 9 people, 4 imagined movements");
-  img(s, "classes.png", M, 1.55, 8.4);
+  img(s, "classes.png", M, 1.55, 8.4, "Four schematic scalp maps: left-hand imagery near C4 on the right, right-hand imagery " +
+    "near C3 on the left, feet near Cz on the midline, tongue lower on both sides.");
   T(s, [
     para("BCI Competition IV dataset 2a, recorded at Graz University of Technology. We chose it because all four papers we " +
       "build on report results on it, so our re-runs can be checked against their published numbers."),
@@ -252,18 +276,25 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
   const s = content("What others have tried", "03  ·  What others have tried", "Bigger models don’t fix the new-person problem");
   const models = ["EEGNet+", "ShallowConvNet+", "CTNet", "DeepConvNet+", "EEG Conformer+"];
   const common = {
-    y: 1.6, h: 4.0, barDir: "bar", catAxisOrientation: "maxMin", barGapWidthPct: 55, showLegend: false,
+    y: 1.6, h: 3.85, barDir: "bar", catAxisOrientation: "maxMin", barGapWidthPct: 55, showLegend: false,
     valGridLine: { style: "none" }, catGridLine: { style: "none" }, catAxisLineShow: false,
     showValue: true, dataLabelPosition: "outEnd", dataLabelFontSize: 13, dataLabelFontFace: "Calibri", dataLabelColor: C.INK,
     catAxisLabelFontSize: 14, catAxisLabelFontFace: "Calibri", catAxisLabelColor: C.INK,
     showTitle: true, titleFontSize: 15, titleFontFace: "Calibri", titleColor: C.INK,
   };
+  // both plot areas are placed explicitly, so the rows line up and the chance line can be drawn exactly at 25%
+  const plotY = 0.14, plotH = 0.83, accX = 7.05, accW = 5.68, accPlot = { x: 0.03, y: plotY, w: 0.8, h: plotH };
   s.addChart(pres.charts.BAR, [{ name: "Parameters", labels: models, values: [3188, 44644, 152364, 282079, 697412] }],
     Object.assign({}, common, { x: M, w: 6.3, chartColors: [C.SLATE], title: "Parameters (log scale)",
+      layout: { x: 0.37, y: plotY, w: 0.5, h: plotH },
       valAxisLogScaleBase: 10, valAxisMinVal: 1000, valAxisMaxVal: 10000000, valAxisHidden: true, dataLabelFormatCode: "#\\,###" }));
   s.addChart(pres.charts.BAR, [{ name: "Accuracy", labels: models, values: [56.85, 56.75, 58.64, 60.15, 53.41] }],
-    Object.assign({}, common, { x: 7.05, w: 5.68, chartColors: [C.TEAL], title: "Accuracy on an unseen person (%)",
-      catAxisHidden: true, valAxisMinVal: 0, valAxisMaxVal: 100, valAxisHidden: true, dataLabelFormatCode: "0.00" }));
+    Object.assign({}, common, { x: accX, w: accW, chartColors: [C.TEAL], title: "Accuracy on an unseen person (%)",
+      layout: accPlot, catAxisHidden: true, valAxisMinVal: 0, valAxisMaxVal: 100, valAxisHidden: true, dataLabelFormatCode: "0.00" }));
+  const chanceX = accX + accW * (accPlot.x + 0.25 * accPlot.w), top = 1.6 + 3.85 * plotY, bottom = 1.6 + 3.85 * (plotY + plotH);
+  s.addShape(pres.shapes.LINE, { x: chanceX, y: top - 0.05, w: 0, h: bottom - top + 0.1,
+    line: { color: C.INK, width: 1.25, dashType: "dash" } });
+  T(s, "chance 25%", { x: chanceX - 0.6, y: bottom + 0.06, w: 1.2, h: 0.26, align: "center", fontSize: 11, color: C.INK });
   box(s, M, 5.75, CW, 0.7, C.TINT);
   T(s, [{ text: "EEG Conformer has 219 times EEGNet’s parameters and scores 3.4 points lower. ", options: { bold: true } },
         { text: "The best of the five is only 3.3 points ahead." }],
@@ -471,7 +502,8 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
 // ---------------------------------------------------------------------------- 13 alignment
 {
   const s = content("Our design", "04  ·  Our design", "Alignment puts every person in one frame");
-  img(s, "alignment.png", M, 1.6, 7.4);
+  img(s, "alignment.png", M, 1.6, 7.4, "Illustration: before alignment, three people's trials sit in separate clouds; after " +
+    "alignment, all three clouds are centred on the same point, the identity.");
   T(s, "Illustration, not measured data.", { x: M, y: 4.78, w: 7.4, h: 0.3, fontSize: 11, color: C.MUTED });
   T(s, "For each person", { x: 8.45, y: 1.7, w: 4.3, h: 0.4, fontSize: 18, bold: true });
   const steps = [
@@ -605,6 +637,33 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
     "sit at the end with as few open questions as possible. Each stage ends in a milestone with a pass-or-fail check.");
 }
 
+// ---------------------------------------------------------------------------- risks
+{
+  const s = content("Plan", "06  ·  Plan", "What could go wrong, and what we will do");
+  const risks = [
+    ["Too little data", "5,184 trials in all; about 4,032 per training fold", "Augmentation, dropout, early stopping and a deliberately small model"],
+    ["Baselines miss their papers", "Each paper used its own preprocessing and protocol", "Use the authors’ reference code and report both numbers side by side"],
+    ["Nine people, wide spread", "Some people produce only weak rhythms", "Per-person results, standard deviations and paired tests, not just means"],
+    ["Not enough GPU time", "153 runs per seed, three seeds each", "Cached data, mixed precision and a checkpoint every epoch"],
+    ["HCT-Net does not win", "The combination may not help on this dataset", "Report it plainly; the component study shows why"],
+  ];
+  const cols = [[M + 0.55, 3.0], [M + 3.75, 3.55], [M + 7.55, 4.3]];
+  ["Risk", "Why it could happen", "What we will do"].forEach((h, i) => label(s, h, cols[i][0], 1.62, cols[i][1]));
+  risks.forEach(([risk, why, plan], i) => {
+    const y = 1.98 + i * 0.94;
+    box(s, M, y, CW, 0.82, i % 2 ? C.WHITE : C.TINT);
+    disc(s, M + 0.18, y + 0.29, 0.24, C.RED);
+    T(s, risk, { x: cols[0][0], y, w: cols[0][1], h: 0.82, valign: "middle", fontSize: 16, bold: true });
+    T(s, why, { x: cols[1][0], y, w: cols[1][1], h: 0.82, valign: "middle", fontSize: 14, color: C.MUTED });
+    T(s, plan, { x: cols[2][0], y, w: cols[2][1], h: 0.82, valign: "middle", fontSize: 15, color: C.TEAL_D, bold: true });
+  });
+  s.addNotes("Five things could go wrong, and each has a planned response. The dataset is small, so we regularise and keep " +
+    "the model small. Baselines may not match their papers, so we use the authors’ own code and report both numbers. Nine " +
+    "people can give a wide spread, so we report per person and use paired tests. GPU time is limited, so we cache data, use " +
+    "mixed precision and checkpoint every epoch. And HCT-Net may simply not win, in which case we say so and use the " +
+    "component study to explain why.");
+}
+
 // ---------------------------------------------------------------------------- 17 outcomes
 {
   const s = content("Plan", "06  ·  Plan", "What we expect, and what is new");
@@ -632,6 +691,35 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
     "modest and specific: one fair comparison of all four architectures under a single leave-one-subject-out protocol, a " +
     "compact combination sized for this dataset, a component study on unseen people, and accuracy measured against size. " +
     "If the result is negative, it is still a result, and we will report it.");
+}
+
+// ---------------------------------------------------------------------------- references
+{
+  const s = content("Close", "References", "Key references");
+  const refs = [
+    "Lawhern et al., “EEGNet: a compact convolutional neural network for EEG-based brain–computer interfaces,” J. Neural Eng., 2018.",
+    "Altaheri et al., “Physics-informed attention temporal convolutional network for EEG-based motor imagery classification,” IEEE Trans. Ind. Informatics, 2023.",
+    "Zhao et al., “CTNet: a convolutional transformer network for EEG-based motor imagery classification,” Scientific Reports, 2024.",
+    "Song et al., “EEG Conformer: convolutional transformer for EEG decoding and visualization,” IEEE Trans. Neural Syst. Rehabil. Eng., 2023.",
+    "Tangermann et al., “Review of the BCI Competition IV,” Frontiers in Neuroscience, 2012.",
+    "Brunner et al., “BCI Competition 2008 – Graz data set A,” Graz University of Technology, 2008.",
+    "He and Wu, “Transfer learning for brain–computer interfaces: a Euclidean space data alignment approach,” IEEE Trans. Biomed. Eng., 2020.",
+    "Schirrmeister et al., “Deep learning with convolutional neural networks for EEG decoding and visualization,” Human Brain Mapping, 2017.",
+    "Ang et al., “Filter bank common spatial pattern (FBCSP) in brain–computer interface,” Proc. IJCNN, 2008.",
+    "Vaswani et al., “Attention is all you need,” NeurIPS, 2017.",
+    "Gramfort et al., “MEG and EEG data analysis with MNE-Python,” Frontiers in Neuroscience, 2013.",
+    "Aristimunha et al., “Mother of All BCI Benchmarks (MOABB),” 2023.",
+    "Pfurtscheller and Lopes da Silva, “Event-related EEG/MEG synchronization and desynchronization,” Clinical Neurophysiology, 1999.",
+    "Holm, “A simple sequentially rejective multiple test procedure,” Scandinavian Journal of Statistics, 1979.",
+    "Wilcoxon, “Individual comparisons by ranking methods,” Biometrics Bulletin, 1945.",
+  ];
+  // paragraph spacing is read from the run that opens each paragraph, so both runs carry it
+  const run = (r, i) => [{ text: `[${i + 1}]  `, options: { bold: true, color: C.TEAL_D, paraSpaceAfter: 11 } },
+    { text: r, options: { breakLine: true, paraSpaceAfter: 11 } }];
+  T(s, refs.slice(0, 8).flatMap((r, i) => run(r, i)), { x: M, y: 1.7, w: 5.9, h: 5.2, fontSize: 13 });
+  T(s, refs.slice(8).flatMap((r, i) => run(r, i + 8)), { x: M + 6.23, y: 1.7, w: 5.9, h: 5.2, fontSize: 13 });
+  s.addNotes("These are the sources behind every number and every borrowed idea in this talk. The full references, with " +
+    "volumes and pages, are in the solution design document.");
 }
 
 // ---------------------------------------------------------------------------- 18 close

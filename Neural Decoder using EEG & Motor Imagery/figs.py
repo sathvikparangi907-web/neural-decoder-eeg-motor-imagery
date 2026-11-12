@@ -1,4 +1,4 @@
-"""Figures for the Phase 2 solution design: the document and the slides.
+"""Figures for the solution design: the document and the slides.
 
 Every figure is either plotted from published values cited in its caption or is a
 labelled schematic. The cover art is a few seconds of real EEG from subject A01 of

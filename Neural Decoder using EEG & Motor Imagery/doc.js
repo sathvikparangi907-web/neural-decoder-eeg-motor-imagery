@@ -1,4 +1,4 @@
-// Phase 2 Solution Design: builds the Word document from design.md.
+// Solution Design: builds the Word document from design.md.
 //
 //   node doc.js                          names only (the public copy)
 //   TEAM_JSON=team.json node doc.js      names from a local file, e.g. with registration numbers
@@ -23,7 +23,7 @@ const {
 } = require("docx");
 
 const FIG = path.join(__dirname, "fig");
-const OUT = path.join(process.env.OUT_DIR || __dirname, "Phase2_Solution_Design.docx");
+const OUT = path.join(process.env.OUT_DIR || __dirname, "Solution_Design.docx");
 const TEAM = process.env.TEAM_JSON
   ? JSON.parse(fs.readFileSync(process.env.TEAM_JSON, "utf8"))
   : ["Ananya Gourishetty", "Haarika D", "Siddhanth Samal", "Sathvik P"];
@@ -265,7 +265,7 @@ function cover() {
                   behindDocument: true, allowOverlap: true, wrap: { type: TextWrappingType.NONE } },
     })] }),
     new Paragraph({ spacing: { before: 260, after: 200 },
-      children: [new TextRun({ text: "PHASE 2  ·  SOLUTION DESIGN", bold: true, size: 19, color: C.TEAL_L, characterSpacing: 40 })] }),
+      children: [new TextRun({ text: "SOLUTION DESIGN", bold: true, size: 19, color: C.TEAL_L, characterSpacing: 40 })] }),
     new Paragraph({ spacing: { after: 220, line: 264 }, children: [
       white("Cross-Subject Motor Imagery EEG", { font: "Georgia", size: 48, bold: true }),
       white("Classification Using Deep Learning", { font: "Georgia", size: 48, bold: true, break: 1 })] }),
@@ -325,7 +325,7 @@ function abbreviations() {
 
 // ---------------------------------------------------------------- document
 const footer = new Footer({ children: [new Paragraph({ children: [
-  new TextRun({ text: "Phase 2 Solution Design  ·  Group 5", size: 16, color: C.MUTED }),
+  new TextRun({ text: "Solution Design  ·  Group 5", size: 16, color: C.MUTED }),
   new TextRun({ children: [new PositionalTab({ alignment: PositionalTabAlignment.RIGHT, relativeTo: PositionalTabRelativeTo.MARGIN,
     leader: PositionalTabLeader.NONE }), PageNumber.CURRENT], size: 16, color: C.MUTED }),
 ] })] });
@@ -333,7 +333,7 @@ const footer = new Footer({ children: [new Paragraph({ children: [
 const doc = new Document({
   creator: "Group 5",
   lastModifiedBy: "Group 5",
-  title: "Phase 2 Solution Design: Cross-Subject Motor Imagery EEG Classification Using Deep Learning",
+  title: "Solution Design: Cross-Subject Motor Imagery EEG Classification Using Deep Learning",
   subject: "CSE4006 Deep Learning, VIT-AP University",
   description: "Methodology and implementation plan for HCT-Net, evaluated leave-one-subject-out on BCI Competition IV 2a",
   styles: {

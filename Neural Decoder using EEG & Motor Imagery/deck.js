@@ -1,4 +1,4 @@
-// Phase 2 Solution Design: the slides.
+// Solution Design: the slides.
 //
 //   node deck.js                         names only (the public copy)
 //   TEAM_JSON=team.json node deck.js     names from a local file, e.g. with registration numbers
@@ -9,7 +9,7 @@ const path = require("path");
 const pptxgen = require("pptxgenjs");
 
 const FIG = path.join(__dirname, "fig");
-const OUT = path.join(process.env.OUT_DIR || __dirname, "Phase2_Presentation.pptx");
+const OUT = path.join(process.env.OUT_DIR || __dirname, "Solution_Design_Presentation.pptx");
 const TEAM = process.env.TEAM_JSON
   ? JSON.parse(fs.readFileSync(process.env.TEAM_JSON, "utf8"))
   : ["Ananya Gourishetty", "Haarika D", "Siddhanth Samal", "Sathvik P"];
@@ -31,7 +31,7 @@ pres.layout = "LAYOUT_WIDE";
 pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
 pres.author = "Group 5";
 pres.company = "VIT-AP University";
-pres.title = "Phase 2 Solution Design: Cross-Subject Motor Imagery EEG Classification";
+pres.title = "Solution Design: Cross-Subject Motor Imagery EEG Classification";
 pres.subject = "CSE4006 Deep Learning";
 
 pres.defineSlideMaster({
@@ -52,7 +52,7 @@ pres.defineSlideMaster({
       color: C.TEAL_D, valign: "top", align: "left", margin: 0 }, text: "" } },
     { placeholder: { options: { name: "title", type: "title", x: M, y: 0.66, w: CW, h: 0.8, fontFace: "Georgia",
       fontSize: 34, bold: true, color: C.INK, valign: "top", align: "left", margin: 0 }, text: "" } },
-    { text: { text: "Phase 2 Solution Design  ·  Group 5",
+    { text: { text: "Solution Design  ·  Group 5",
       options: { x: M, y: 7.02, w: 6, h: 0.26, fontSize: 10, color: C.MUTED, margin: 0 } } },
   ],
   slideNumber: { x: W - M - 0.6, y: 7.02, w: 0.6, h: 0.26, fontSize: 10, color: C.MUTED, align: "right" },
@@ -116,7 +116,7 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
   const s = slideOf("COVER", "Opening");
   s.addText("Cross-Subject Motor Imagery\nEEG Classification", { placeholder: "title" });
   s.addText("A small hybrid CNN–Transformer that has to work for people it has never seen", { placeholder: "body" });
-  label(s, "Phase 2  ·  Solution design", 0.75, 1.15, 6, C.TEAL_L);
+  label(s, "Solution design", 0.75, 1.15, 6, C.TEAL_L);
   const twoLines = TEAM.some((n) => n.includes("("));
   label(s, "Team", 0.75, 4.3, 2, C.TEAL_L);
   T(s, twoLines ? `${TEAM[0]}     ${TEAM[1]}\n${TEAM[2]}     ${TEAM[3]}` : TEAM.join("   ·   "),
@@ -128,7 +128,7 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
   T(s, "CSE4006 Deep Learning  ·  Group 5", { x: 3.6, y: y + 0.3, w: 4.4, h: 0.34, fontSize: 16, color: C.WHITE });
   T(s, "School of Computer Science and Engineering, VIT-AP University",
     { x: 0.75, y: y + 0.85, w: 7.4, h: 0.3, fontSize: 14, color: C.PALE });
-  s.addNotes("We are Group 5: Ananya, Haarika, Siddhanth and Sathvik, guided by Dr. Mohan Allam. This is our Phase 2 " +
+  s.addNotes("We are Group 5: Ananya, Haarika, Siddhanth and Sathvik, guided by Dr. Mohan Allam. This is our " +
     "solution design. The short version: we want to decode imagined movements from EEG for a person the model has never " +
     "seen, and we want to do it with a small model. The next slides cover why that is hard, what others have tried, what " +
     "we will build, and how we will test it fairly.");
@@ -153,7 +153,7 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
     T(s, b, { x: x + 0.3, y: y + 1.42, w: 3.3, h: 0.7, fontSize: 14, color: C.MUTED });
   });
   s.addNotes("Here is the route through the talk. We start with the problem and the data, look at what published models " +
-    "have achieved and where they fall short, then walk through our design, how we will test it, and the plan for Phase 3.");
+    "have achieved and where they fall short, then walk through our design, how we will test it, and how we will build it.");
 }
 
 // ---------------------------------------------------------------------------- 2 the problem
@@ -631,7 +631,7 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
     box(s, x, 5.85, 3.89, 0.92, C.TINT);
     T(s, r, { x: x + 0.25, y: 5.85, w: 3.45, h: 0.92, valign: "middle", fontSize: 15 });
   });
-  s.addNotes("Phase 3 gives us eighteen days, and the order is deliberate. Data checks and preprocessing come first, then " +
+  s.addNotes("The build has eighteen days, and the order is deliberate. Data checks and preprocessing come first, then " +
     "the baselines, and only then our own model, because a new model on an unchecked pipeline cannot be interpreted. Three " +
     "rules protect the plan. Code can be written faster under pressure; training runs cannot, so the compute-heavy stages " +
     "sit at the end with as few open questions as possible. Each stage ends in a milestone with a pass-or-fail check.");
@@ -727,11 +727,11 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
   const s = slideOf("CLOSING", "Close");
   s.addText("Thank you", { placeholder: "title" });
   s.addText("Questions are welcome", { placeholder: "body" });
-  T(s, "Next, in Phase 3: the pipeline and baselines first, then HCT-Net, then the leave-one-subject-out experiments.",
+  T(s, "Next: the pipeline and baselines first, then HCT-Net, then the leave-one-subject-out experiments.",
     { x: 0.75, y: 4.6, w: 5.9, h: 1.0, fontSize: 18, color: C.PALE });
   T(s, `Group 5  ·  ${TEAM.map((n) => n.replace(/\s*\(.*\)/, "")).join(", ")}`,
     { x: 0.75, y: 6.45, w: 7.5, h: 0.35, fontSize: 13, color: C.PALE });
-  s.addNotes("Thank you. Next comes Phase 3: the pipeline and the baselines first, then HCT-Net, then the experiments. " +
+  s.addNotes("Thank you. Next comes the build: the pipeline and the baselines first, then HCT-Net, then the experiments. " +
     "We are happy to take questions.");
 }
 

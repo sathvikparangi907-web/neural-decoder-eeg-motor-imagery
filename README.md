@@ -49,7 +49,7 @@ size tested is not a capacity problem, so a bigger model was never going to clos
 | Which part of the model came from which paper | [`model_provenance/`](model_provenance/) |
 | Every paper, with DOIs and the PDFs we may republish | [`references/`](references/) |
 | Per-fold metrics, one row per fold per seed | [`results/`](results/) |
-| The final article (PDF), the final presentation, and the Phase 2 design | [`Neural Decoder using EEG & Motor Imagery/`](Neural%20Decoder%20using%20EEG%20&%20Motor%20Imagery/) |
+| The final article (PDF), the final presentation, and the solution design | [`Neural Decoder using EEG & Motor Imagery/`](Neural%20Decoder%20using%20EEG%20&%20Motor%20Imagery/) |
 
 `phase3/` is split by the seven Phase 3 activities, and each directory has its own page
 explaining what was done, which file does it, and the result:
@@ -117,5 +117,5 @@ win:
 2. A change is accepted only if it improves the three-seed validation mean by at least
    **0.75 points**.
 3. One change at a time, each stacked on the last accepted one.
-4. Negative results are kept and written down. Several of the ideas in the Phase 2 design
+4. Negative results are kept and written down. Several of the ideas in the solution design
    were measured and rejected; they are in `FINDINGS.md` with the date and the numbers.

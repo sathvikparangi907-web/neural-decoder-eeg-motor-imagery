@@ -1,6 +1,6 @@
 # Summary
 
-This is our Phase 2 solution design. Decoders of imagined movement work well on people they were trained on and much worse on anyone new, and that gap is what keeps brain–computer interfaces tied to long calibration sessions. We propose HCT-Net, a network of 20,996 parameters that joins EEGNet's convolutional front end to a two-layer Transformer attending within short windows, with Euclidean alignment of each person's data before training. We will test it against EEGNet, ATCNet, EEG Conformer, CTNet and FBCSP on BCI Competition IV dataset 2a, with every model under the same leave-one-subject-out protocol, three random seeds and paired statistics. A component study will show what each part contributes. The plan fits an eighteen-day implementation phase, and the data pipeline and baselines are verified before our own model is written.
+This is our solution design. Decoders of imagined movement work well on people they were trained on and much worse on anyone new, and that gap is what keeps brain–computer interfaces tied to long calibration sessions. We propose HCT-Net, a network of 20,996 parameters that joins EEGNet's convolutional front end to a two-layer Transformer attending within short windows, with Euclidean alignment of each person's data before training. We will test it against EEGNet, ATCNet, EEG Conformer, CTNet and FBCSP on BCI Competition IV dataset 2a, with every model under the same leave-one-subject-out protocol, three random seeds and paired statistics. A component study will show what each part contributes. The plan fits an eighteen-day implementation phase, and the data pipeline and baselines are verified before our own model is written.
 
 **Keywords:** electroencephalography, motor imagery, brain–computer interface, cross-subject decoding, leave-one-subject-out evaluation, Transformer, Euclidean alignment
 
@@ -18,7 +18,7 @@ That is why we treat accuracy on unseen people as the main result of this projec
 
 ## 1.3 What we propose
 
-We propose HCT-Net, a Hybrid Convolution–Transformer Network with 20,996 parameters. It uses the convolutional front end of EEGNet, a small Transformer encoder that attends within short overlapping windows, and Euclidean alignment of each person's data before training. We will test it, together with four published deep models and one classical method, under one leave-one-subject-out protocol on BCI Competition IV dataset 2a. The rest of this document explains the reasoning, the design, and how we will build and test it in Phase 3.
+We propose HCT-Net, a Hybrid Convolution–Transformer Network with 20,996 parameters. It uses the convolutional front end of EEGNet, a small Transformer encoder that attends within short overlapping windows, and Euclidean alignment of each person's data before training. We will test it, together with four published deep models and one classical method, under one leave-one-subject-out protocol on BCI Competition IV dataset 2a. The rest of this document explains the reasoning, the design, and how we will build and test it.
 
 # 2. Background and related work
 
@@ -32,9 +32,9 @@ Reading this signal is hard for three reasons. It is small, a few microvolts, an
 
 ## 2.2 The four models we build on
 
-Early motor imagery decoders used hand-designed features, most often common spatial patterns or its filter-bank version FBCSP [9], followed by a linear classifier. Deep learning replaced the hand-designed features with networks that learn their own filters, first with compact convolutional networks [1], [8] and later with attention and Transformer layers [2]–[4], [10]. Our Phase 1 literature survey settled on four models that trace this path ({tab:models}).
+Early motor imagery decoders used hand-designed features, most often common spatial patterns or its filter-bank version FBCSP [9], followed by a linear classifier. Deep learning replaced the hand-designed features with networks that learn their own filters, first with compact convolutional networks [1], [8] and later with attention and Transformer layers [2]–[4], [10]. Our literature survey settled on four models that trace this path ({tab:models}).
 
-Table: The four architectures from our Phase 1 survey and what HCT-Net borrows from each. Parameter counts are from the braindecode 1.8.1 reference implementations for 22 channels, four classes and our 875-sample input. {#tab:models}
+Table: The four architectures from our literature survey and what HCT-Net borrows from each. Parameter counts are from the braindecode 1.8.1 reference implementations for 22 channels, four classes and our 875-sample input. {#tab:models}
 ::table widths=19,13,38,30
 | Model | Parameters | Main idea | What we take |
 |---|---|---|---|
@@ -597,11 +597,11 @@ Table: Tools and frameworks. {#tab:tools}
 | Configuration | YAML | One file per experiment |
 | Version control | Git and GitHub | Code, configurations and result tables |
 
-We use published reference implementations for the baselines wherever they exist. If we wrote a baseline from scratch and it missed its published accuracy, we could not tell a bug from a genuine difference in evaluation, and Phase 3 has no time to settle that question for four architectures. We also pin the environment in a lock file, store each configuration with the git commit and seeds of every run, cache preprocessed data under a name that includes a hash of the preprocessing settings (so a settings change can never silently reuse stale data), and checkpoint every epoch, so a dropped session on a hosted GPU costs one epoch and not one fold. Unit tests cover the tensor shapes of every model and the alignment check, and they run before any experiment.
+We use published reference implementations for the baselines wherever they exist. If we wrote a baseline from scratch and it missed its published accuracy, we could not tell a bug from a genuine difference in evaluation, and the build has no time to settle that question for four architectures. We also pin the environment in a lock file, store each configuration with the git commit and seeds of every run, cache preprocessed data under a name that includes a hash of the preprocessing settings (so a settings change can never silently reuse stale data), and checkpoint every epoch, so a dropped session on a hosted GPU costs one epoch and not one fold. Unit tests cover the tensor shapes of every model and the alignment check, and they run before any experiment.
 
 ## 11.2 Order of work
 
-Phase 3 gives us eighteen days. We build and verify the data pipeline and the baselines before writing HCT-Net. A result from a new model on an unverified pipeline cannot be interpreted: if accuracy is low, we could not tell whether the model is weak or the data is being handled wrongly, and finding out late would leave no time to fix it.
+The build has eighteen days. We build and verify the data pipeline and the baselines before writing HCT-Net. A result from a new model on an unverified pipeline cannot be interpreted: if accuracy is low, we could not tell whether the model is weak or the data is being handled wrongly, and finding out late would leave no time to fix it.
 
 The stages also differ in how far they can be squeezed. Writing code can be sped up by working longer; training runs take as long as they take. So the compute-heavy stages come last, with as few open questions in front of them as possible, and the coding stages, which can absorb pressure, come first. Three rules follow from this, and we will not bend them:
 

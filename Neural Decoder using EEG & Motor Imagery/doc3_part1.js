@@ -19,15 +19,15 @@ const CODEBG = "F5F6F9";
 const MONO = "Courier New";
 
 const H1 = (t) => new Paragraph({
-  heading: HeadingLevel.HEADING_1, spacing: { before: 330, after: 145 },
+  heading: HeadingLevel.HEADING_1, keepNext: true, keepLines: true, spacing: { before: 330, after: 145 },
   children: [new TextRun({ text: t, bold: true, color: NAVYD, size: 27 })]
 });
 const H2 = (t) => new Paragraph({
-  heading: HeadingLevel.HEADING_2, spacing: { before: 250, after: 105 },
+  heading: HeadingLevel.HEADING_2, keepNext: true, keepLines: true, spacing: { before: 250, after: 105 },
   children: [new TextRun({ text: t, bold: true, color: NAVY, size: 22 })]
 });
 const H3 = (t) => new Paragraph({
-  heading: HeadingLevel.HEADING_3, spacing: { before: 190, after: 90 },
+  heading: HeadingLevel.HEADING_3, keepNext: true, keepLines: true, spacing: { before: 190, after: 90 },
   children: [new TextRun({ text: t, bold: true, color: PURPLE, size: 20 })]
 });
 const P = (t, o = {}) => new Paragraph({
@@ -49,26 +49,26 @@ const CAP = (t) => new Paragraph({
   spacing: { before: 70, after: 190 },
   children: [new TextRun({ text: t, size: 17, italics: true, color: GREY })]
 });
-const SP = (n = 110) => new Paragraph({ spacing: { after: n }, children: [new TextRun({ text: "", size: 10 })] });
+const SP = (n = 110) => new Paragraph({ keepNext: true, spacing: { after: n }, children: [new TextRun({ text: "", size: 10 })] });
 
 function pngSize(p) { const b = fs.readFileSync(p); return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) }; }
 function figure(file, widthPt) {
   const { w, h } = pngSize(file);
   return new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { before: 130, after: 40 },
+    alignment: AlignmentType.CENTER, keepNext: true, spacing: { before: 130, after: 40 },
     children: [new ImageRun({
       type: "png", data: fs.readFileSync(file),
       transformation: { width: widthPt, height: Math.round(widthPt * (h / w)) }
     })]
   });
 }
-function cell(text, { bold = false, bg, align = AlignmentType.LEFT, width, size = 18, color } = {}) {
+function cell(text, { bold = false, bg, align = AlignmentType.LEFT, width, size = 18, color, keep = false } = {}) {
   return new TableCell({
     width: { size: width, type: WidthType.DXA },
     shading: bg ? { type: ShadingType.CLEAR, fill: bg, color: "auto" } : undefined,
     margins: { top: 72, bottom: 72, left: 95, right: 95 },
     children: [new Paragraph({
-      alignment: align, spacing: { after: 0, line: 248 },
+      alignment: align, keepNext: keep, spacing: { after: 0, line: 248 },
       children: [new TextRun({ text: String(text), bold, size, color })]
     })]
   });
@@ -77,7 +77,7 @@ function table(headers, rows, widths, opts = {}) {
   const head = new TableRow({
     tableHeader: true, cantSplit: true,
     children: headers.map((h, i) => cell(h, {
-      bold: true, bg: NAVY, color: "FFFFFF", width: widths[i], size: 18,
+      bold: true, bg: NAVY, color: "FFFFFF", width: widths[i], size: 18, keep: true,
       align: (opts.center || []).includes(i) ? AlignmentType.CENTER : AlignmentType.LEFT
     }))
   });
@@ -86,7 +86,7 @@ function table(headers, rows, widths, opts = {}) {
     children: r.map((c, i) => cell(c, {
       width: widths[i],
       bg: (opts.hi || []).includes(ri) ? TINT : (ri % 2 === 1 ? CARD : undefined),
-      size: opts.size || 18, bold: opts.boldFirst && i === 0,
+      size: opts.size || 18, bold: opts.boldFirst && i === 0, keep: true,
       align: (opts.center || []).includes(i) ? AlignmentType.CENTER : AlignmentType.LEFT
     }))
   }));

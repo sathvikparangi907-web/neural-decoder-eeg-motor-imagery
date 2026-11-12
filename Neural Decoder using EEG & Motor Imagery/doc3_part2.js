@@ -42,7 +42,7 @@ C.push(SP(40));
 C.push(table(
   ["Constraint", "Value", "Reason"],
   [
-    ["Trainable parameters", "Below 50,000", "Below ShallowConvNet at 47,364 and far below ATCNet at 113,732; a small model is less able to memorise subject-specific detail"],
+    ["Trainable parameters", "Below 50,000", "A ceiling near ShallowConvNet's 44,644 and far below ATCNet's 113,732; a small model is less able to memorise subject-specific detail"],
     ["Attention span", "Windowed, not global", "Global attention over 27 time steps is affordable but unconstrained; windowing imposes a locality prior that suits short EEG trials"],
     ["Encoder depth", "2 layers", "CTNet uses 6; with fewer than 6,000 trials in total, additional depth is more likely to fit subject-specific structure than shared structure"],
     ["Input length", "875 samples", "Fixed by the analysis window in Section 8.3"],
@@ -142,7 +142,7 @@ C.push(table(
 C.push(CAP("Table 11.5 — Components of the proposed model, their origin, and the reason for including each."));
 
 C.push(H2("11.6 Why two encoder layers rather than six"));
-C.push(P("CTNet uses a six-layer Transformer encoder and reports strong within-subject accuracy. This project uses two. The reasoning is that the dataset contains 5,184 labelled trials in total, and under leave-one-subject-out only about 4,032 of those are available for training in any fold. A six-layer encoder at this model dimension would roughly triple the attention parameter count, from 17,088 to 51,264, which alone would exceed the budget set in Table 11.1 before the convolutional block is counted."));
+C.push(P("CTNet uses a six-layer Transformer encoder and reports strong within-subject accuracy. This project uses two. The reasoning is that the dataset contains 5,184 labelled trials in total, and under leave-one-subject-out only about 4,032 of those are available for training in any fold. A six-layer encoder at this model dimension would triple the attention parameter count, from 17,088 to 51,264, which alone would exceed the budget set in Table 11.1 before the convolutional block is counted."));
 C.push(P("There is also a substantive reason rather than merely a budgetary one. Additional attention capacity gives the model more freedom to fit structure that is specific to the training subjects, and that structure does not transfer to a new person. The gap documented in Figure 4.2 is precisely the symptom of a model fitting subject-specific detail. Reducing capacity is therefore a plausible response to the problem, not only a concession to hardware. Whether it is the correct response is an empirical question, and it is tested directly as experiment E5 in Section 17.2."));
 
 C.push(H2("11.7 How a trial passes through the model"));
@@ -166,7 +166,7 @@ C.push(figure("fig/f_method.png", 468));
 C.push(CAP("Figure 12.1 — The methodology as a sequence of stages."));
 
 C.push(H2("12.1 Stage 1 — Data acquisition and verification"));
-C.push(P("The dataset is downloaded programmatically through MOABB, which handles the file format and the standard channel naming. Before anything else is done, the loaded data are verified against the published dataset description, because every later result depends on the data being what it is assumed to be."));
+C.push(P("The dataset is downloaded programmatically through MOABB [12], which handles the file format and the standard channel naming. Before anything else is done, the loaded data are verified against the published dataset description, because every later result depends on the data being what it is assumed to be."));
 C.push(SP(30));
 C.push(table(
   ["Receives", "Does", "Produces"],
@@ -237,7 +237,7 @@ C.push(P("Once training has finished, the held-out subject's trials are loaded. 
 C.push(P("The loop therefore produces nine independent measurements rather than a single number, and it is those nine that are reported, both individually and as a mean with a standard deviation. Each configuration is run with three random seeds and the per-fold results averaged, so that a difference between two models is not an artefact of a single fortunate initialisation."));
 
 C.push(H2("12.8 Stage 8 — Statistical analysis"));
-C.push(P("Comparing two mean accuracies is not sufficient to claim that one model is better than another, particularly with only nine folds. Each pairwise comparison uses the Wilcoxon signed-rank test, applied to the nine paired per-subject accuracies. The test is non-parametric, which matters because per-subject accuracy is not normally distributed across subjects, and it is paired, which matters because the same nine subjects are used for every model."));
+C.push(P("Comparing two mean accuracies is not sufficient to claim that one model is better than another, particularly with only nine folds. Each pairwise comparison uses the Wilcoxon signed-rank test [15], applied to the nine paired per-subject accuracies. The test is non-parametric, which matters because per-subject accuracy is not normally distributed across subjects, and it is paired, which matters because the same nine subjects are used for every model."));
 C.push(P("Where multiple comparisons are made against the same baseline, the significance level is adjusted accordingly, and both the adjusted and unadjusted results are reported."));
 
 C.push(H2("12.9 Stage 9 — Component study"));
@@ -262,12 +262,12 @@ C.push(table(
   ["Setting", "Value", "Reason"],
   [
     ["Loss function", "Cross-entropy with label smoothing of 0.1", "Label smoothing reduces overconfidence, which matters on a small dataset where a model can become certain about patterns it has seen only a few times"],
-    ["Optimiser", "Adam, initial learning rate 0.001", "The choice used by all four surveyed papers; changing it would make comparison with their results harder to interpret"],
+    ["Optimiser", "Adam, initial learning rate 0.001", "Adam is the optimiser used by all four surveyed papers; changing it would make comparison with their results harder to interpret"],
     ["Learning rate schedule", "Cosine annealing over the maximum epoch count", "Allows large steps early and fine adjustment late without a hand-tuned step schedule"],
     ["Batch size", "64", "Fits comfortably in the memory of the available GPUs and gives stable batch normalisation statistics"],
     ["Maximum epochs", "500", "Generous upper bound; early stopping is expected to trigger first"],
     ["Early stopping", "Patience of 50 epochs on validation subject accuracy", "Stops before the model begins fitting the training subjects specifically"],
-    ["Dropout", "0.25 after each pooling stage", "The value used by EEGNet; higher values were found by its authors to hurt on datasets of this size"],
+    ["Dropout", "0.25 after each pooling stage", "The value EEGNet's authors use for cross-subject classification; they use 0.5 within subject"],
     ["Weight constraint", "Max-norm of 1.0 on the depthwise convolution", "Used by EEGNet to keep individual spatial filters from dominating"],
     ["Weight decay", "0.0001", "Mild additional regularisation, applied uniformly"],
     ["Data augmentation", "Segmentation and reconstruction, training split only", "Increases the effective number of training trials; never applied to validation or test data"],

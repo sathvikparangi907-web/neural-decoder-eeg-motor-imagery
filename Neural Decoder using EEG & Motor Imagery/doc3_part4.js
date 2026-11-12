@@ -84,7 +84,7 @@ C.push(table(
     ["Overfitting to training subjects", "The model can fit subject-specific detail that does not transfer", "Validation on a held-out subject rather than a random trial split; capacity limited by design"],
     ["Baselines not reproducing published accuracy", "Differences in preprocessing or evaluation protocol between papers", "Use published reference implementations; report both reproduced and published figures and explain the difference"],
     ["High variance across folds", "Only nine subjects, some of whom produce weak sensorimotor rhythms", "Report per-subject results and standard deviation; use a paired test rather than comparing means alone"],
-    ["Training time exceeding available GPU hours", "Approximately 153 runs across all experiments", "Cache preprocessed tensors, use mixed precision, reduce the maximum epoch count, and checkpoint every epoch so that an interruption costs one epoch rather than one fold"],
+    ["Training time exceeding available GPU hours", "153 runs per seed across all experiments, each repeated with three seeds", "Cache preprocessed tensors, use mixed precision, reduce the maximum epoch count, and checkpoint every epoch so that an interruption costs one epoch rather than one fold"],
     ["Session interruptions on hosted GPU services", "Time limits on free tiers", "Checkpoint to persistent storage so an interruption costs one epoch rather than one fold"],
     ["The proposed model does not improve on the baselines", "The combination may not help on this dataset", "Report the result honestly and use the component study to explain it"],
     ["Attention stage unstable during training", "Small model dimension and a short sequence can make attention weights collapse", "Monitor attention entropy during the smoke test; fall back to a single encoder layer if instability is observed, and record the change"],
@@ -99,7 +99,7 @@ C.push(CAP("Table 21.1 — Anticipated challenges and the response decided in ad
 C.push(H1("22. Novelty and Expected Contribution"));
 C.push(P("This section states what is new in the project and what is not, so that the contribution is not overstated."));
 C.push(H2("22.1 What is not new"));
-C.push(P("The individual components of the proposed model are all taken from published work. Depthwise and separable convolution come from EEGNet, sliding-window attention comes from ATCNet, the arrangement of convolution followed by a Transformer encoder comes from CTNet and EEG Conformer, Euclidean alignment comes from the transfer learning literature, and segmentation-and-reconstruction augmentation comes from EEG Conformer and CTNet. Leave-one-subject-out evaluation is a standard protocol. None of these is presented as an original contribution."));
+C.push(P("The individual components of the proposed model are all taken from published work. Depthwise and separable convolution come from EEGNet, sliding-window attention comes from ATCNet, the arrangement of convolution followed by a Transformer encoder comes from CTNet and EEG Conformer, Euclidean alignment comes from the transfer learning literature [7], and segmentation-and-reconstruction augmentation comes from EEG Conformer and CTNet. Leave-one-subject-out evaluation is a standard protocol. None of these is presented as an original contribution."));
 C.push(H2("22.2 What the project contributes"));
 C.push(BUL("A comparison of EEGNet, ATCNet, CTNet and EEG Conformer under one identical subject-independent protocol. The published figures for these models were obtained under different evaluation settings and cannot be ranked against one another as they stand."));
 C.push(BUL("A specific lightweight combination of these components, at 20,996 parameters, with the attention depth reduced to suit the size of the dataset, and evaluated for cross-subject rather than within-subject performance."));
@@ -137,6 +137,7 @@ const refs = [
   "B. Aristimunha, I. Carrara, P. Guetschel et al., “Mother of All BCI Benchmarks (MOABB),” software framework for reproducible EEG decoding, 2023.",
   "G. Pfurtscheller and F. H. Lopes da Silva, “Event-Related EEG/MEG Synchronization and Desynchronization: Basic Principles,” Clinical Neurophysiology, vol. 110, no. 11, pp. 1842–1857, 1999.",
   "S. Holm, “A Simple Sequentially Rejective Multiple Test Procedure,” Scandinavian Journal of Statistics, vol. 6, no. 2, pp. 65–70, 1979.",
+  "F. Wilcoxon, “Individual Comparisons by Ranking Methods,” Biometrics Bulletin, vol. 1, no. 6, pp. 80–83, 1945.",
 ];
 refs.forEach((r, i) => C.push(new Paragraph({
   spacing: { after: 110, line: 276 },
@@ -148,7 +149,9 @@ refs.forEach((r, i) => C.push(new Paragraph({
 // BUILD
 // =====================================================================
 const doc = new Document({
-  creator: "Phase 2 Solution Design",
+  creator: "Group 5 — Ananya Gourishetty, Haarika D, Siddhanth Samal, Sathvik P",
+  lastModifiedBy: "Group 5",
+  subject: "Phase 2 Solution Design — CSE4006 Deep Learning, VIT-AP University",
   title: "Cross-Subject Motor Imagery EEG Classification — Complete Methodology and Detailed Implementation Plan",
   numbering: {
     config: [

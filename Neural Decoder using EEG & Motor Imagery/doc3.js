@@ -36,14 +36,15 @@ C.push(new Paragraph({
 C.push(SP(180));
 {
   const rows = [
-    ["Team members", "[ Names and registration numbers ]"],
-    ["Guide / faculty", "[ Name and designation ]"],
-    ["Course", "[ Course code and title ]"],
-    ["Department / institution", "[ Department, institution ]"],
+    ["Team members", ["Ananya Gourishetty", "Haarika D", "Siddhanth Samal", "Sathvik P"]],
+    ["Group", "Group 5"],
+    ["Guide / faculty", "Dr. Mohan Allam"],
+    ["Course", "CSE4006 – Deep Learning"],
+    ["Department / institution", "School of Computer Science and Engineering, VIT-AP University"],
     ["Primary dataset", "BCI Competition IV Dataset 2a"],
-    ["Review", "1st Review, 15 September 2026"],
-    ["Implementation window", "16 September – 3 October 2026"],
-    ["Final submission", "10 October 2026"],
+    ["Review", "Phase 2 review, 15 September 2026"],
+    ["Planned implementation window", "16 September – 3 October 2026"],
+    ["Planned final submission", "10 October 2026"],
   ];
   const none = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   C.push(new Table({
@@ -60,13 +61,12 @@ C.push(SP(180));
         new TableCell({
           width: { size: 6200, type: WidthType.DXA }, margins: { top: 85, bottom: 85, left: 0, right: 0 },
           borders: { top: none, bottom: none, left: none, right: none },
-          children: [new Paragraph({ spacing: { after: 0 }, children: [new TextRun({ text: v, size: 20, color: NAVYD })] })]
+          children: (Array.isArray(v) ? v : [v]).map(t => new Paragraph({ spacing: { after: 0 }, children: [new TextRun({ text: t, size: 20, color: NAVYD })] }))
         }),
       ]
     }))
   }));
 }
-C.push(CAP("Fields in square brackets are to be completed before submission."));
 BR();
 
 // =====================================================================
@@ -80,7 +80,7 @@ C.push(P("The work develops a deep learning model that classifies four motor ima
 // 2
 // =====================================================================
 C.push(H1("2. Problem Statement"));
-C.push(P("Motor imagery is the act of imagining a movement without performing it. When a person imagines moving a limb, the sensorimotor cortex produces a measurable change in the mu band (approximately 8 to 13 Hz) and the beta band (approximately 13 to 30 Hz). This change is called event-related desynchronisation, and it appears on the side of the head opposite to the imagined limb. Electroencephalography records this activity from the scalp without surgery, which makes it the most widely used signal for practical brain–computer interfaces."));
+C.push(P("Motor imagery is the act of imagining a movement without performing it. When a person imagines moving a limb, the sensorimotor cortex produces a measurable change in the mu band (approximately 8 to 13 Hz) and the beta band (approximately 13 to 30 Hz). This change is called event-related desynchronisation [13], and it appears on the side of the head opposite to the imagined limb. Electroencephalography records this activity from the scalp without surgery, which makes it the most widely used signal for practical brain–computer interfaces."));
 C.push(P("Building a classifier for these signals is difficult for several related reasons. The signal-to-noise ratio is low, because the cortical activity of interest is attenuated by the skull and scalp. The recordings are contaminated by eye movements, muscle activity and mains interference, all of which are often larger in amplitude than the signal being sought. The data are high-dimensional: a four-second trial recorded from 22 channels at 250 Hz contains more than twenty thousand samples, while a typical dataset provides only a few hundred labelled trials per subject. The signal is also non-stationary, so recordings made from the same person on different days do not have identical statistics."));
 C.push(SP(50));
 C.push(figure("fig/f_erd.png", 460));
@@ -98,7 +98,7 @@ C.push(P("For any of these applications the practical obstacle is the calibratio
 // 4
 // =====================================================================
 C.push(H1("4. Research Gap"));
-C.push(P("The literature survey conducted in Phase 1 covered four representative deep learning architectures for motor imagery decoding. Taken together they show a clear direction of development and a clear unresolved problem."));
+C.push(P("The literature survey conducted in Phase 1 covered four representative deep learning architectures for motor imagery decoding: EEGNet [1], ATCNet [2], CTNet [3] and EEG Conformer [4]. Taken together they show a clear direction of development and a clear unresolved problem."));
 C.push(SP(50));
 C.push(figure("fig/f_evolution.png", 462));
 C.push(CAP("Figure 4.1 — Development of the surveyed architectures, from a compact convolutional network towards convolutional–Transformer hybrids. Accuracies and parameter counts are as reported by the respective authors."));
@@ -162,9 +162,9 @@ C.push(SP(40));
 C.push(table(
   ["Approach", "Why it was considered", "Why it was not selected on its own"],
   [
-    ["FBCSP with linear discriminant analysis", "Well understood, fast, no training instability, still competitive on small datasets", "Feature extraction is fixed in advance and cannot adapt; retained as a control baseline rather than the main method"],
+    ["FBCSP with linear discriminant analysis [9]", "Well understood, fast, no training instability, still competitive on small datasets", "Feature extraction is fixed in advance and cannot adapt; retained as a control baseline rather than the main method"],
     ["Compact CNN (EEGNet alone)", "Very small and trains reliably; the natural lower bound on model size", "Receptive field limits how much long-range temporal structure it can represent; retained as a baseline"],
-    ["Deep CNN (DeepConvNet)", "Greater capacity than a compact CNN", "Reported accuracy on this dataset is poor relative to its size, which suggests it overfits at this data scale"],
+    ["Deep CNN (DeepConvNet [8])", "Greater capacity than a compact CNN", "Reported accuracy on this dataset is poor relative to its size, which suggests it overfits at this data scale"],
     ["Recurrent networks (LSTM, GRU)", "Designed for sequences and can carry information across a whole trial", "Slow to train, difficult to stabilise on short noisy sequences, and not used by any of the four surveyed papers"],
     ["Pure Transformer on raw EEG", "Directly models relationships between any two time points", "Very large parameter count and a strong data requirement; EEG datasets of this size do not support it without heavy augmentation"],
     ["Hybrid convolution with windowed attention", "Convolution supplies cheap spatial filtering; attention supplies long-range structure; windowing limits the cost of attention", "Selected. It is the only family that is acceptable on all four criteria, although it is best on none"],
@@ -174,12 +174,12 @@ C.push(table(
 C.push(CAP("Table 6.2 — Candidate approaches and the reason each was accepted or set aside."));
 
 C.push(H2("6.3 The selected approach"));
-C.push(P("The reasoning behind each component of the selected approach is as follows. The convolutional front end is taken from EEGNet, because depthwise and separable convolution provide spatial filtering comparable to classical common spatial patterns at a very small parameter cost, which directly serves principle P2. The temporal attention stage takes the sliding-window formulation used by ATCNet rather than attention over the full sequence, because windowing reduces both the parameter count and the tendency to overfit that is associated with unconstrained attention on small datasets. The use of a Transformer encoder on top of a convolutional feature map follows CTNet and EEG Conformer, but with two encoder layers rather than the six used by CTNet, again for reasons of model size and data efficiency. Euclidean alignment is applied during preprocessing because it reduces the difference between subjects at zero parameter cost, which serves P1 and P2 at the same time. Finally, the training and evaluation procedure is subject-independent throughout, which none of the four papers adopts as its primary setting."));
+C.push(P("The reasoning behind each component of the selected approach is as follows. The convolutional front end is taken from EEGNet, because depthwise and separable convolution provide spatial filtering comparable to classical common spatial patterns at a very small parameter cost, which directly serves principle P2. The temporal attention stage takes the sliding-window formulation used by ATCNet rather than attention over the full sequence, because windowing reduces both the parameter count and the tendency to overfit that is associated with unconstrained attention on small datasets. The use of a Transformer encoder [10] on top of a convolutional feature map follows CTNet and EEG Conformer, but with two encoder layers rather than the six used by CTNet, again for reasons of model size and data efficiency. Euclidean alignment is applied during preprocessing because it reduces the difference between subjects at zero parameter cost, which serves P1 and P2 at the same time. Finally, the training and evaluation procedure is subject-independent throughout, which none of the four papers adopts as its primary setting."));
 
 C.push(H2("6.4 What is taken from the literature and what is proposed here"));
 C.push(SP(40));
 C.push(note("Stated explicitly, so that the contribution is not overstated", [
-  "Taken from the literature: the depthwise and separable convolution block (EEGNet), the sliding-window attention formulation (ATCNet), the convolution-then-Transformer arrangement (CTNet and EEG Conformer), Euclidean alignment (transfer learning literature), and segmentation-and-reconstruction augmentation (EEG Conformer and CTNet).",
+  "Taken from the literature: the depthwise and separable convolution block (EEGNet), the sliding-window attention formulation (ATCNet), the convolution-then-Transformer arrangement (CTNet and EEG Conformer), Euclidean alignment (He and Wu [7]), and segmentation-and-reconstruction augmentation (EEG Conformer and CTNet).",
   "Proposed in this project: the particular combination of these components in one lightweight model, the reduced-depth attention configuration chosen for data efficiency, the subject-independent training and evaluation procedure applied uniformly to every model, and the component study that measures what each part contributes to cross-subject performance."
 ], TINT));
 
@@ -217,9 +217,9 @@ C.push(SP(40));
 C.push(table(
   ["Point in the system", "Shape", "Data type", "Produced by"],
   [
-    ["Raw recording, one session", "25 × 6.1 × 10⁵", "float32", "Dataset loader"],
-    ["After channel selection", "22 × 6.1 × 10⁵", "float32", "data/loaders.py"],
-    ["After band-pass filter", "22 × 6.1 × 10⁵", "float32", "preprocessing/filters.py"],
+    ["Raw recording, one session", "25 × ~6.7 × 10⁵", "float32", "Dataset loader"],
+    ["After channel selection", "22 × ~6.7 × 10⁵", "float32", "data/loaders.py"],
+    ["After band-pass filter", "22 × ~6.7 × 10⁵", "float32", "preprocessing/filters.py"],
     ["After epoching", "22 × 875 per trial", "float32", "preprocessing/filters.py"],
     ["After artefact rejection", "22 × 875, fewer trials", "float32", "preprocessing/filters.py"],
     ["After Euclidean alignment", "22 × 875", "float32", "preprocessing/align.py"],
@@ -303,7 +303,7 @@ C.push(table(
   ["Property", "Value"],
   [
     ["Dataset", "BCI Competition IV Dataset 2a"],
-    ["Source", "Graz University of Technology, released for BCI Competition IV (2008)"],
+    ["Source", "Graz University of Technology, released for BCI Competition IV (2008) [5], [6]"],
     ["Number of subjects", "9, labelled A01 to A09"],
     ["EEG channels", "22, arranged over sensorimotor cortex"],
     ["Additional channels", "3 electrooculogram channels, used for artefact checking then discarded"],
@@ -373,7 +373,7 @@ C.push(table(
 C.push(CAP("Table 9.1 — Preprocessing specification. Every parameter is fixed here so that the pipeline can be implemented without further decisions."));
 
 C.push(H2("9.2 Euclidean alignment in detail"));
-C.push(P("Euclidean alignment is the step that does most of the work in reducing the difference between people, so it is worth setting out carefully what it does and why it works."));
+C.push(P("Euclidean alignment [7] is the step that does most of the work in reducing the difference between people, so it is worth setting out carefully what it does and why it works."));
 C.push(P("Every EEG trial can be summarised by its spatial covariance matrix, a 22 by 22 table in which each entry records how strongly the signals at two electrodes vary together. This matrix captures how the underlying cortical sources are mixed on their way to the scalp. That mixing is determined by physical properties of the individual: the thickness and conductivity of the skull, the shape and folding of the cortex, and the exact position in which the electrode cap was placed. None of these has anything to do with which movement the person is imagining, yet all of them shape the recorded signal. This is the main reason a model trained on one group of people transfers poorly to a new person."));
 C.push(P("The method proceeds in two steps. First, the covariance matrix of every trial belonging to one subject is computed and the average is taken. This average describes the typical way that subject's signals are mixed across electrodes, with the class-specific detail averaged out, because each class contributes roughly equally to the set. Second, every trial from that subject is multiplied by the inverse square root of that average matrix. The effect is that of a whitening transform: after it is applied, the average covariance of the subject's trials becomes the identity matrix."));
 C.push(P("The consequence is that all subjects arrive at the network sharing the same average spatial statistics. A model no longer has to spend capacity learning that one person's signals are generally larger at one electrode, or that two electrodes happen to be more correlated in one individual than another. What remains, and what the model is then free to learn, is the variation around that common average, which is where the class-discriminating information lives."));

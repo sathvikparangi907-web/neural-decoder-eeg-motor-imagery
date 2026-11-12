@@ -39,6 +39,7 @@ node deck2.js           # builds Phase2_Presentation.pptx
 ```
 
 Figures must be generated before the documents, because both documents embed the PNGs from `fig/`.
+Last rebuilt 12 November 2026 with `docx` 9.15.3 and `pptxgenjs` 4.0.1.
 
 Both builders write their output next to the script (`path.join(__dirname, ...)`), so they work
 from any folder; earlier versions wrote to a hard-coded `/home/claude/review2` path.
@@ -200,9 +201,10 @@ These were removed on request. **Do not reinstate them** when revising:
 
 ### Immediately, before submitting
 
-- [ ] Fill the `[ ]` placeholders on the title page of **both** files: team members and
-      registration numbers, guide name and designation, course code and title, department.
-      These live in `doc3.js` (title page block) and `deck2.js` (slide 1 `meta` array).
+- [x] Fill the `[ ]` placeholders on the title page of **both** files. Done 12 November 2026:
+      team, guide, course (CSE4006 – Deep Learning) and department, in `doc3.js` (title page
+      block) and `deck2.js` (slide 1 `meta` array). This public copy lists names only; the
+      copies submitted to the university also carry registration numbers.
 - [ ] If presenting from the Review 0 material, **correct the EEG Conformer figures**. Review 0
       quoted 86.25% / 92.07% / 86.57%. The authors' own repository states **78.66%** (IV-2a),
       **84.63%** (IV-2b), **95.30%** (SEED). Review 0 also claimed Conformer beat CTNet on

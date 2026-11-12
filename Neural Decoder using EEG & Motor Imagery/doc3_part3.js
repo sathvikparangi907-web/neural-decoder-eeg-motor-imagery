@@ -61,7 +61,7 @@ C.push(table(
   [1500, 600, 600, 600, 600, 600, 600, 600, 600, 600, 1500, 1100],
   { boldFirst: true, center: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], size: 15 }
 ));
-C.push(CAP("Table 15.2 — Cross-subject reference: leave-one-subject-out accuracy (%) on BCI IV-2a as reported by Zhao et al. (2024), the CTNet paper. Each subject is held out in turn and the model is trained on the data of the other eight, for 600 epochs with batch size 512 and learning rate 0.001, on the 2–6 s window (1,000 samples) with z-score normalisation and no alignment; the held-out subject is used only for testing, with no fine-tuning. Models marked + were re-implemented by the CTNet authors under the same conditions. This is the only published comparison of these architectures under one cross-subject protocol that could be verified, and it is the reference for this project's cross-subject results."));
+C.push(CAP("Table 15.2 — Cross-subject reference: leave-one-subject-out accuracy (%) on BCI IV-2a as reported by Zhao et al. (2024) [3], the CTNet paper. Each subject is held out in turn and the model is trained on the data of the other eight, for 600 epochs with batch size 512 and learning rate 0.001, on the 2–6 s window (1,000 samples) with z-score normalisation and no alignment; the held-out subject is used only for testing, with no fine-tuning. Models marked + were re-implemented by the CTNet authors under the same conditions. This is the only published comparison of these architectures under one cross-subject protocol that could be verified, and it is the reference for this project's cross-subject results."));
 C.push(SP(40));
 C.push(table(
   ["Model", "Accuracy", "Source", "Evaluation behind the figure"],
@@ -85,7 +85,7 @@ C.push(table(
     ["EEGNet", "Very small and trains reliably on limited data", "Limited ability to model long-range temporal structure", "Lower bound on model size; reference point for parameter efficiency"],
     ["ATCNet", "Attention applied locally, which suits short EEG trials", "Considerably larger than EEGNet", "Source of the windowed attention formulation used in the proposed model"],
     ["EEG Conformer", "Global self-attention with an interpretability method", "Global attention is costly and needs augmentation to train well", "Reference for the convolution-then-attention arrangement"],
-    ["CTNet", "Highest reported within-subject accuracy of the four", "Reports a large drop under subject-independent evaluation", "Provides the quantitative statement of the research gap"],
+    ["CTNet", "Strong within-subject accuracy (82.52%)", "Reports a large drop under subject-independent evaluation", "Provides the quantitative statement of the research gap"],
     ["FBCSP with LDA", "Well understood, fast, no training instability", "Fixed feature extraction, no learned representation", "Check that the deep models justify their additional complexity"],
   ],
   [1700, 2700, 2500, 2600], { boldFirst: true, size: 17 }
@@ -165,7 +165,7 @@ C.push(table(
   ],
   [550, 2000, 2600, 2900, 1450], { boldFirst: true, center: [0, 4], size: 17 }
 ));
-C.push(CAP("Table 17.2 — Planned experiments. The total is approximately 153 training runs."));
+C.push(CAP("Table 17.2 — Planned experiments. The total is 153 training runs for one seed; every configuration is repeated with three seeds (Table 13.1)."));
 C.push(SP(40));
 C.push(table(
   ["Variant", "Convolution", "Windowed attention", "Euclidean alignment", "Augmentation"],
@@ -230,7 +230,7 @@ C.push(CAP("Template 17.3 — Component study. The interpretation column is writ
 C.push(H2("17.4 Statistical procedure"));
 C.push(NUMI("For each pair of models, collect the nine paired per-subject accuracies.", 3));
 C.push(NUMI("Apply the Wilcoxon signed-rank test to the paired differences, two-sided, at a significance level of 0.05.", 3));
-C.push(NUMI("Where the proposed model is compared against all five baselines, apply a Holm–Bonferroni correction across the five comparisons and report both the corrected and uncorrected values.", 3));
+C.push(NUMI("Where the proposed model is compared against all five baselines, apply a Holm–Bonferroni correction [14] across the five comparisons and report both the corrected and uncorrected values.", 3));
 C.push(NUMI("Report the effect size alongside the p-value, since with nine samples a non-significant result may still indicate a practically meaningful difference, and a significant one may not.", 3));
 C.push(NUMI("State explicitly when a comparison is inconclusive rather than describing it as a trend.", 3));
 
@@ -248,13 +248,13 @@ C.push(table(
   [
     ["Language", "Python 3.10", "All implementation"],
     ["Deep learning", "PyTorch 2.x with CUDA", "Model definition, automatic differentiation, training"],
-    ["EEG processing", "MNE-Python 1.6 or later", "Loading, filtering, epoching, topographic plotting"],
+    ["EEG processing", "MNE-Python 1.6 or later [11]", "Loading, filtering, epoching, topographic plotting"],
     ["Dataset access", "MOABB 1.0 or later", "Programmatic download and standard dataset handling"],
     ["Reference models", "Braindecode 0.8 or later", "Validated implementations of EEGNet, ShallowConvNet and related models"],
     ["Classical baseline", "scikit-learn 1.4, pyRiemann 0.6", "Filter-bank common spatial patterns with linear discriminant analysis"],
     ["Numerical computing", "NumPy 1.26, SciPy 1.11", "Filtering, alignment matrices, statistical tests"],
     ["Visualisation", "Matplotlib 3.8, Seaborn 0.13", "Figures, confusion matrices, topographic maps"],
-    ["Experiment tracking", "TensorBoard, or Weights and Biases", "Logging approximately 153 runs with per-fold metrics"],
+    ["Experiment tracking", "TensorBoard, or Weights and Biases", "Logging every run in Table 17.2 with per-fold metrics"],
     ["Configuration", "PyYAML", "One configuration file per experiment"],
     ["Version control", "Git with GitHub", "Code, configuration files and result tables"],
   ],

@@ -2,6 +2,9 @@ const pptxgen = require('pptxgenjs');
 const fs = require('fs');
 const pres = new pptxgen();
 pres.layout = 'LAYOUT_WIDE';                // 13.3 x 7.5 in
+pres.author = "Group 5 — Ananya Gourishetty, Haarika D, Siddhanth Samal, Sathvik P";
+pres.company = "School of Computer Science and Engineering, VIT-AP University";
+pres.title = "Phase 2 Solution Design — Cross-Subject Motor Imagery EEG Classification";
 const W = 13.3, H = 7.5, M = 0.62;
 const CW = W - 2 * M;
 
@@ -126,23 +129,25 @@ function mkTable(rows, opts) {
   });
 
   const meta = [
-    ["Team members", "[ Names and registration numbers ]"],
-    ["Guide / faculty", "[ Name and designation ]"],
-    ["Course", "[ Course code and title ]"],
+    ["Team members", "Ananya Gourishetty   ·   Haarika D   ·   Siddhanth Samal   ·   Sathvik P"],
+    ["Guide / faculty", "Dr. Mohan Allam"],
+    ["Course", "CSE4006 – Deep Learning   ·   Group 5"],
+    ["Institution", "School of Computer Science and Engineering, VIT-AP University"],
     ["Date", "15 September 2026"],
   ];
-  meta.forEach(([k, v], i) => {
-    const y = 4.85 + i * 0.36;
+  let y = 4.62;
+  meta.forEach(([k, v, lines = 1]) => {
     s.addText(k, {
-      x: M, y, w: 2.2, h: 0.3, isTextBox: true, margin: 0,
+      x: M, y, w: 2.2, h: 0.3, isTextBox: true, margin: 0, valign: 'top',
       fontFace: BF, fontSize: 12, color: GREY
     });
     s.addText(v, {
-      x: M + 2.3, y, w: 8.5, h: 0.3, isTextBox: true, margin: 0,
+      x: M + 2.3, y, w: 8.5, h: 0.3 + 0.26 * (lines - 1), isTextBox: true, margin: 0, valign: 'top',
       fontFace: BF, fontSize: 12, color: NAVYD
     });
+    y += 0.36 + 0.26 * (lines - 1);
   });
-  s.addNotes("Phase 2 presents the solution design: how the literature survey from Phase 1 becomes a concrete, implementable project plan. Fill in team, guide and course before presenting.");
+  s.addNotes("Phase 2 presents the solution design: how the literature survey from Phase 1 becomes a concrete, implementable project plan.");
 }
 
 // =====================================================================
@@ -188,7 +193,7 @@ function mkTable(rows, opts) {
   const y = 1.55 + h + 0.25;
   const pts = [
     ["What improved", "Each step added a better way to relate information across the whole trial, rather than only within a short window."],
-    ["What it cost", "Parameter counts rose from roughly two thousand to over one hundred thousand, and the data requirement rose with them."],
+    ["What it cost", "Parameter counts rose from about two and a half thousand to over one hundred thousand, and the data requirement rose with them."],
   ];
   pts.forEach(([t, b], i) => {
     const x = M + i * 6.13;
@@ -233,7 +238,7 @@ function mkTable(rows, opts) {
     x: 7.79, y: 5.18, w: 4.7, h: 0.28, isTextBox: true, margin: 0,
     fontFace: BF, fontSize: 12, bold: true, color: NAVY
   });
-  s.addText("CTNet is the strongest of the four within subject, yet loses 23.88 points on the four-class task when the test subject is unseen.", {
+  s.addText("CTNet reaches 82.52% within subject, yet loses 23.88 points on the four-class task when the test subject is unseen.", {
     x: 7.79, y: 5.48, w: 4.7, h: 0.72, isTextBox: true, margin: 0, valign: 'top',
     fontFace: BF, fontSize: 11.8, color: NAVYD
   });
@@ -384,7 +389,7 @@ function mkTable(rows, opts) {
     ["EEGNet\n(2018)", "Compact CNN", "Very small; trains reliably on limited data", "Limited long-range temporal modelling", "Lower bound on model size"],
     ["ATCNet\n(2023)", "CNN + attention + TCN", "Attention applied locally, suits short trials", "Considerably larger than EEGNet", "Source of the windowed attention idea"],
     ["EEG Conformer\n(2023)", "CNN + Transformer", "Global self-attention with interpretability", "Costly; needs augmentation to train well", "Reference for convolution-then-attention"],
-    ["CTNet\n(2024)", "CNN + Transformer", "Highest reported within-subject accuracy", "Large drop under subject-independent testing", "States the research gap quantitatively"],
+    ["CTNet\n(2024)", "CNN + Transformer", "Strong within-subject accuracy (82.52%)", "Large drop under subject-independent testing", "States the research gap quantitatively"],
     ["Proposed\nHCT-Net", "CNN + windowed attention", "Combines the components above at 20,996 parameters", "Not yet evaluated", "The model under investigation"],
   ];
   s.addTable(mkTable(rows, { boldFirst: true, hs: 10.5, bs: 10.8, hi: 5 }), {

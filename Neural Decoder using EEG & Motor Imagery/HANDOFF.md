@@ -13,7 +13,7 @@ anything, edit the source and rebuild. Edits made by hand in Word or PowerPoint 
 | `figs.py` | Draws every figure into `fig/` |
 | `finalize.ps1` | Opens the `.docx` in Word, fills in the contents page, saves it and exports the PDF |
 | `index.html` | The interactive 3D presentation of the whole project (separate from Phase 2) |
-| `Neural_Decoder_Research_Paper_Group5.pdf` | The final article: cover, one-page project at a glance, then the 28-page paper |
+| `Neural_Decoder_Research_Paper_Group5.pdf` | The final article, 28 pages |
 | `Review3_Final_Presentation.pptx` / `.pdf` | The final presentation: 16 talk slides and 4 appendix slides, speaker notes on all |
 | `deck_final.js` | Builds the final presentation (`node deck_final.js`; uses `fig/title_net.png`, `fig/pca.png`, `fig/confusion.png`) |
 

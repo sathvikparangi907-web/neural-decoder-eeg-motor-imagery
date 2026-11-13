@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Neural Decoder using EEG &amp; Motor Imagery</title>
+<title>Deep Learning–Based Neural Decoder for EEG Motor Imagery</title>
 <meta name="description" content="Interactive 3D presentation of a final-year project: HCT-Net, a compact convolution–Transformer decoder for four-class motor-imagery EEG, tested leave-one-subject-out on BCI Competition IV Dataset 2a.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
 <!--
-  Neural Decoder using EEG & Motor Imagery — single-file 3D presentation.
+  Deep Learning–Based Neural Decoder for EEG Motor Imagery — single-file 3D presentation.
   Three.js r168 is the only dependency. It is inlined further down as a classic script (MIT),
   so the page works by double-clicking it, with no internet connection.
   Everything else is in this file.
@@ -347,7 +347,7 @@ const SLIDES = [
     pose: { t: [0, -0.08, 0], th: 0.6, ph: 0.98, box: [[-1.0, -1.45, -1.1], [1.0, 1.15, 1.25]], m: 0.74 },
     aria: 'A low-poly head with 22 electrodes in their 10-20 positions, glowing with a synthetic signal.',
     html: () => `
-<h1>Neural Decoder using EEG &amp; Motor Imagery</h1>
+<h1>Deep Learning–Based Neural Decoder for EEG Motor Imagery</h1>
 <p class="lead">Classify four imagined movements — left hand, right hand, feet, tongue — from 22-channel scalp EEG, tested on people the model never trained on.</p>
 ${headlineTable}
 <p class="callout"><strong>A tie.</strong> EEGNet is 0.7 ahead on validation, inside our 0.75 threshold. We do not claim to beat it.</p>
@@ -583,7 +583,7 @@ function go(i) {
   hud.hidden = hero.hidden = !(s.hud && gl3d);
   if (gl3d) gl3d.show(i);
   if (s.arch) wireArchPanel();
-  document.title = `${s.label} · Neural Decoder using EEG & Motor Imagery`;
+  document.title = `${s.label} · Deep Learning–Based Neural Decoder for EEG Motor Imagery`;
 }
 const next = () => go(current + 1);
 const prev = () => go(current - 1);

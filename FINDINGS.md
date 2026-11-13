@@ -18,7 +18,7 @@ paths, for example `phase3/tta.py`; that file is now
 `phase3/5_training_tuning_and_optimisation/tta.py`. The map is in `phase3/README.md`. Nothing
 was renamed and no result changed — only the directory each file sits in.
 
-Milestone definitions are in §19.3 of `Neural Decoder using EEG & Motor Imagery/Phase2_Solution_Design.docx`.
+Milestone definitions are in §19.3 of `Neural Decoder using EEG & Motor Imagery/Implementation_Plan.docx`.
 
 ---
 

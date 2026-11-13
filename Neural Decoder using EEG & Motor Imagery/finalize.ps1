@@ -1,6 +1,6 @@
 # Opens the generated .docx in Word, fills in the table of contents, saves it, and exports a PDF
 # with heading bookmarks and document properties.
-#   powershell -File finalize.ps1 Solution_Design.docx Solution_Design.pdf
+#   powershell -File finalize.ps1 Implementation_Plan.docx Implementation_Plan.pdf
 param([string]$docx, [string]$pdf)
 $docx = (Resolve-Path $docx).Path
 if (-not [System.IO.Path]::IsPathRooted($pdf)) { $pdf = Join-Path (Get-Location) $pdf }

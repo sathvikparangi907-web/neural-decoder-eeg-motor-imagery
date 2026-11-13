@@ -5,7 +5,7 @@ anything, edit the source and rebuild. Edits made by hand in Word or PowerPoint 
 
 | File | What it is |
 |---|---|
-| `Solution_Design.docx` / `.pdf` | The solution design: 30 pages, 10 figures, 26 tables, 3 equations |
+| `Implementation_Plan.docx` / `.pdf` | The solution design: 30 pages, 10 figures, 26 tables, 3 equations |
 | `Solution_Design_Presentation.pptx` / `.pdf` | The presentation: 21 slides, speaker notes on every slide |
 | `design.md` | The text of the design document |
 | `doc.js` | Builds the `.docx` from `design.md` |
@@ -24,9 +24,9 @@ Word and PowerPoint for the PDFs.
 
 ```bash
 python figs.py           # figures; the cover art is real EEG read from ../data/A01T.mat
-node doc.js              # Solution_Design.docx
+node doc.js              # Implementation_Plan.docx
 node deck.js             # Solution_Design_Presentation.pptx
-powershell -File finalize.ps1 Solution_Design.docx Solution_Design.pdf
+powershell -File finalize.ps1 Implementation_Plan.docx Implementation_Plan.pdf
 ```
 
 Export the deck to PDF from PowerPoint (File → Export → PDF).

@@ -1,4 +1,4 @@
-// Solution Design: builds the Word document from design.md.
+// Implementation Plan: builds the Word document from design.md.
 //
 //   node doc.js                          names only (the public copy)
 //   TEAM_JSON=team.json node doc.js      names from a local file, e.g. with registration numbers
@@ -23,7 +23,7 @@ const {
 } = require("docx");
 
 const FIG = path.join(__dirname, "fig");
-const OUT = path.join(process.env.OUT_DIR || __dirname, "Solution_Design.docx");
+const OUT = path.join(process.env.OUT_DIR || __dirname, "Implementation_Plan.docx");
 const TEAM = process.env.TEAM_JSON
   ? JSON.parse(fs.readFileSync(process.env.TEAM_JSON, "utf8"))
   : ["Ananya Gourishetty", "Haarika D", "Siddhanth Samal", "Sathvik P"];
@@ -255,39 +255,49 @@ function body() {
 
 // ---------------------------------------------------------------- cover and contents
 function cover() {
-  const band = fs.readFileSync(path.join(FIG, "cover_page.png"));
-  const white = (text, o = {}) => new TextRun(Object.assign({ text, color: C.WHITE }, o));
+  // A formal title page: centred, serif, no artwork. The page border is added by add_borders.py.
+  const NAVY = "1F3864";
+  const centre = (children, before = 0, after = 0, extra = {}) =>
+    new Paragraph(Object.assign({ alignment: AlignmentType.CENTER, spacing: { before, after }, children }, extra));
+  const t = (text, o = {}) => new TextRun(Object.assign({ text, font: "Georgia", color: C.INK }, o));
+  const rule = (before, after) => new Paragraph({ spacing: { before, after },
+    border: { bottom: { style: BorderStyle.DOUBLE, size: 6, color: NAVY, space: 1 } }, children: [] });
+  const people = TEAM.map((n) => { const m = n.match(/^(.*?)\s*\((.*)\)$/); return m ? [m[1], m[2]] : [n, ""]; });
+  const withReg = people.some(([, r]) => r);
+  const line = { style: BorderStyle.SINGLE, size: 4, color: "8EA0BC" };
+  const cw = [3600, 2400], tw = cw[0] + (withReg ? cw[1] : 0);
+  const cell = (text, w, bold, shade) => new TableCell({ width: { size: w, type: WidthType.DXA },
+    shading: shade ? { type: ShadingType.CLEAR, fill: "E8EDF5", color: "auto" } : undefined,
+    margins: { top: 70, bottom: 70, left: 140, right: 140 }, verticalAlign: VerticalAlign.CENTER,
+    children: [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 },
+      children: [new TextRun({ text, size: 22, bold, color: bold ? NAVY : C.INK })] })] });
+  const header = withReg ? [cell("Name", cw[0], true, true), cell("Registration No.", cw[1], true, true)] : [cell("Name", cw[0], true, true)];
+  const team = new Table({
+    alignment: AlignmentType.CENTER, width: { size: tw, type: WidthType.DXA }, columnWidths: withReg ? cw : [cw[0]],
+    layout: TableLayoutType.FIXED,
+    borders: { top: line, bottom: line, left: line, right: line, insideHorizontal: line, insideVertical: line },
+    rows: [new TableRow({ tableHeader: true, children: header }),
+      ...people.map(([n, r]) => new TableRow({ cantSplit: true,
+        children: withReg ? [cell(n, cw[0], false), cell(r, cw[1], false)] : [cell(n, cw[0], false)] }))],
+  });
   const out = [
-    new Paragraph({ spacing: { before: 0, after: 0 }, children: [new ImageRun({
-      type: "png", data: band, transformation: { width: 8.27 * 96, height: 4.35 * 96 },
-      floating: { horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 0 },
-                  verticalPosition: { relative: VerticalPositionRelativeFrom.PAGE, offset: 0 },
-                  behindDocument: true, allowOverlap: true, wrap: { type: TextWrappingType.NONE } },
-    })] }),
-    new Paragraph({ spacing: { before: 260, after: 200 },
-      children: [new TextRun({ text: "SOLUTION DESIGN", bold: true, size: 19, color: C.TEAL_L, characterSpacing: 40 })] }),
-    new Paragraph({ spacing: { after: 220, line: 264 }, children: [
-      white("Cross-Subject Motor Imagery EEG", { font: "Georgia", size: 48, bold: true }),
-      white("Classification Using Deep Learning", { font: "Georgia", size: 48, bold: true, break: 1 })] }),
-    new Paragraph({ spacing: { after: 0, line: 288 }, children: [
-      new TextRun({ text: "Methodology and implementation plan for a small hybrid CNN–Transformer", size: 25, color: C.PALE }),
-      new TextRun({ text: "that has to work for people it has never seen", size: 25, color: C.PALE, break: 1 })] }),
-    new Paragraph({ spacing: { before: 2700, after: 0 }, children: [] }),
+    centre([t("VIT-AP UNIVERSITY", { size: 34, bold: true, color: NAVY, characterSpacing: 60 })], 300, 60),
+    centre([t("School of Computer Science and Engineering", { size: 24, italics: true })], 0, 0),
+    rule(120, 520),
+    centre([t("CSE4006  –  Deep Learning", { size: 24, bold: true, color: C.MUTED, font: "Calibri" })], 0, 120),
+    centre([t("PROJECT IMPLEMENTATION PLAN", { size: 26, bold: true, color: NAVY, font: "Calibri", characterSpacing: 40 })], 0, 520),
+    centre([t("Cross-Subject Motor Imagery EEG", { size: 42, bold: true }),
+            t("Classification Using Deep Learning", { size: 42, bold: true, break: 1 })], 0, 260, { spacing: { before: 0, after: 260, line: 300 } }),
+    centre([t("Methodology, workflow and planned activities for HCT-Net, a compact", { size: 23, italics: true, color: C.MUTED }),
+            t("hybrid CNN–Transformer tested on people it has never seen", { size: 23, italics: true, color: C.MUTED, break: 1 })], 0, 700),
+    centre([t("Submitted by", { size: 22, italics: true, color: C.MUTED })], 0, 80),
+    centre([t("Group 5", { size: 26, bold: true, color: NAVY })], 0, 160),
+    team,
+    centre([t("Under the guidance of", { size: 22, italics: true, color: C.MUTED })], 620, 80),
+    centre([t("Dr. Mohan Allam", { size: 28, bold: true, color: NAVY })], 0, 0),
+    rule(700, 120),
+    centre([t("Dataset: BCI Competition IV, dataset 2a", { size: 20, color: C.MUTED, font: "Calibri" })], 0, 0),
   ];
-  const rows = [["Team", TEAM], ["Group", ["Group 5"]], ["Guide", ["Dr. Mohan Allam"]], ["Course", ["CSE4006 Deep Learning"]],
-    ["School", ["School of Computer Science and Engineering, VIT-AP University"]], ["Dataset", ["BCI Competition IV dataset 2a"]]];
-  const none = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
-  const lw = 1900;
-  out.push(new Table({
-    width: { size: TW, type: WidthType.DXA }, columnWidths: [lw, TW - lw], layout: TableLayoutType.FIXED,
-    borders: { top: none, bottom: none, left: none, right: none, insideHorizontal: none, insideVertical: none },
-    rows: rows.map(([k, vals]) => new TableRow({ cantSplit: true, children: [
-      new TableCell({ width: { size: lw, type: WidthType.DXA }, margins: { top: 90, bottom: 90, left: 0, right: 120 },
-        children: [new Paragraph({ spacing: { after: 0 }, children: [new TextRun({ text: k.toUpperCase(), bold: true, size: 17, color: C.TEAL_D, characterSpacing: 30 })] })] }),
-      new TableCell({ width: { size: TW - lw, type: WidthType.DXA }, margins: { top: 70, bottom: 70, left: 0, right: 0 },
-        children: vals.map((v) => new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: v, size: 23, color: C.INK })] })) }),
-    ] })),
-  }));
   out.push(new Paragraph({ children: [new PageBreak()] }));
   out.push(new Paragraph({ spacing: { after: 160 }, children: [new TextRun({ text: "Contents", font: "Georgia", size: 34, bold: true, color: C.INK })] }));
   out.push(new TableOfContents("Contents", { hyperlink: true, headingStyleRange: "1-2" }));
@@ -325,7 +335,7 @@ function abbreviations() {
 
 // ---------------------------------------------------------------- document
 const footer = new Footer({ children: [new Paragraph({ children: [
-  new TextRun({ text: "Solution Design  ·  Group 5", size: 16, color: C.MUTED }),
+  new TextRun({ text: "Implementation Plan  ·  Group 5", size: 16, color: C.MUTED }),
   new TextRun({ children: [new PositionalTab({ alignment: PositionalTabAlignment.RIGHT, relativeTo: PositionalTabRelativeTo.MARGIN,
     leader: PositionalTabLeader.NONE }), PageNumber.CURRENT], size: 16, color: C.MUTED }),
 ] })] });
@@ -333,7 +343,7 @@ const footer = new Footer({ children: [new Paragraph({ children: [
 const doc = new Document({
   creator: "Group 5",
   lastModifiedBy: "Group 5",
-  title: "Solution Design: Cross-Subject Motor Imagery EEG Classification Using Deep Learning",
+  title: "Implementation Plan: Cross-Subject Motor Imagery EEG Classification Using Deep Learning",
   subject: "CSE4006 Deep Learning, VIT-AP University",
   description: "Methodology and implementation plan for HCT-Net, evaluated leave-one-subject-out on BCI Competition IV 2a",
   styles: {

@@ -1,4 +1,4 @@
-// Solution Design: the slides.
+// Implementation Plan: the slides.
 //
 //   node deck.js                         names only (the public copy)
 //   TEAM_JSON=team.json node deck.js     names from a local file, e.g. with registration numbers
@@ -31,7 +31,7 @@ pres.layout = "LAYOUT_WIDE";
 pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
 pres.author = "Group 5";
 pres.company = "VIT-AP University";
-pres.title = "Solution Design: Cross-Subject Motor Imagery EEG Classification";
+pres.title = "Implementation Plan: Deep Learning–Based Neural Decoder for EEG Motor Imagery";
 pres.subject = "CSE4006 Deep Learning";
 
 pres.defineSlideMaster({
@@ -39,7 +39,7 @@ pres.defineSlideMaster({
   background: { path: path.join(FIG, "cover_slide.png") },
   objects: [
     { placeholder: { options: { name: "title", type: "title", x: 0.75, y: 1.55, w: 8.4, h: 1.35, fontFace: "Georgia",
-      fontSize: 36, bold: true, color: C.WHITE, valign: "top", align: "left", margin: 0 }, text: "" } },
+      fontSize: 28, bold: true, color: C.WHITE, valign: "top", align: "left", margin: 0 }, text: "" } },
     { placeholder: { options: { name: "body", type: "body", x: 0.75, y: 3.05, w: 6.2, h: 0.9, fontSize: 19,
       color: C.PALE, valign: "top", align: "left", margin: 0 }, text: "" } },
   ],
@@ -52,7 +52,7 @@ pres.defineSlideMaster({
       color: C.TEAL_D, valign: "top", align: "left", margin: 0 }, text: "" } },
     { placeholder: { options: { name: "title", type: "title", x: M, y: 0.66, w: CW, h: 0.8, fontFace: "Georgia",
       fontSize: 34, bold: true, color: C.INK, valign: "top", align: "left", margin: 0 }, text: "" } },
-    { text: { text: "Solution Design  ·  Group 5",
+    { text: { text: "Implementation Plan  ·  Group 5",
       options: { x: M, y: 7.02, w: 6, h: 0.26, fontSize: 10, color: C.MUTED, margin: 0 } } },
   ],
   slideNumber: { x: W - M - 0.6, y: 7.02, w: 0.6, h: 0.26, fontSize: 10, color: C.MUTED, align: "right" },
@@ -114,9 +114,9 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
 // ---------------------------------------------------------------------------- 1 cover
 {
   const s = slideOf("COVER", "Opening");
-  s.addText("Cross-Subject Motor Imagery\nEEG Classification", { placeholder: "title" });
+  s.addText("Deep Learning–Based Neural Decoder for EEG Motor Imagery", { placeholder: "title" });
   s.addText("A small hybrid CNN–Transformer that has to work for people it has never seen", { placeholder: "body" });
-  label(s, "Solution design", 0.75, 1.15, 6, C.TEAL_L);
+  label(s, "Implementation plan", 0.75, 1.15, 6, C.TEAL_L);
   const twoLines = TEAM.some((n) => n.includes("("));
   label(s, "Team", 0.75, 4.3, 2, C.TEAL_L);
   T(s, twoLines ? `${TEAM[0]}     ${TEAM[1]}\n${TEAM[2]}     ${TEAM[3]}` : TEAM.join("   ·   "),
@@ -129,7 +129,7 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
   T(s, "School of Computer Science and Engineering, VIT-AP University",
     { x: 0.75, y: y + 0.85, w: 7.4, h: 0.3, fontSize: 14, color: C.PALE });
   s.addNotes("We are Group 5: Ananya, Haarika, Siddhanth and Sathvik, guided by Dr. Mohan Allam. This is our " +
-    "solution design. The short version: we want to decode imagined movements from EEG for a person the model has never " +
+    "implementation plan. The short version: we want to decode imagined movements from EEG for a person the model has never " +
     "seen, and we want to do it with a small model. The next slides cover why that is hard, what others have tried, what " +
     "we will build, and how we will test it fairly.");
 }
@@ -719,7 +719,7 @@ const label = (s, text, x, y, w, color = C.TEAL_D) =>
   T(s, refs.slice(0, 8).flatMap((r, i) => run(r, i)), { x: M, y: 1.7, w: 5.9, h: 5.2, fontSize: 13 });
   T(s, refs.slice(8).flatMap((r, i) => run(r, i + 8)), { x: M + 6.23, y: 1.7, w: 5.9, h: 5.2, fontSize: 13 });
   s.addNotes("These are the sources behind every number and every borrowed idea in this talk. The full references, with " +
-    "volumes and pages, are in the solution design document.");
+    "volumes and pages, are in the implementation plan document.");
 }
 
 // ---------------------------------------------------------------------------- 18 close

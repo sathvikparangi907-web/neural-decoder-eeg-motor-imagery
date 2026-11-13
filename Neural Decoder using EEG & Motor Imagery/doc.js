@@ -286,8 +286,8 @@ function cover() {
     rule(120, 520),
     centre([t("CSE4006  –  Deep Learning", { size: 24, bold: true, color: C.MUTED, font: "Calibri" })], 0, 120),
     centre([t("PROJECT IMPLEMENTATION PLAN", { size: 26, bold: true, color: NAVY, font: "Calibri", characterSpacing: 40 })], 0, 520),
-    centre([t("Cross-Subject Motor Imagery EEG", { size: 42, bold: true }),
-            t("Classification Using Deep Learning", { size: 42, bold: true, break: 1 })], 0, 260, { spacing: { before: 0, after: 260, line: 300 } }),
+    centre([t("Deep Learning–Based Neural Decoder", { size: 42, bold: true }),
+            t("for EEG Motor Imagery", { size: 42, bold: true, break: 1 })], 0, 260, { spacing: { before: 0, after: 260, line: 300 } }),
     centre([t("Methodology, workflow and planned activities for HCT-Net, a compact", { size: 23, italics: true, color: C.MUTED }),
             t("hybrid CNN–Transformer tested on people it has never seen", { size: 23, italics: true, color: C.MUTED, break: 1 })], 0, 700),
     centre([t("Submitted by", { size: 22, italics: true, color: C.MUTED })], 0, 80),
@@ -343,7 +343,7 @@ const footer = new Footer({ children: [new Paragraph({ children: [
 const doc = new Document({
   creator: "Group 5",
   lastModifiedBy: "Group 5",
-  title: "Implementation Plan: Cross-Subject Motor Imagery EEG Classification Using Deep Learning",
+  title: "Implementation Plan: Deep Learning–Based Neural Decoder for EEG Motor Imagery",
   subject: "CSE4006 Deep Learning, VIT-AP University",
   description: "Methodology and implementation plan for HCT-Net, evaluated leave-one-subject-out on BCI Competition IV 2a",
   styles: {

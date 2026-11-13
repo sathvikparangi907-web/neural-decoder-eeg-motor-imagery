@@ -1,4 +1,4 @@
-// Final presentation: Neural Decoding of Motor Imagery from EEG (Phase 3 / final review).
+// Final presentation: Deep Learning–Based Neural Decoder for EEG Motor Imagery (final review).
 //   node deck_r3.js                         names only
 //   TEAM_JSON=team.json node deck_r3.js     names from a local file (e.g. with registration numbers)
 // Every number is taken from the final article; the table it comes from is named in the speaker notes.
@@ -28,7 +28,7 @@ pres.layout = "LAYOUT_WIDE";
 pres.theme = { headFontFace: "Georgia", bodyFontFace: "Calibri" };
 pres.author = "Group 5";
 pres.company = "VIT-AP University";
-pres.title = "Neural Decoding of Motor Imagery from EEG Signals using Deep Learning";
+pres.title = "Deep Learning–Based Neural Decoder for EEG Motor Imagery";
 pres.subject = "CSE4006 Deep Learning, final project presentation";
 
 pres.defineSlideMaster({ title: "DARK", background: { color: C.NAVY }, objects: [] });
@@ -39,7 +39,7 @@ pres.defineSlideMaster({
       color: C.ORANGE, valign: "top", align: "left", margin: 0 }, text: "" } },
     { placeholder: { options: { name: "title", type: "title", x: M, y: 0.72, w: CW, h: 0.75, fontFace: "Georgia",
       fontSize: 34, bold: true, color: C.NAVY, valign: "top", align: "left", margin: 0 }, text: "" } },
-    { text: { text: "Neural Decoding of Motor Imagery from EEG  ·  Group 5",
+    { text: { text: "Deep Learning–Based Neural Decoder for EEG Motor Imagery  ·  Group 5",
       options: { x: M, y: 7.0, w: 8, h: 0.28, fontSize: 12, color: C.MUTED, margin: 0 } } },
   ],
   slideNumber: { x: W - M - 0.8, y: 7.0, w: 0.8, h: 0.28, fontSize: 12, color: C.MUTED, align: "right" },
@@ -92,7 +92,7 @@ const teamLine = (sep) => TEAM.join(sep);
   const s = slideOf("DARK", "Opening");
   s.addImage({ path: path.join(FIG, "title_net.png"), x: 8.3, y: 0.95, w: 4.75, h: 4.75, altText: "The 22 EEG electrodes as a network; C3, Cz and C4 over the motor cortex glow orange." });
   label(s, "Final review  ·  CSE4006 Deep Learning", 0.75, 0.9, 7, C.GLOW);
-  T(s, "Neural Decoding of Motor Imagery from EEG Signals using Deep Learning", { x: 0.75, y: 1.3, w: 7.6, h: 2.3,
+  T(s, "Deep Learning–Based Neural Decoder for EEG Motor Imagery", { x: 0.75, y: 1.3, w: 7.6, h: 2.3,
     fontFace: "Georgia", fontSize: 36, bold: true, color: C.WHITE });
   T(s, "Cross-subject decoding on BCI Competition IV-2a, tested on people the model has never seen",
     { x: 0.75, y: 3.85, w: 7.0, h: 0.8, fontSize: 19, color: C.PALE });

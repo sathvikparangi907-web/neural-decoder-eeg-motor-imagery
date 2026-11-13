@@ -10,8 +10,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
 <!--
   Neural Decoder using EEG & Motor Imagery — single-file 3D presentation.
-  Three.js r168 is the only dependency, kept beside this file as three.module.min.js (MIT) and
-  resolved through the import map below, so the page works with no internet connection.
+  Three.js r168 is the only dependency. It is inlined further down as a classic script (MIT),
+  so the page works by double-clicking it, with no internet connection.
   Everything else is in this file.
 
   Where the numbers come from
@@ -179,8 +179,8 @@ tr.ours td { font-weight: 600; }
 <!-- Three.js r168 (MIT, three.js Authors), inlined as a classic script so the page runs
      by double-clicking it: no server, no internet, no module loading. This is the upstream
      three.module.min.js with its single trailing export statement rewritten to assign the
-     same 419 names to window.THREE; nothing else is changed. The file is also kept beside
-     the page, and the loader below falls back to it, then to cdnjs. -->
+     same 419 names to window.THREE; nothing else is changed. If it is missing, the loader
+     below tries three.module.min.js beside the page, then cdnjs. -->
 <script>/**
  * @license
  * Copyright 2010-2024 Three.js Authors

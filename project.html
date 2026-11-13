@@ -1,0 +1,295 @@
+<title>Neural Decoder Project</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ink:#131C2E; --navy:#1B3A6B; --violet:#5B3E96;
+    --ground:#F6F7FA; --surface:#FFFFFF; --line:#DFE3EC;
+    --muted:#5C6678; --faint:#8A93A6;
+    --good:#2E6F62; --poor:#9A5238; --chance:#B9C0CE;
+    --serif:"IBM Plex Serif",Georgia,serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ink:#E8ECF4; --navy:#8FB0E0; --violet:#B69BE4;
+      --ground:#10141C; --surface:#171D28; --line:#2A3242;
+      --muted:#9AA4B8; --faint:#6C7689;
+      --good:#6FBBA8; --poor:#D08A6A; --chance:#3A4354;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#E8ECF4; --navy:#8FB0E0; --violet:#B69BE4;
+    --ground:#10141C; --surface:#171D28; --line:#2A3242;
+    --muted:#9AA4B8; --faint:#6C7689;
+    --good:#6FBBA8; --poor:#D08A6A; --chance:#3A4354;
+  }
+
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+       line-height:1.6;margin:0}
+  .wrap{max-width:860px;margin:0 auto;padding-inline:20px;padding-block:0 72px}
+  h1,h2,h3{font-family:var(--serif);text-wrap:balance;line-height:1.25;margin:0}
+  h1{font-size:clamp(28px,5vw,42px);font-weight:600;letter-spacing:-.01em}
+  h2{font-size:clamp(21px,3.2vw,27px);font-weight:600;margin-bottom:6px}
+  h3{font-size:17px;font-weight:600;margin-bottom:4px}
+  p{margin:0 0 14px}
+  .lede{font-size:clamp(16px,2.2vw,18.5px);color:var(--muted);max-width:62ch}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
+           text-transform:uppercase;color:var(--violet);margin-bottom:10px}
+  section{margin-top:56px}
+  .note{font-size:13.5px;color:var(--muted)}
+  strong{font-weight:600}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
+
+  header{border-bottom:1px solid var(--line);padding-block:44px 30px;margin-bottom:4px}
+  .toc{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:20px;padding-top:16px;
+       border-top:1px solid var(--line);font-size:13px}
+  .toc a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent}
+  .toc a:hover{color:var(--ink);border-bottom-color:var(--violet)}
+  .warn{margin:18px 0;padding:12px 16px;border-left:3px solid #B8860B;
+        background:rgba(184,134,11,.10);border-radius:0 6px 6px 0;font-size:13.5px}
+  .warn strong{color:#9A5238}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .warn strong{color:#E0A95C}}
+  :root[data-theme="dark"] .warn strong{color:#E0A95C}
+  .verdict{margin-top:26px;padding:18px 20px;border-left:3px solid var(--violet);
+           background:var(--surface);border-radius:0 8px 8px 0}
+  .verdict p{margin:0;font-size:15.5px}
+
+  .split{display:grid;gap:16px;grid-template-columns:1fr 1fr;margin-top:22px}
+  @media (max-width:560px){.split{grid-template-columns:1fr}}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+  .panel .big{font-family:var(--mono);font-size:38px;font-weight:500;line-height:1;
+              letter-spacing:-.02em;display:block;margin:10px 0 2px}
+  .panel.cold .big{color:var(--poor)}
+  .panel.warm .big{color:var(--good)}
+  .panel .cap{font-size:13.5px;color:var(--muted)}
+
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  th{text-align:left;font-weight:500;font-size:11.5px;letter-spacing:.09em;
+     text-transform:uppercase;color:var(--faint);padding:0 10px 8px 0;white-space:nowrap}
+  td{padding:9px 10px 9px 0;border-top:1px solid var(--line);vertical-align:middle}
+  td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;
+       white-space:nowrap}
+
+  .bar{position:relative;height:9px;border-radius:5px;background:var(--line);
+       min-width:120px;overflow:hidden}
+  .bar i{position:absolute;inset:0 auto 0 0;border-radius:5px;display:block}
+  .bar .chance{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--chance)}
+  .pairbar{display:flex;flex-direction:column;gap:4px;min-width:150px}
+
+  ul{margin:0 0 14px;padding-left:18px}
+  li{margin-bottom:7px}
+  .tag{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:20px;
+       border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+  .tag.win{color:var(--good);border-color:var(--good)}
+  .tag.lose{color:var(--poor);border-color:var(--poor)}
+  details{border-top:1px solid var(--line);padding-top:12px;margin-top:8px}
+  summary{cursor:pointer;font-size:14px;color:var(--violet);font-weight:500}
+  summary:focus-visible{outline:2px solid var(--violet);outline-offset:3px}
+  footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);
+         font-size:13px;color:var(--faint)}
+  code{font-family:var(--mono);font-size:.92em;background:var(--surface);
+       border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Final-year project &middot; School of Computer Science and Engineering, VIT-AP</div>
+  <h1>Neural Decoder using EEG &amp; Motor Imagery</h1>
+  <p class="lede">Reading four imagined movements from scalp EEG, and testing it on people the
+  decoder has never met.</p>
+  <div class="verdict">
+    <p><strong>Abstract.</strong> A motor-imagery decoder normally has to be calibrated on each
+    new user before it works. We ask whether the usual remedy &mdash; more capacity, more
+    attention &mdash; helps at all on an unseen person. Six decoders from 3,188 to 697,412
+    parameters were run on BCI Competition IV Dataset 2a under one protocol, nine rounds, each
+    testing on a person held out entirely. Accuracy did not grow with size. Our own model,
+    HCT-Net, reaches <strong>53.6%</strong> on an unseen person at <strong>3,924 parameters</strong>
+    (chance 25%), level with EEGNet rather than ahead of it. Of five interventions tested, the
+    three that changed the model failed and the two that normalised the data worked.
+    <strong>Every point of cross-subject gain came from normalising distributions, none from the
+    model.</strong></p>
+  </div>
+  <nav class="toc" aria-label="Contents">
+    <a href="#intro">1 Introduction</a><a href="#data">2 Data</a><a href="#method">3 Method</a><a href="#result">4 Results</a><a href="#discussion">5 Discussion</a>
+  </nav>
+</header>
+
+<section id="intro">
+  <div class="eyebrow">1</div>
+  <h2>Introduction</h2>
+  <p>A brain&ndash;computer interface lets someone act through recorded brain activity rather than
+  muscles. In <em>motor imagery</em> the user mentally rehearses a movement &mdash; a hand, the
+  feet, the tongue &mdash; and the decoder names it from the rhythms this produces over the
+  sensorimotor cortex. The people it would help most are those who cannot use a keyboard, a
+  touchscreen or their voice.</p>
+  <p>The obstacle is calibration. A decoder trained on you works for you and poorly for everyone
+  else, so each new user must first record a labelled session. CTNet, one of the models compared
+  here, reports <strong>82.52%</strong> on a person it trained on and <strong>58.64%</strong> on
+  one it did not: a drop of 23.88 points. Only the second number describes anyone's first use of
+  the device.</p>
+  <p>Recent decoders answer with scale &mdash; attention layers, hundreds of thousands of
+  parameters &mdash; but those gains are almost always measured <em>within</em> a person. This
+  project asks one question: on a small public dataset, does extra capacity make a decoder better
+  at people it has never seen?</p>
+  <p class="warn"><strong>How to read the numbers.</strong> Four classes, so guessing scores
+  <span class="num">25%</span>. Published cross-subject results on this dataset sit in the
+  low-to-high fifties. With nine volunteers, a difference must reach about
+  <span class="num">5.4 points</span> before this test can reliably detect it &mdash; so the one-
+  to four-point gaps below are not differences anyone can prove, and this page never claims
+  otherwise.</p>
+</section>
+
+<section id="data">
+  <div class="eyebrow">2</div>
+  <h2>Data</h2>
+  <p>BCI Competition IV Dataset 2a, recorded at Graz University of Technology. Nine volunteers,
+  each in two sessions on <em>different days</em> &mdash; a detail that matters, because a
+  person's own signals shift between sessions and those who shift most are hardest to decode.</p>
+  <div class="scroll"><table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Participants &middot; sessions</td><td class="n">9 &middot; 2 each, different days</td></tr>
+    <tr><td>Trials</td><td class="n">288 per session &middot; 576 each &middot; <strong>5,184</strong></td></tr>
+    <tr><td>Classes</td><td class="n">left hand, right hand, feet, tongue</td></tr>
+    <tr><td>Electrodes &middot; rate</td><td class="n">22 EEG &middot; 250 Hz</td></tr>
+    <tr><td>Window analysed</td><td class="n">0.5&ndash;4.0 s after the cue = 875 samples</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">Each trial shows a fixation cross and a beep, then an
+  arrow two seconds later telling the volunteer which movement to imagine; they hold it until the
+  cross clears at six seconds. The decoder sees from half a second after the arrow, which excludes
+  the brain's response to the arrow itself. Trials above 100 &micro;V peak to peak are
+  <strong>flagged, not deleted</strong> &mdash; 4.3% on average, 25% for A09 &mdash; and the flag
+  is applied to training people only, so no test person is scored on a convenient subset.</p>
+</section>
+
+<section id="method">
+  <div class="eyebrow">3</div>
+  <h2>Method</h2>
+
+  <h3>3.1 &nbsp;Preprocessing</h3>
+  <p>Five steps run once and are cached: keep the 22 EEG channels, band-pass 4&ndash;38 Hz, cut
+  the trial window, flag artefacts, store. Three depend on who is held out and run inside every
+  round: <strong>Euclidean alignment</strong> (whiten each session by its own covariance),
+  standardisation using training-split statistics only, and augmentation of the training split by
+  recombining real segments of the same class. The band-pass runs over the continuous recording in
+  both directions, so no filter ringing lands at a trial edge and nothing is smeared in time.
+  Alignment needs no labels, which is why it can be applied to a brand-new user.</p>
+
+  <h3>3.2 &nbsp;The model</h3>
+  <p><strong>HCT-Net</strong> joins a convolutional front end modelled on EEGNet to one small
+  Transformer encoder layer. Eight temporal filters act as learned frequency bands; a depthwise
+  convolution gives each one a spatial filter across all 22 electrodes, collapsing them to one;
+  a separable convolution mixes the result and pools it to 27 time steps. Those are cut into five
+  overlapping windows of eleven steps and passed through a single two-head encoder, then averaged
+  and classified. The convolution's output width <em>is</em> the encoder's model dimension, so the
+  halves join with no projection layer.</p>
+  <p class="note">1,456 parameters in the convolutions, 2,224 in the encoder, 176 in the position
+  code, 68 in the classifier &mdash; <strong>3,924</strong> in all. Four sizes were compared:
+  <strong>A</strong> is this one, the smallest and the final model; <strong>D</strong> is the size
+  written into the design document before any experiment, 20,996 parameters. On a new person the
+  batch-normalisation statistics are recomputed from their <em>unlabelled</em> trials: no labels,
+  no gradients, about 0.2 s.</p>
+
+  <h3>3.3 &nbsp;What it was compared against</h3>
+  <p>FBCSP with LDA, reimplemented, and four published networks from <code>braindecode</code> at
+  their authors' defaults: EEGNet (3,188 parameters), ATCNet (113,732), CTNet (152,364) and EEG
+  Conformer (697,412). Two classical Riemannian methods were added later. Using the authors' own
+  code means a shortfall is a real difference under this protocol, not a bug in our copy.</p>
+  <p class="note">Checked against published within-subject figures, EEG Conformer came 1.4 points
+  short and FBCSP about 3, which was the bar set in advance before writing our own model. ATCNet
+  and CTNet fell <strong>18 points</strong> short; their reference code trains far longer than
+  this protocol allows, so their results here may understate those architectures.</p>
+
+  <h3>3.4 &nbsp;Protocol</h3>
+  <p>Nine rounds. In each, <strong>seven people train</strong> the model, <strong>an eighth
+  decides</strong> which version to keep, and <strong>the ninth is scored once</strong> and never
+  influences a choice. Early stopping uses a tenth of the training people's trials, never the
+  deciding person &mdash; a model stopped on someone is already fitted to them.</p>
+  <p>Before trusting any improvement we measured the noise: the same configuration, three seeds,
+  nothing else changed, moves the nine-round average by <span class="num">0.9</span> points. So a
+  single-run gain under about 1.3 points cannot be told apart from the random seed. Three seeds
+  are therefore the unit of evidence, and a change is kept only if it improves the validation
+  average by <span class="num">0.75</span> points or more.</p>
+  <p class="note">It cost us two results of our own: two changes accepted earlier on single runs
+  sat inside that noise band and did not survive being measured again.</p>
+</section>
+
+<section id="result">
+  <div class="eyebrow">4</div>
+  <h2>Results</h2>
+
+  <h3>4.1 &nbsp;Accuracy on an unseen person</h3>
+  <div class="scroll"><table>
+    <tr><th>Decoder</th><th>Size</th><th>Validation</th><th>Unseen person</th><th>&kappa;</th></tr>
+    <tr><td>EEGNet</td><td class="n">3,188</td><td class="n">55.0%</td><td class="n">54.3%</td><td class="n">0.391</td></tr>
+    <tr><td><strong>HCT-Net A</strong> <span class="tag">ours</span></td><td class="n"><strong>3,924</strong></td><td class="n"><strong>54.3%</strong></td><td class="n"><strong>53.6%</strong></td><td class="n">0.381</td></tr>
+    <tr><td>HCT-Net D <span class="tag">as first designed</span></td><td class="n">20,996</td><td class="n">53.3%</td><td class="n">52.7%</td><td class="n">0.369</td></tr>
+    <tr><td>Tangent space + LR <span class="tag">classical</span></td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">50.5%</td><td class="n">0.340</td></tr>
+    <tr><td>Minimum distance to mean <span class="tag">classical</span></td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">47.1%</td><td class="n">0.295</td></tr>
+    <tr><td>&hellip;the same, without alignment</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">30.2%</td><td class="n">0.070</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">Three seeds, adaptation on, chance 25%. EEGNet is 0.7
+  points ahead of us on validation, inside our own 0.75 threshold; on the test people the gap is
+  &minus;0.7 with a 95% interval from &minus;4.3 to +2.9, which contains zero. <strong>This is a
+  tie and is reported as one.</strong> The last two rows are the same classical method with and
+  without alignment: 30.2% to 47.1%, nothing changed but the data.</p>
+
+  <h3>4.2 &nbsp;What helped, and what did not</h3>
+  <div class="scroll"><table>
+    <tr><th>Intervention</th><th>Acts on</th><th>Result</th></tr>
+    <tr><td>More capacity, 3,924 &rarr; 20,996</td><td>the model</td><td class="n">54.3 &rarr; 53.3 &mdash; nothing</td></tr>
+    <tr><td>Remove the attention block</td><td>the model</td><td class="n">46.9 &rarr; 48.8 &mdash; better without</td></tr>
+    <tr><td>More adaptable layers, 3 &rarr; 7</td><td>the model</td><td class="n">53.6 &rarr; 49.3 &mdash; worse in 9/9</td></tr>
+    <tr><td>Euclidean alignment</td><td><strong>the data</strong></td><td class="n">+5.5 points</td></tr>
+    <tr><td>Re-estimate statistics on the new person</td><td><strong>the data</strong></td><td class="n">+3.5 points</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">The third was our own idea &mdash; a Transformer's layer
+  normalisation keeps no statistics, so adaptation can never reach the attention half. We rebuilt
+  the encoder to hold them, at an identical parameter count, and it was worse on every person.</p>
+
+  <h3>4.3 &nbsp;Who it works for</h3>
+  <div class="scroll"><table>
+    <tr><th>Person</th><th>A03</th><th>A01</th><th>A08</th><th>A09</th><th>A07</th><th>A06</th><th>A04</th><th>A05</th><th>A02</th></tr>
+    <tr><td>Accuracy</td><td class="n">76.7</td><td class="n">72.2</td><td class="n">65.0</td><td class="n">58.5</td><td class="n">51.6</td><td class="n">45.0</td><td class="n">44.6</td><td class="n">37.6</td><td class="n">31.4</td></tr>
+  </table></div>
+  <p class="note" style="margin-top:14px">The spread between people dwarfs every difference
+  between models in this study. A02 and A05 sit near chance whatever decoder is pointed at them,
+  and they were the hardest for the classical method and all four networks alike &mdash; a property
+  of the people, not the software. A device built on this would serve about a third of users well
+  and a third badly, which is why nothing here is reported as an average alone.</p>
+</section>
+
+<section id="discussion">
+  <div class="eyebrow">5</div>
+  <h2>Discussion</h2>
+  <p>Three measurements point the same way. Capacity does nothing: four sizes of our model, from
+  3,924 to 20,996 parameters, finish within a point of each other, and across published decoders
+  EEG Conformer carries 219 times EEGNet's parameters for nine tenths of a point. The attention
+  block does nothing: removing it <em>improved</em> cross-subject accuracy, and global attention
+  beat the windowed design the project was built around. Making more of the network adaptable made
+  it worse.</p>
+  <p>What did work were two operations on the data rather than the model, both label-free:
+  aligning each recording's covariance, and recomputing normalisation statistics on the new
+  person. Alignment alone takes the classical method from 30.2% to 47.1%, and halves how often a
+  trial's own participant can be identified from its channel variances, from 46.8% to 22.9%.</p>
+  <p>The reading we take from this is that the cross-subject gap is a problem of
+  <strong>distribution</strong>, not of capacity, architecture or adaptability &mdash; and that
+  within-subject accuracy is a poor guide to it. Across six decoders the correlation between
+  doing well on a familiar person and doing well on a stranger is r = 0.08, which settles nothing
+  at six models but certainly offers no support for the usual assumption.</p>
+  <p class="note">An earlier version of this page reported r = &minus;0.86 between familiar-person
+  skill and the size of the drop, and called it the project's strongest result. It was an
+  artefact: the drop is computed from the familiar-person score, so the two must correlate. It was
+  withdrawn on 7 November 2026.</p>
+</section>
+
+<footer>
+  <p>Nine volunteers &middot; 5,184 recorded trials &middot; 22 electrodes &middot; four
+  imagined movements &middot; BCI Competition IV Dataset 2a (Graz University of Technology).
+  Every number here is produced from the recorded per-fold results by
+  <code>py results.py</code>, with the confidence intervals, the power analysis and the
+  Riemannian references in <code>paper/</code>. The full write-up, including every negative
+  result and the date each was found, is in <code>FINDINGS.md</code>.</p>
+</footer>
+</div>

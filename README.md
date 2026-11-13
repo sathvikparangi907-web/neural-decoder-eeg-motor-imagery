@@ -3,6 +3,8 @@
 A deep-learning decoder that reads four imagined movements — left hand, right hand, feet,
 tongue — from scalp EEG, and is tested on **people it was never trained on**.
 
+**Live:** [3D architecture presentation](https://sathvikparangi907-web.github.io/neural-decoder-eeg-motor-imagery/) · [project page](https://sathvikparangi907-web.github.io/neural-decoder-eeg-motor-imagery/project.html)
+
 ## The problem
 
 Motor imagery decoders work well on the person they were calibrated for and badly on

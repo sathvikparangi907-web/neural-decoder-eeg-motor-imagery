@@ -99,16 +99,6 @@ a number nobody verified.
 
 The commands for each stage are on that stage's own page under `phase3/`.
 
-## Status
-
-| Phase | What | When |
-|---|---|---|
-| 2 — Solution design | Submitted | 15 September 2026 |
-| 3 — Implementation and experimentation | All seven activities built and producing results | from 16 September 2026 |
-
-The optimisation queue is the one thing still running: window length and cropped training
-are next, and each step adds a row rather than changing what is already measured.
-
 ## How results are decided
 
 Four rules the project holds to, which is why the table above reports a tie rather than a

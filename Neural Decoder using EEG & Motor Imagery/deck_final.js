@@ -176,6 +176,54 @@ const teamLine = (sep) => TEAM.join(sep);
     "new. (Article, Fig. 6.)");
 }
 
+// ------------------------------------------------------------------ 4a objectives
+{
+  const s = content("Objectives and survey", "Objectives", "Six objectives, set before the build");
+  const objs = [
+    ["Pipeline", "A reproducible preprocessing and evaluation pipeline for BCI Competition IV-2a"],
+    ["Baselines", "EEGNet, ATCNet, CTNet and EEG Conformer, with FBCSP as a classical control, under one protocol"],
+    ["HCT-Net", "Combine EEGNet's convolutional front end with windowed Transformer attention"],
+    ["Unseen people", "Leave-one-subject-out testing: every number comes from a person the model never saw"],
+    ["Metrics", "Accuracy, Cohen's κ, precision, recall and F1, per person and on average, with model size"],
+    ["Honest answer", "State whether the hybrid helps new people while staying small, whichever way it goes"],
+  ];
+  objs.forEach(([t, body], i) => {
+    const x = M + (i % 3) * (3.95 + 0.14), y = 1.8 + Math.floor(i / 3) * 2.45;
+    box(s, x, y, 3.95, 2.25, i === 5 ? C.NAVY : C.CARD);
+    disc(s, x + 0.3, y + 0.3, 0.55, i === 5 ? C.ORANGE : C.BLUE, i + 1, C.WHITE, 18);
+    T(s, t, { x: x + 1.0, y: y + 0.3, w: 2.8, h: 0.55, valign: "middle", fontFace: "Georgia", fontSize: 22, bold: true, color: i === 5 ? C.WHITE : C.NAVY });
+    T(s, body, { x: x + 0.3, y: y + 1.0, w: 3.4, h: 1.15, fontSize: 17, color: i === 5 ? C.PALE : C.INK });
+  });
+  s.addNotes("These are the six objectives we set in the solution design, before building anything. The last one matters " +
+    "most to us: we committed to reporting whether the hybrid model helps on new people, whichever way the answer went.");
+}
+
+// ------------------------------------------------------------------ 4b literature survey
+{
+  const s = content("Objectives and survey", "Literature survey", "What the published models do on a new person");
+  const head = ["Model", "Parameters", "Main idea", "What HCT-Net takes", "New person*"].map((t, i) => ({ text: t,
+    options: { bold: true, color: C.WHITE, fill: { color: C.NAVY }, align: i === 1 || i === 4 ? "center" : "left" } }));
+  const rows = [
+    ["FBCSP + LDA (2008) [11]", "—", "Hand-designed spatial filters per frequency band, then a linear classifier", "Classical control only", "not reported"],
+    ["EEGNet (2018) [7]", "3,188", "Compact convolutions: frequency, then spatial, then a summary", "The whole convolutional front end", "56.85%"],
+    ["ATCNet (2023) [8]", "113,732", "Attention and temporal convolution inside sliding windows", "Attention limited to short windows", "not reported"],
+    ["EEG Conformer (2023) [6]", "697,412", "Convolution for local features, a Transformer across the trial", "Convolution first, attention after", "53.41%"],
+    ["CTNet (2024) [1]", "152,364", "EEGNet-style front end feeding a six-layer Transformer", "The encoder, cut to two layers", "58.64%"],
+  ].map((r, k) => r.map((t, i) => ({ text: t, options: { align: i === 1 || i === 4 ? "center" : "left",
+    bold: i === 0 || i === 4, color: i === 4 && t.endsWith("%") ? C.ORANGE : C.INK, fill: { color: k % 2 ? C.WHITE : "F6F8FB" } } })));
+  s.addTable([head, ...rows], { x: M, y: 1.7, w: CW, colW: [2.75, 1.4, 3.9, 2.6, 1.48], rowH: 0.72, fontSize: 15,
+    fontFace: "Calibri", valign: "middle", border: { type: "solid", pt: 0.5, color: C.RULE }, margin: [0, 0.1, 0, 0.1] });
+  T(s, "* Published leave-one-subject-out accuracy on BCI IV-2a, from the CTNet paper's re-runs under one protocol [1]. Parameters for our 875-sample input.",
+    { x: M, y: 6.15, w: CW, h: 0.3, fontSize: 12, color: C.MUTED });
+  T(s, [{ text: "Gap: ", options: { bold: true, color: C.NAVY } },
+        { text: "size does not predict accuracy on a new person, and two of the five have no published new-person figure." }],
+    { x: M, y: 6.45, w: CW, h: 0.4, fontSize: 16 });
+  s.addNotes("Our literature survey traced the path from hand-designed features to compact convolutional networks and then " +
+    "to attention and Transformers. Two things stood out. Size does not predict accuracy on a new person: EEG Conformer has " +
+    "219 times as many parameters as EEGNet and is 3.4 points less accurate. And the published numbers come from different " +
+    "protocols, so they cannot be ranked. That is the gap our project fills.");
+}
+
 // ------------------------------------------------------------------ 5 novelty
 {
   const s = content("The idea", "Our novelty", "What is new in this project?");
